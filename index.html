@@ -527,15 +527,23 @@
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAyhe5GGDNlPrOMXQYCeKzJYZeTw3VHIKo",
-      authDomain: "trip-schedule-754f4.firebaseapp.com",
-      projectId: "trip-schedule-754f4",
-      storageBucket: "trip-schedule-754f4.firebasestorage.app",
-      messagingSenderId: "955421835998",
-      appId: "1:955421835998:web:14219864c96fa4d32d384f"
-    };
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAyhe5GGDNlPrOMXQYCeKzJYZeTw3VHIKo",
+  authDomain: "trip-schedule-754f4.firebaseapp.com",
+  projectId: "trip-schedule-754f4",
+  storageBucket: "trip-schedule-754f4.firebasestorage.app",
+  messagingSenderId: "955421835998",
+  appId: "1:955421835998:web:14219864c96fa4d32d384f"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
     const statusEl = document.getElementById('firebase-status');
 
     function setFirebaseStatus(message, ok = false) {
