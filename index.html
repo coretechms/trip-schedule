@@ -2,11 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" id="dynamic-viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
+  <meta name="viewport" id="dynamic-viewport" content="width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
-    html { touch-action: pan-x pan-y pinch-zoom; overscroll-behavior: auto; }
     body {
       margin: 0;
       padding: 10px;
@@ -27,6 +26,7 @@
       overflow-y: visible;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x pan-y pinch-zoom;
+      overscroll-behavior: contain;
     }
 
     .title-bar {
@@ -229,8 +229,8 @@
     .h58 td { height: 58px; }
     .h62 td { height: 62px; }
     .spaced { letter-spacing: 0.15em; }
-    .expected-top td:not(:first-child) { border-bottom: 1px dotted #444; }
-    .expected-bottom td { border-top: 1px dotted #444; }
+    .expected-top td:not(:first-child) { border-bottom: 0; }
+    .expected-bottom td { border-top: 0; }
     .sky-cell { background: #eaf6ff !important; }
     .sky-cell .cell-input { background: #eaf6ff !important; }
     .readonly-cell .cell-input {
@@ -274,45 +274,10 @@
     .capture-render.bold { font-weight: 700; }
     .capture-render.red { color: #c51616; font-weight: 700; }
     .capture-render.blue { color: #203fd8; font-weight: 700; }
-
-
-    .section-outer-top td {
-      border-top: 2px solid #222 !important;
-    }
-    .section-outer-top td:not([rowspan]) {
-      border-bottom: 1px dotted #444 !important;
-    }
-    .section-outer-bottom td {
-      border-top: 1px dotted #444 !important;
-      border-bottom: 2px solid #222 !important;
-    }
-    .section-outer-top td:first-child,
-    .section-outer-bottom td:first-child {
-      border-left: 2px solid #222 !important;
-    }
-    .section-outer-top td:last-child,
-    .section-outer-bottom td:last-child {
-      border-right: 2px solid #222 !important;
-    }
-
     @media (max-width: 1100px) {
       body { padding: 6px; }
       .sheet { width: 1045px; }
       table.plan { min-width: 1045px; }
-    }
-
-    @media (orientation: portrait) and (max-width: 1024px) {
-      html,
-      body,
-      .mobile-fit-wrap {
-        touch-action: pan-x pan-y pinch-zoom;
-      }
-      body {
-        overflow: auto;
-      }
-      .mobile-fit-wrap {
-        overflow: auto;
-      }
     }
 
     @media (orientation: landscape) and (max-width: 1024px) {
@@ -320,10 +285,8 @@
         padding: 4px;
         overflow: auto;
       }
-      .mobile-fit-wrap.landscape-fit {
+      .mobile-fit-wrap {
         overflow: auto;
-        display: block;
-        -webkit-overflow-scrolling: touch;
       }
     }
     @media (max-width: 768px) {
@@ -461,7 +424,7 @@
         <td colspan="2" class="input-cell"><input class="cell-input" value="" /></td>
       </tr>
 
-      <tr class="h26 section-outer-top">
+      <tr class="h26">
         <td class="fixed" rowspan="2">소요시간</td>
         <td class="fixed bold">출 발</td>
         <td class="input-cell sky-cell"><input class="cell-input bold" value="산행 시간" /></td>
@@ -471,7 +434,7 @@
         <td class="input-cell sky-cell"><input class="cell-input" value=" " /></td>
         <td class="fixed bold">귀 가</td>
       </tr>
-      <tr class="h14 section-outer-bottom">
+      <tr class="h14">
         <td class="input-cell"><input id="duration-start" class="cell-input" value="2:30 예정" /></td>
         <td class="input-cell"><input id="duration-hike" class="cell-input" value="4:30 예정" /></td>
         <td class="input-cell"><input id="duration-move" class="cell-input" value="00:50 예정" /></td>
@@ -481,7 +444,7 @@
         <td class="input-cell"><input id="duration-home" class="cell-input" value="2:40 예정" /></td>
       </tr>
 
-      <tr class="h20 expected-top section-outer-top">
+      <tr class="h20 expected-top">
         <td class="fixed" rowspan="2">예상 시간</td>
         <td class="input-cell"><input id="base-time" class="cell-input red" value="06:30" /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold" value="09:00 ->" readonly /></td>
@@ -491,7 +454,7 @@
         <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold" value="16:00 ->" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold" value="17:00 ->" readonly /></td>
       </tr>
-      <tr class="h20 expected-bottom section-outer-bottom">
+      <tr class="h20 expected-bottom">
         <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input" value="09:00" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold" value="13:30" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input" value="14:20" readonly /></td>
@@ -696,11 +659,6 @@
       const sheet = document.getElementById('capture-area');
       if (!viewportMeta || !wrap || !sheet) return;
 
-      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-      const isMobileLike = Math.min(viewportWidth, viewportHeight) <= 1024;
-
       sheet.style.transform = 'none';
       sheet.style.margin = '0 auto';
       wrap.classList.remove('landscape-fit');
@@ -708,22 +666,11 @@
       wrap.style.height = 'auto';
       wrap.style.overflowX = 'auto';
       wrap.style.overflowY = 'visible';
-      wrap.style.touchAction = 'pan-x pan-y pinch-zoom';
-      document.body.style.overflow = '';
-      document.body.style.touchAction = 'pan-x pan-y pinch-zoom';
-      document.documentElement.style.touchAction = 'pan-x pan-y pinch-zoom';
-
-      let initialScale = 1;
-      if (isMobileLike) {
-        initialScale = 0.25;
-        if (isLandscape) {
-          wrap.classList.add('landscape-fit');
-        }
-      }
+      document.body.style.overflow = 'auto';
 
       viewportMeta.setAttribute(
         'content',
-        `width=device-width, initial-scale=${initialScale.toFixed(3)}, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain`
+        'width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
       );
     }
 
