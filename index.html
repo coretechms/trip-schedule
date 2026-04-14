@@ -20,7 +20,9 @@
     }
     .mobile-fit-wrap {
       width: 100%;
-      overflow: visible;
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
     }
 
     .title-bar {
@@ -152,8 +154,21 @@
     }
     @media (max-width: 1100px) {
       body { padding: 6px; }
-      .sheet { width: 100%; overflow-x: auto; }
+      .sheet { width: 1045px; }
       table.plan { min-width: 1045px; }
+    }
+
+    @media (orientation: landscape) and (max-width: 1024px) {
+      body {
+        padding: 4px;
+        overflow: hidden;
+      }
+      .mobile-fit-wrap.landscape-fit {
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
     }
     @media (max-width: 768px) {
       body { padding: 8px; }
@@ -489,29 +504,46 @@
       if (el) el.addEventListener('input', updateGimbapTotals);
     });
 
-    function applyMobileInitialFit() {
+    function applyLandscapeFit() {
       const wrap = document.getElementById('mobile-fit-wrap');
       const sheet = document.getElementById('capture-area');
       if (!wrap || !sheet) return;
 
-      const mobileWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-      if (mobileWidth <= 768) {
-        const horizontalPadding = 16;
-        const availableWidth = Math.max(mobileWidth - horizontalPadding, 280);
-        const baseWidth = 1045;
-        const scale = Math.min(1, availableWidth / baseWidth);
-        sheet.style.transform = `scale(${scale})`;
-        wrap.style.height = `${Math.ceil(sheet.offsetHeight * scale)}px`;
-      } else {
-        sheet.style.transform = 'scale(1)';
-        wrap.style.height = 'auto';
+      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const isMobileLike = Math.min(viewportWidth, viewportHeight) <= 1024;
+
+      sheet.style.transform = 'scale(1)';
+      sheet.style.margin = '0 auto';
+      wrap.classList.remove('landscape-fit');
+      wrap.style.width = '100%';
+      wrap.style.height = 'auto';
+
+      if (!(isLandscape && isMobileLike)) {
+        document.body.style.overflow = '';
+        return;
       }
+
+      const rect = sheet.getBoundingClientRect();
+      const naturalWidth = 1045;
+      const naturalHeight = Math.ceil(rect.height);
+      const availableWidth = Math.max(viewportWidth - 8, 280);
+      const availableHeight = Math.max(viewportHeight - 8, 200);
+      const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+
+      wrap.classList.add('landscape-fit');
+      wrap.style.width = `${Math.floor(naturalWidth * scale)}px`;
+      wrap.style.height = `${Math.floor(naturalHeight * scale)}px`;
+      sheet.style.transform = `scale(${scale})`;
+      document.body.style.overflow = 'hidden';
     }
 
     updateExpectedTimes();
     updateGimbapTotals();
-    applyMobileInitialFit();
-    window.addEventListener('resize', applyMobileInitialFit);
+    applyLandscapeFit();
+    window.addEventListener('resize', applyLandscapeFit);
+    window.addEventListener('orientationchange', applyLandscapeFit);
     async function capturePlan() {
       const target = document.getElementById('capture-area');
       const button = document.getElementById('capture-button');
