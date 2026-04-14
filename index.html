@@ -228,8 +228,8 @@
     .h58 td { height: 58px; }
     .h62 td { height: 62px; }
     .spaced { letter-spacing: 0.15em; }
-    .expected-top td:not(:first-child) { border-bottom: 0; }
-    .expected-bottom td { border-top: 0; }
+    .expected-top td:not(:first-child) { border-bottom: 1px dotted #444; }
+    .expected-bottom td { border-top: 1px dotted #444; }
     .sky-cell { background: #eaf6ff !important; }
     .sky-cell .cell-input { background: #eaf6ff !important; }
     .readonly-cell .cell-input {
@@ -273,6 +273,27 @@
     .capture-render.bold { font-weight: 700; }
     .capture-render.red { color: #c51616; font-weight: 700; }
     .capture-render.blue { color: #203fd8; font-weight: 700; }
+
+
+    .section-outer-top td {
+      border-top: 2px solid #222 !important;
+    }
+    .section-outer-top td:not([rowspan]) {
+      border-bottom: 1px dotted #444 !important;
+    }
+    .section-outer-bottom td {
+      border-top: 1px dotted #444 !important;
+      border-bottom: 2px solid #222 !important;
+    }
+    .section-outer-top td:first-child,
+    .section-outer-bottom td:first-child {
+      border-left: 2px solid #222 !important;
+    }
+    .section-outer-top td:last-child,
+    .section-outer-bottom td:last-child {
+      border-right: 2px solid #222 !important;
+    }
+
     @media (max-width: 1100px) {
       body { padding: 6px; }
       .sheet { width: 1045px; }
@@ -438,7 +459,7 @@
         <td colspan="2" class="input-cell"><input class="cell-input" value="" /></td>
       </tr>
 
-      <tr class="h26">
+      <tr class="h26 section-outer-top">
         <td class="fixed" rowspan="2">소요시간</td>
         <td class="fixed bold">출 발</td>
         <td class="input-cell sky-cell"><input class="cell-input bold" value="산행 시간" /></td>
@@ -448,7 +469,7 @@
         <td class="input-cell sky-cell"><input class="cell-input" value=" " /></td>
         <td class="fixed bold">귀 가</td>
       </tr>
-      <tr class="h14">
+      <tr class="h14 section-outer-bottom">
         <td class="input-cell"><input id="duration-start" class="cell-input" value="2:30 예정" /></td>
         <td class="input-cell"><input id="duration-hike" class="cell-input" value="4:30 예정" /></td>
         <td class="input-cell"><input id="duration-move" class="cell-input" value="00:50 예정" /></td>
@@ -458,7 +479,7 @@
         <td class="input-cell"><input id="duration-home" class="cell-input" value="2:40 예정" /></td>
       </tr>
 
-      <tr class="h20 expected-top">
+      <tr class="h20 expected-top section-outer-top">
         <td class="fixed" rowspan="2">예상 시간</td>
         <td class="input-cell"><input id="base-time" class="cell-input red" value="06:30" /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold" value="09:00 ->" readonly /></td>
@@ -468,7 +489,7 @@
         <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold" value="16:00 ->" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold" value="17:00 ->" readonly /></td>
       </tr>
-      <tr class="h20 expected-bottom">
+      <tr class="h20 expected-bottom section-outer-bottom">
         <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input" value="09:00" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold" value="13:30" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input" value="14:20" readonly /></td>
