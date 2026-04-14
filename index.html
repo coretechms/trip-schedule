@@ -59,9 +59,37 @@
       transform: translateY(1px);
     }
     .title,
-    .capture-btn {
+    .capture-btn,
+    .save-btn {
       flex-shrink: 0;
     }
+
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .save-btn {
+      border: 1px solid #0b7a28;
+      background: #0b7a28;
+      color: #fff;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .save-btn:hover {
+      filter: brightness(1.05);
+    }
+    .save-btn:active {
+      transform: translateY(1px);
+    }
+
     table.plan {
       width: 100%;
       border-collapse: collapse;
@@ -99,7 +127,10 @@
       font: inherit;
       color: inherit;
       padding: 3px 4px;
-      line-height: 1.15;
+      line-height: 1.25;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .cell-input.left, .left { text-align: left; }
     .cell-input.right, .right { text-align: right; }
@@ -109,7 +140,11 @@
     textarea.cell-input {
       resize: none;
       min-height: 30px;
-      line-height: 1.2;
+      line-height: 1.25;
+      overflow: hidden;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .meal-row .cell-input {
       min-height: 24px;
@@ -152,6 +187,27 @@
       pointer-events: none;
       user-select: none;
     }
+
+    .capture-render {
+      display: block;
+      width: 100%;
+      min-height: 28px;
+      padding: 3px 4px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.25;
+      font: inherit;
+      color: inherit;
+      text-align: inherit;
+      background: transparent;
+      border: 0;
+    }
+    .capture-render.left { text-align: left; }
+    .capture-render.right { text-align: right; }
+    .capture-render.bold { font-weight: 700; }
+    .capture-render.red { color: #c51616; font-weight: 700; }
+    .capture-render.blue { color: #203fd8; font-weight: 700; }
     @media (max-width: 1100px) {
       body { padding: 6px; }
       .sheet { width: 1045px; }
@@ -182,7 +238,8 @@
         font-size: 17px;
         line-height: 1.2;
       }
-      .capture-btn {
+      .capture-btn,
+      .save-btn {
         min-height: 34px;
         padding: 6px 12px;
         font-size: 13px;
@@ -197,7 +254,8 @@
         font-size: 16px;
         letter-spacing: -0.4px;
       }
-      .capture-btn {
+      .capture-btn,
+      .save-btn {
         min-height: 36px;
         padding: 7px 12px;
         font-size: 13px;
@@ -205,6 +263,7 @@
     }
   
     .firebase-panel {
+      display: none !important;
       margin: 10px 0 14px;
       padding: 10px 12px;
       border: 1px solid #cfd8ff;
@@ -229,16 +288,20 @@
   </style>
 </head>
 <body>
+  <!-- mobile-zoom-enabled -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
       <div class="title">정기산행 계획</div>
-      <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
+      <div class="action-buttons">
+        <button type="button" id="save-button" class="save-btn">[저장하기]</button>
+        <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
+      </div>
     </div>
 
     <div class="firebase-panel" id="firebase-panel">
       <div class="firebase-title">실시간 동기화 상태</div>
-      <div>이 문서는 Firebase Realtime Database와 연결되면 입력 내용이 자동 저장되고 다른 화면에도 즉시 반영됩니다.</div>
+      <div>이 문서는 Firebase Realtime Database와 연결되며 입력 후 [저장하기]를 누르면 저장되고 다른 화면에도 반영됩니다.</div>
       <div class="firebase-status" id="firebase-status">Firebase 연결 준비 중...</div>
     </div>
 
@@ -256,7 +319,7 @@
 
       <tr class="h30">
         <td class="fixed">회 비</td>
-        <td colspan="2" class="input-cell"><input class="cell-input bold" value=" 원" /></td>
+        <td colspan="2" class="input-cell"><input class="cell-input bold amount-input" value=" 원" /></td>
         <td colspan="3" class="fixed left">특별 추가회비 :</td>
         <td class="fixed blue">산행날자</td>
         <td class="input-cell"><input class="cell-input blue" value=" 월  일" /></td>
@@ -287,7 +350,7 @@
         <td colspan="2" class="fixed">계좌번호</td>
       </tr>
       <tr class="h38">
-        <td class="input-cell"><input class="cell-input" /></td>
+        <td class="input-cell"><input class="cell-input amount-input" /></td>
         <td class="input-cell"><input class="cell-input" value="" /></td>
         <td class="input-cell"><input class="cell-input" value="" /></td>
         <td class="input-cell"><input class="cell-input" value="" /></td>
@@ -394,7 +457,7 @@
  </textarea></td>
         <td class="input-cell"><textarea class="cell-input"> 
  </textarea></td>
-        <td class="input-cell"><input id="gimbap-price" class="cell-input" value="  원" /></td>
+        <td class="input-cell"><input id="gimbap-price" class="cell-input amount-input" value="  원" /></td>
         <td class="fixed bold">금 액 :</td>
         <td class="input-cell calc-cell"><input id="gimbap-total" class="cell-input bold" value="  원" readonly /></td>
       </tr>
@@ -433,6 +496,42 @@
 
     function formatNumber(value) {
       return Number(value || 0).toLocaleString('ko-KR');
+    }
+
+
+    function formatAmountInputValue(rawValue, suffix) {
+      const hasSuffix = String(rawValue || '').includes(suffix);
+      const digits = String(rawValue || '').replace(/[^\d.-]/g, '');
+      if (!digits || digits === '-' || digits === '.' || digits === '-.') {
+        return hasSuffix ? (' ' + suffix) : '';
+      }
+      const number = Number(digits);
+      if (!Number.isFinite(number)) {
+        return hasSuffix ? (' ' + suffix) : '';
+      }
+      return formatNumber(number) + ' ' + suffix;
+    }
+
+    function bindAmountFormatting() {
+      const amountFields = Array.from(document.querySelectorAll('input.amount-input'));
+      amountFields.forEach((el) => {
+        const suffix = /원/.test(el.value) ? '원' : '';
+        el.addEventListener('input', function() {
+          const endDigits = String(el.value || '').replace(/[^\d]/g, '').length;
+          if (suffix) {
+            el.value = formatAmountInputValue(el.value, suffix);
+          } else {
+            const digits = String(el.value || '').replace(/[^\d.-]/g, '');
+            el.value = digits ? formatNumber(Number(digits)) : '';
+          }
+        });
+        if (suffix) {
+          el.value = formatAmountInputValue(el.value, suffix);
+        } else {
+          const digits = String(el.value || '').replace(/[^\d.-]/g, '');
+          el.value = digits ? formatNumber(Number(digits)) : '';
+        }
+      });
     }
 
     function updateGimbapTotals() {
@@ -539,11 +638,142 @@
       document.body.style.overflow = 'hidden';
     }
 
+    bindAmountFormatting();
     updateExpectedTimes();
     updateGimbapTotals();
+
+    function isLikelyDesktop() {
+      return window.matchMedia('(hover: hover) and (pointer: fine)').matches && window.innerWidth > 768;
+    }
+
+    function getTabbablePlanFields() {
+      return Array.from(document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])'))
+        .filter((el) => el.offsetParent !== null);
+    }
+
+    function moveFocusToNextField(currentEl) {
+      const fields = getTabbablePlanFields();
+      const index = fields.indexOf(currentEl);
+      if (index === -1) return;
+      const next = fields[index + 1];
+      if (!next) return;
+      next.focus();
+      try {
+        if (next.tagName === 'INPUT') next.select();
+        else if (typeof next.setSelectionRange === 'function') next.setSelectionRange(0, next.value.length);
+      } catch (e) {}
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key !== 'Enter') return;
+      if (!isLikelyDesktop()) return;
+
+      const target = event.target;
+      if (!target) return;
+      if (!(target.matches('input.cell-input') || target.matches('textarea.cell-input'))) return;
+      if (target.hasAttribute('readonly') || target.disabled) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      moveFocusToNextField(target);
+    }, true);
+
+
     applyLandscapeFit();
     window.addEventListener('resize', applyLandscapeFit);
     window.addEventListener('orientationchange', applyLandscapeFit);
+
+    function autoResizeTextarea(el) {
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.max(el.scrollHeight, 30) + 'px';
+    }
+
+    function expandCellsForCapture(target) {
+      const changed = [];
+      const textareas = Array.from(target.querySelectorAll('textarea.cell-input'));
+      textareas.forEach((el) => {
+        changed.push([el, el.style.height, el.style.overflow]);
+        el.style.overflow = 'hidden';
+        autoResizeTextarea(el);
+      });
+
+      const rows = Array.from(target.querySelectorAll('tr'));
+      rows.forEach((row) => {
+        const inputs = Array.from(row.querySelectorAll('input.cell-input, textarea.cell-input'));
+        if (!inputs.length) return;
+
+        let needed = 0;
+        inputs.forEach((el) => {
+          const h = Math.max(el.scrollHeight || 0, el.offsetHeight || 0, 28);
+          needed = Math.max(needed, h + 8);
+        });
+
+        if (needed > row.offsetHeight) {
+          changed.push([row, row.style.height, null]);
+          row.style.height = needed + 'px';
+        }
+      });
+
+      return function restore() {
+        changed.forEach((item) => {
+          const el = item[0]
+          if (el.tagName === 'TEXTAREA') {
+            el.style.height = item[1];
+            el.style.overflow = item[2];
+          } else {
+            el.style.height = item[1];
+          }
+        });
+      };
+    }
+
+
+    function buildCaptureClone(target) {
+      const clone = target.cloneNode(true);
+      clone.id = 'capture-clone-' + Date.now();
+      clone.style.position = 'fixed';
+      clone.style.left = '-100000px';
+      clone.style.top = '0';
+      clone.style.zIndex = '-1';
+      clone.style.background = '#ffffff';
+      clone.style.overflow = 'visible';
+      clone.style.maxWidth = 'none';
+      clone.style.width = getComputedStyle(target).width;
+
+      clone.querySelectorAll('input.cell-input, textarea.cell-input').forEach((field) => {
+        const div = document.createElement('div');
+        div.className = 'capture-render';
+        Array.from(field.classList || []).forEach((cls) => {
+          if (cls !== 'cell-input' && cls !== 'amount-input') div.classList.add(cls);
+        });
+
+        const value = field.value == null ? '' : String(field.value);
+        div.textContent = value.trim() ? value : ' ';
+        div.style.minHeight = Math.max(field.offsetHeight || 28, 28) + 'px';
+
+        const td = field.closest('td');
+        if (td) {
+          td.style.height = 'auto';
+          td.style.verticalAlign = 'middle';
+          td.style.paddingTop = '3px';
+          td.style.paddingBottom = '3px';
+        }
+
+        field.replaceWith(div);
+      });
+
+      clone.querySelectorAll('tr').forEach((row) => {
+        row.style.height = 'auto';
+      });
+
+      clone.querySelectorAll('table, tbody, thead').forEach((el) => {
+        el.style.height = 'auto';
+      });
+
+      return clone;
+    }
+
     async function capturePlan() {
       const target = document.getElementById('capture-area');
       const button = document.getElementById('capture-button');
@@ -552,23 +782,45 @@
       const originalText = button.textContent;
       button.textContent = '[저장중]';
 
+      let clone = null;
+
       try {
-        const canvas = await html2canvas(target, {
+        clone = buildCaptureClone(target);
+        document.body.appendChild(clone);
+
+        const rect = clone.getBoundingClientRect();
+        const canvas = await html2canvas(clone, {
           backgroundColor: '#ffffff',
           scale: Math.max(window.devicePixelRatio || 1, 2),
-          useCORS: true
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: Math.ceil(rect.width || clone.scrollWidth || target.scrollWidth),
+          windowHeight: Math.ceil(clone.scrollHeight || rect.height || target.scrollHeight)
         });
+
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
-        link.download = '정기산행_계획.png';
+        link.download = '정기산행_앱화면.png';
+        document.body.appendChild(link);
         link.click();
+        link.remove();
       } catch (error) {
-        alert('캡쳐 저장 중 오류가 발생했습니다.');
+        alert('앱 화면 캡쳐 저장 중 오류가 발생했습니다.');
         console.error(error);
       } finally {
+        if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
         button.textContent = originalText;
       }
     }
+
+
+    document.querySelectorAll('textarea.cell-input').forEach((el) => {
+      autoResizeTextarea(el);
+      el.addEventListener('input', function() {
+        autoResizeTextarea(el);
+      });
+    });
 
     const captureButton = document.getElementById('capture-button');
     if (captureButton) captureButton.addEventListener('click', capturePlan);
@@ -595,7 +847,6 @@
     const SYNC_PATH = 'tripSchedule/sharedPlan';
     let db = null;
     let applyingRemote = false;
-    let saveTimer = null;
 
     function setFirebaseStatus(message, ok) {
       if (!statusEl) return;
@@ -650,7 +901,7 @@
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
     }
 
-    async function saveFormData() {
+    async function saveFormData(showSuccessMessage = true) {
       if (!db || applyingRemote) return;
       try {
         const payload = {
@@ -658,35 +909,43 @@
           updatedAt: serverTimestamp()
         };
         await set(ref(db, SYNC_PATH), payload);
-        setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 완료', true);
+        if (showSuccessMessage) {
+          setFirebaseStatus('실시간 동기화 연결됨 · 저장 완료', true);
+        } else {
+          setFirebaseStatus('실시간 동기화 연결됨 · 데이터 반영 중', true);
+        }
       } catch (error) {
         console.error(error);
-        setFirebaseStatus('자동 저장 실패: 데이터베이스 주소 또는 규칙을 확인하세요.', false);
+        setFirebaseStatus('저장 실패: 데이터베이스 주소 또는 규칙을 확인하세요.', false);
       }
     }
 
-    function scheduleSave() {
-      if (applyingRemote) return;
-      window.clearTimeout(saveTimer);
-      saveTimer = window.setTimeout(saveFormData, 250);
-    }
 
     function bindRealtimeSync() {
       ensureSyncKeys();
 
-      getEditableFields().forEach((el) => {
-        el.addEventListener('input', scheduleSave);
-        el.addEventListener('change', scheduleSave);
-      });
+      const saveButton = document.getElementById('save-button');
+      if (saveButton) {
+        saveButton.addEventListener('click', async () => {
+          const originalText = saveButton.textContent;
+          saveButton.textContent = '[저장중]';
+          saveButton.disabled = true;
+          try {
+            await saveFormData(true);
+          } finally {
+            saveButton.textContent = originalText;
+            saveButton.disabled = false;
+          }
+        });
+      }
 
       onValue(ref(db, SYNC_PATH), (snapshot) => {
         const value = snapshot.val();
         if (value && value.formData) {
           applyFormData(value.formData);
-          setFirebaseStatus('실시간 동기화 연결됨 · 다른 화면 변경도 반영 중', true);
+          setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 중', true);
         } else {
-          setFirebaseStatus('실시간 동기화 연결됨 · 새 문서 상태', true);
-          saveFormData();
+          setFirebaseStatus('실시간 동기화 연결됨 · 아직 저장된 데이터 없음', true);
         }
       }, (error) => {
         console.error(error);
