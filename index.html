@@ -164,6 +164,21 @@
       padding-top: 0;
       padding-bottom: 0;
     }
+
+    .address-cell {
+      vertical-align: top !important;
+    }
+    .address-input {
+      text-align: left !important;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      min-height: 24px;
+      height: 24px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      line-height: 1.2;
+    }
     .meal-row .cell-input {
       min-height: 24px;
     }
@@ -382,7 +397,7 @@
         <td class="fixed gray">도 선 료 왕복</td>
       </tr>
       <tr class="h30">
-        <td colspan="2" class="input-cell"><input class="cell-input left" value="" /></td>
+        <td colspan="2" class="input-cell address-cell"><textarea class="cell-input left address-input" data-min-height="24"></textarea></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
@@ -751,20 +766,6 @@
       } catch (e) {}
     }
 
-    document.addEventListener('keydown', function(event) {
-      if (event.key !== 'Enter') return;
-      if (!isLikelyDesktop()) return;
-
-      const target = event.target;
-      if (!target) return;
-      if (!(target.matches('input.cell-input') || target.matches('textarea.cell-input'))) return;
-      if (target.hasAttribute('readonly') || target.disabled) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      moveFocusToNextField(target);
-    }, true);
-
 
     updateDynamicViewport();
     window.addEventListener('resize', updateDynamicViewport);
@@ -889,6 +890,10 @@ function resizeAllTextareas(root = document) {
 
       clone.querySelectorAll('table, tbody, thead').forEach((el) => {
         el.style.height = 'auto';
+      });
+
+      clone.querySelectorAll('table.plan, table.plan td, table.plan th').forEach((el) => {
+        el.style.borderStyle = 'solid';
       });
 
       return clone;
