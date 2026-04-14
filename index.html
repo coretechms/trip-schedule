@@ -371,6 +371,27 @@
       font-size: 14px !important;
     }
 
+  
+    /* 소요시간 행 위 가로줄만 굵은 선 */
+    tr.duration-top-line > td,
+    tr.duration-top-line > th {
+      border-top: 2px solid #222 !important;
+    }
+
+  
+    /* 예상 시간 행 아래 가로줄만 굵은 선 */
+    tr.expected-bottom-bold-line > td,
+    tr.expected-bottom-bold-line > th {
+      border-bottom: 2px solid #222 !important;
+    }
+
+  
+    /* 예상 시간 제목칸 밑줄도 굵은 선 */
+    td.expected-label-bold-bottom,
+    th.expected-label-bold-bottom {
+      border-bottom: 2px solid #222 !important;
+    }
+
   </style>
 </head>
 <body>
@@ -447,7 +468,7 @@
         <td colspan="2" class="input-cell"><input class="cell-input" value="" /></td>
       </tr>
 
-      <tr class="h26">
+      <tr class="h26 duration-top-line">
         <td class="fixed" rowspan="2">소요시간</td>
         <td class="fixed bold">출 발</td>
         <td class="input-cell sky-cell"><input class="cell-input bold" value="산행 시간" /></td>
@@ -468,7 +489,7 @@
       </tr>
 
       <tr class="h20 expected-top">
-        <td class="fixed" rowspan="2">예상 시간</td>
+        <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
         <td class="input-cell"><input id="base-time" class="cell-input red key-font-14" value="06:30" /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold key-font-14" value="09:00 ->" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-2" class="cell-input bold key-font-14" value="13:30 ->" readonly /></td>
@@ -477,7 +498,7 @@
         <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold key-font-14" value="16:00 ->" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold key-font-14" value="17:00 ->" readonly /></td>
       </tr>
-      <tr class="h20 expected-bottom">
+      <tr class="h20 expected-bottom expected-bottom-bold-line">
         <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input key-font-14" value="09:00" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold key-font-14" value="13:30" readonly /></td>
         <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input key-font-14" value="14:20" readonly /></td>
