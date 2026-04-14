@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" id="dynamic-viewport" content="width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
+  <meta name="viewport" content="width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
       width: 100%;
       min-height: 100%;
-      overflow: visible;
+      overflow: auto;
     }
     body {
       margin: 0;
@@ -17,11 +17,13 @@
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
       background: #ffffff;
       color: #111;
-      touch-action: pinch-zoom;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
       overscroll-behavior: auto;
+      touch-action: manipulation;
     }
     .sheet {
-      width: 1254px;
+      width: 1045px;
       margin: 0 auto;
       transform-origin: top left;
     }
@@ -30,8 +32,8 @@
       max-width: 100%;
       max-height: none;
       overflow: visible;
-      touch-action: pinch-zoom;
       overscroll-behavior: auto;
+      touch-action: auto;
     }
 
     .title-bar {
@@ -279,19 +281,15 @@
     .capture-render.bold { font-weight: 700; }
     .capture-render.red { color: #c51616; font-weight: 700; }
     .capture-render.blue { color: #203fd8; font-weight: 700; }
-    @media (max-width: 1320px) {
+    @media (max-width: 1100px) {
       body { padding: 6px; }
-      .sheet { width: 1254px; }
-      table.plan { min-width: 1254px; }
+      .sheet { width: 1045px; }
+      table.plan { min-width: 1045px; }
     }
 
     @media (orientation: landscape) and (max-width: 1024px) {
       body {
         padding: 4px;
-        overflow: auto;
-      }
-      .mobile-fit-wrap {
-        overflow: auto;
       }
     }
     @media (max-width: 1024px) {
@@ -300,17 +298,12 @@
       }
       body {
         -webkit-overflow-scrolling: touch;
-        touch-action: pan-x pan-y pinch-zoom;
       }
       .mobile-fit-wrap {
-        max-height: 100vh;
-        overflow-x: auto;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        touch-action: pan-x pan-y pinch-zoom;
-        overscroll-behavior: contain;
+        overflow: visible;
+        max-height: none;
       }
-}
+    }
     @media (max-width: 768px) {
       body { padding: 8px; }
       .title-bar {
@@ -373,7 +366,7 @@
   </style>
 </head>
 <body>
-  <!-- mobile-zoom-enabled / both-axis-scroll-enabled -->
+  <!-- free-pan-zoom-enabled -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
@@ -675,29 +668,13 @@
       if (el) el.addEventListener('input', updateGimbapTotals);
     });
 
-    function updateDynamicViewport() {
-      const viewportMeta = document.getElementById('dynamic-viewport');
-      const wrap = document.getElementById('mobile-fit-wrap');
+    function initializeFreePanZoomLayout() {
       const sheet = document.getElementById('capture-area');
-      if (!viewportMeta || !wrap || !sheet) return;
-
+      if (!sheet) return;
       sheet.style.transform = 'none';
       sheet.style.margin = '0 auto';
-      wrap.classList.remove('landscape-fit');
-      const isMobile = window.matchMedia('(max-width: 1024px)').matches;
-      wrap.style.width = '100%';
-      wrap.style.height = isMobile ? '100vh' : 'auto';
-      wrap.style.overflowX = isMobile ? 'auto' : 'visible';
-      wrap.style.overflowY = isMobile ? 'auto' : 'visible';
-      document.documentElement.style.overflow = isMobile ? 'auto' : 'visible';
-      document.body.style.overflow = isMobile ? 'auto' : 'visible';
-      document.body.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
-      wrap.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
-
-      viewportMeta.setAttribute(
-        'content',
-        'width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
-      );
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
     }
 
     bindAmountFormatting();
@@ -776,10 +753,7 @@
     }
 
 
-    updateDynamicViewport();
-    window.addEventListener('resize', updateDynamicViewport);
-    window.addEventListener('orientationchange', updateDynamicViewport);
-    window.addEventListener('load', updateDynamicViewport);
+    initializeFreePanZoomLayout();
 
     function autoResizeTextarea(el) {
       if (!el) return;
@@ -962,7 +936,7 @@ function resizeAllTextareas(root = document) {
     });
     resizeAllTextareas(document);
     alignMountainNameCenter();
-    updateDynamicViewport();
+    initializeFreePanZoomLayout();
     window.addEventListener('resize', alignMountainNameCenter);
     window.addEventListener('load', alignMountainNameCenter);
 
