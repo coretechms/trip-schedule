@@ -22,14 +22,15 @@
     }
     .sheet {
       width: 1045px;
-      margin: 0;
+      margin: 0 auto;
       transform-origin: top left;
     }
     .mobile-fit-wrap {
       width: 100%;
       max-width: 100%;
-      overflow: auto;
-      touch-action: pan-x pan-y pinch-zoom;
+      max-height: none;
+      overflow: visible;
+      touch-action: pinch-zoom;
       overscroll-behavior: auto;
     }
 
@@ -309,8 +310,7 @@
         touch-action: pan-x pan-y pinch-zoom;
         overscroll-behavior: contain;
       }
-
-    }
+}
     @media (max-width: 768px) {
       body { padding: 8px; }
       .title-bar {
@@ -373,7 +373,7 @@
   </style>
 </head>
 <body>
-  <!-- free-zoom-pan-enabled / file-made-scrollbars-removed -->
+  <!-- mobile-zoom-enabled / both-axis-scroll-enabled -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
@@ -681,29 +681,22 @@
       const sheet = document.getElementById('capture-area');
       if (!viewportMeta || !wrap || !sheet) return;
 
-      const isMobile = window.matchMedia('(max-width: 1024px)').matches;
-
-      sheet.style.width = '1045px';
       sheet.style.transform = 'none';
-      sheet.style.margin = '0';
-
+      sheet.style.margin = '0 auto';
+      wrap.classList.remove('landscape-fit');
+      const isMobile = window.matchMedia('(max-width: 1024px)').matches;
       wrap.style.width = '100%';
       wrap.style.height = isMobile ? '100vh' : 'auto';
-      wrap.style.minHeight = '';
-      wrap.style.maxHeight = isMobile ? '100vh' : 'none';
-      wrap.style.overflowX = 'auto';
-      wrap.style.overflowY = 'auto';
-      wrap.style.touchAction = 'pan-x pan-y pinch-zoom';
-      wrap.style.webkitOverflowScrolling = 'touch';
-      wrap.style.overscrollBehavior = 'contain';
-
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
-      document.body.style.touchAction = 'pan-x pan-y pinch-zoom';
+      wrap.style.overflowX = isMobile ? 'auto' : 'visible';
+      wrap.style.overflowY = isMobile ? 'auto' : 'visible';
+      document.documentElement.style.overflow = isMobile ? 'auto' : 'visible';
+      document.body.style.overflow = isMobile ? 'auto' : 'visible';
+      document.body.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
+      wrap.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
 
       viewportMeta.setAttribute(
         'content',
-        'width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
+        'width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
       );
     }
 
