@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes" />
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
@@ -16,7 +16,13 @@
     .sheet {
       width: 1045px;
       margin: 0 auto;
+      transform-origin: top left;
     }
+    .mobile-fit-wrap {
+      width: 100%;
+      overflow: visible;
+    }
+
     .title-bar {
       display: flex;
       align-items: center;
@@ -43,13 +49,6 @@
       cursor: pointer;
       line-height: 1.2;
       white-space: nowrap;
-    }
-
-    .action-buttons {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
     }
     .capture-btn:hover {
       filter: brightness(1.05);
@@ -191,7 +190,6 @@
     }
   
     .firebase-panel {
-      display: none;
       margin: 10px 0 14px;
       padding: 10px 12px;
       border: 1px solid #cfd8ff;
@@ -216,16 +214,17 @@
   </style>
 </head>
 <body>
-  <div class="sheet" id="capture-area">
+  <div class="mobile-fit-wrap" id="mobile-fit-wrap">
+    <div class="sheet" id="capture-area">
     <div class="title-bar">
       <div class="title">정기산행 계획</div>
-      <div class="action-buttons">
-        <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
-      </div>
+      <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
     </div>
-    <div class="firebase-panel">
-      <div class="firebase-title">Firebase 저장 상태</div>
-      <div id="firebase-status" class="firebase-status">Firebase 연결 및 자동저장 준비 중...</div>
+
+    <div class="firebase-panel" id="firebase-panel">
+      <div class="firebase-title">실시간 동기화 상태</div>
+      <div>이 문서는 Firebase Realtime Database와 연결되면 입력 내용이 자동 저장되고 다른 화면에도 즉시 반영됩니다.</div>
+      <div class="firebase-status" id="firebase-status">Firebase 연결 준비 중...</div>
     </div>
 
     <table class="plan">
@@ -385,6 +384,7 @@
         <td class="input-cell calc-cell"><input id="gimbap-total" class="cell-input bold" value="  원" readonly /></td>
       </tr>
     </table>
+    </div>
   </div>
   <script>
     function parseDuration(text) {
@@ -489,8 +489,29 @@
       if (el) el.addEventListener('input', updateGimbapTotals);
     });
 
+    function applyMobileInitialFit() {
+      const wrap = document.getElementById('mobile-fit-wrap');
+      const sheet = document.getElementById('capture-area');
+      if (!wrap || !sheet) return;
+
+      const mobileWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      if (mobileWidth <= 768) {
+        const horizontalPadding = 16;
+        const availableWidth = Math.max(mobileWidth - horizontalPadding, 280);
+        const baseWidth = 1045;
+        const scale = Math.min(1, availableWidth / baseWidth);
+        sheet.style.transform = `scale(${scale})`;
+        wrap.style.height = `${Math.ceil(sheet.offsetHeight * scale)}px`;
+      } else {
+        sheet.style.transform = 'scale(1)';
+        wrap.style.height = 'auto';
+      }
+    }
+
     updateExpectedTimes();
     updateGimbapTotals();
+    applyMobileInitialFit();
+    window.addEventListener('resize', applyMobileInitialFit);
     async function capturePlan() {
       const target = document.getElementById('capture-area');
       const button = document.getElementById('capture-button');
@@ -526,278 +547,130 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-    import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDatabase, ref, set, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-   const firebaseConfig = {
-  apiKey: "AIzaSyAmp9G9ZZ-CzK5LqR-b66U1wBRmUrp8W_c",
-  authDomain: "trip-schedule-52faf.firebaseapp.com",
-  projectId: "trip-schedule-52faf",
-  storageBucket: "trip-schedule-52faf.firebasestorage.app",
-  messagingSenderId: "937582511238",
-  appId: "1:937582511238:web:72e16b57e9f622e15a7d07"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyAyhe5GGDNlPrOMXQYCeKzJYZeTw3VHIKo",
+      authDomain: "trip-schedule-754f4.firebaseapp.com",
+      databaseURL: "https://trip-schedule-754f4-default-rtdb.firebaseio.com",
+      projectId: "trip-schedule-754f4",
+      storageBucket: "trip-schedule-754f4.firebasestorage.app",
+      messagingSenderId: "955421835998",
+      appId: "1:955421835998:web:14219864c96fa4d32d384f"
+    };
 
     const statusEl = document.getElementById('firebase-status');
+    const SYNC_PATH = 'tripSchedule/sharedPlan';
+    let db = null;
+    let applyingRemote = false;
+    let saveTimer = null;
 
-    function setFirebaseStatus(message, ok = false) {
+    function setFirebaseStatus(message, ok) {
       if (!statusEl) return;
       statusEl.textContent = message;
-      statusEl.style.color = ok ? '#0b7a28' : '#1737c9';
+      statusEl.style.color = ok ? '#0b7a28' : '#b42318';
     }
 
     function hasRealFirebaseConfig(config) {
-      return config && config.apiKey && config.projectId && config.appId;
+      return !!(
+        config &&
+        config.apiKey &&
+        config.authDomain &&
+        config.databaseURL &&
+        config.projectId &&
+        config.appId
+      );
+    }
+
+    function getEditableFields() {
+      return Array.from(document.querySelectorAll('input.cell-input, textarea.cell-input'))
+        .filter((el) => !el.readOnly && !el.disabled);
+    }
+
+    function ensureSyncKeys() {
+      getEditableFields().forEach((el, index) => {
+        if (!el.dataset.syncKey) {
+          el.dataset.syncKey = el.id ? `id:${el.id}` : `field:${index}`;
+        }
+      });
     }
 
     function collectFormData() {
-      const values = {};
-      document.querySelectorAll('.plan input, .plan textarea').forEach((el, index) => {
-        const key = el.id || `field_${index}`;
-        values[key] = el.value;
+      const data = {};
+      getEditableFields().forEach((el) => {
+        data[el.dataset.syncKey] = el.value;
       });
-      return values;
+      return data;
     }
 
-    function applyFormData(values) {
-      document.querySelectorAll('.plan input, .plan textarea').forEach((el, index) => {
-        const key = el.id || `field_${index}`;
-        if (Object.prototype.hasOwnProperty.call(values, key)) {
-          el.value = values[key];
+    function applyFormData(data) {
+      if (!data || typeof data !== 'object') return;
+      applyingRemote = true;
+      ensureSyncKeys();
+      getEditableFields().forEach((el) => {
+        const key = el.dataset.syncKey;
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          el.value = data[key];
         }
       });
+      applyingRemote = false;
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
     }
 
-    let db = null;
-    let autoSaveTimer = null;
-    let autoSavePending = false;
-    let autoSaveInFlight = false;
-    let suppressAutoSave = false;
-    let remoteListenerStarted = false;
-    let lastSavedJson = '';
-    let lastRemoteJson = '';
-    let lastLoadedAt = null;
-    const clientId = (() => {
-      const key = 'tripScheduleClientId';
-      let value = localStorage.getItem(key);
-      if (!value) {
-        value = 'client-' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem(key, value);
-      }
-      return value;
-    })();
-
-    const LOCAL_DRAFT_KEY = 'tripScheduleDraftMainPlan';
-    const LOCAL_DRAFT_TIME_KEY = 'tripScheduleDraftMainPlanUpdatedAt';
-
-
-    function saveLocalDraft(values) {
+    async function saveFormData() {
+      if (!db || applyingRemote) return;
       try {
-        localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(values));
-        localStorage.setItem(LOCAL_DRAFT_TIME_KEY, String(Date.now()));
-      } catch (error) {
-        console.warn('local draft save skipped:', error);
-      }
-    }
-
-    function loadLocalDraft() {
-      try {
-        const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
-        if (!raw) return null;
-        const values = JSON.parse(raw);
-        if (!values || typeof values !== 'object') return null;
-        return {
-          values,
-          updatedAtMs: Number(localStorage.getItem(LOCAL_DRAFT_TIME_KEY) || 0)
+        const payload = {
+          formData: collectFormData(),
+          updatedAt: serverTimestamp()
         };
+        await set(ref(db, SYNC_PATH), payload);
+        setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 완료', true);
       } catch (error) {
-        console.warn('local draft load failed:', error);
-        return null;
+        console.error(error);
+        setFirebaseStatus('자동 저장 실패: 데이터베이스 주소 또는 규칙을 확인하세요.', false);
       }
     }
 
-    function persistLocalSnapshot() {
-      saveLocalDraft(collectFormData());
+    function scheduleSave() {
+      if (applyingRemote) return;
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(saveFormData, 250);
     }
 
-    function getEditableFields() {
-      return Array.from(document.querySelectorAll('.plan input, .plan textarea')).filter((el) => !el.readOnly && !el.disabled);
-    }
+    function bindRealtimeSync() {
+      ensureSyncKeys();
 
-    function focusNextEmptyField(currentEl) {
-      const fields = getEditableFields();
-      const currentIndex = fields.indexOf(currentEl);
-      if (currentIndex === -1) return;
+      getEditableFields().forEach((el) => {
+        el.addEventListener('input', scheduleSave);
+        el.addEventListener('change', scheduleSave);
+      });
 
-      const after = fields.slice(currentIndex + 1);
-      const before = fields.slice(0, currentIndex + 1);
-      const emptyField = after.find((el) => !String(el.value || '').trim()) || before.find((el) => !String(el.value || '').trim());
-      const target = emptyField || after[0] || before[0];
-      if (!target || target === currentEl) return;
-      target.focus();
-      if (typeof target.select === 'function') target.select();
-    }
-
-    async function savePlanAuto() {
-      if (!db) {
-        setFirebaseStatus('실시간저장 대기 중: Firebase 또는 Firestore 연결 안됨');
-        return;
-      }
-      if (suppressAutoSave) {
-        return;
-      }
-
-      const values = collectFormData();
-      saveLocalDraft(values);
-      const payloadJson = JSON.stringify(values);
-      if (payloadJson === lastSavedJson && payloadJson === lastRemoteJson) {
-        setFirebaseStatus(remoteListenerStarted ? '실시간 동기화 연결됨' : '실시간저장 대기 중', true);
-        return;
-      }
-
-      autoSaveInFlight = true;
-      setFirebaseStatus('실시간 저장 중...', false);
-      try {
-        await setDoc(doc(db, 'tripPlans', 'mainPlan'), {
-          values,
-          updatedAt: serverTimestamp(),
-          updatedBy: clientId,
-          pageTitle: document.title,
-          saveMode: 'realtime'
-        }, { merge: true });
-        lastSavedJson = payloadJson;
-        setFirebaseStatus('실시간 저장 완료', true);
-      } catch (error) {
-        console.error('savePlanAuto error:', error);
-        setFirebaseStatus('실시간 저장 실패: Firestore 규칙 또는 설정 확인 필요');
-      } finally {
-        autoSaveInFlight = false;
-        if (autoSavePending) {
-          autoSavePending = false;
-          queueAutoSave(250);
-        }
-      }
-    }
-
-    function queueAutoSave(delay = 350) {
-      if (suppressAutoSave) return;
-      persistLocalSnapshot();
-      if (autoSaveInFlight) {
-        autoSavePending = true;
-        return;
-      }
-      window.clearTimeout(autoSaveTimer);
-      setFirebaseStatus('입력됨 · 실시간 저장 대기 중...', false);
-      autoSaveTimer = window.setTimeout(savePlanAuto, delay);
-    }
-
-    function startRealtimeSync() {
-      if (!db) {
-        setFirebaseStatus('실시간 동기화 실패: Firebase 또는 Firestore 연결 안됨');
-        return;
-      }
-
-      onSnapshot(doc(db, 'tripPlans', 'mainPlan'), (snap) => {
-        remoteListenerStarted = true;
-        const localDraft = loadLocalDraft();
-        if (!snap.exists()) {
-          if (localDraft && localDraft.values) {
-            suppressAutoSave = true;
-            applyFormData(localDraft.values);
-            suppressAutoSave = false;
-            lastSavedJson = JSON.stringify(collectFormData());
-            lastRemoteJson = lastSavedJson;
-            setFirebaseStatus('기기 임시저장 내용 복구됨 · 서버 저장 대기 중', true);
-            queueAutoSave(50);
-            return;
-          }
-          lastSavedJson = JSON.stringify(collectFormData());
-          lastRemoteJson = lastSavedJson;
-          setFirebaseStatus('저장된 내용 없음 · 실시간 동기화 사용 중', true);
-          return;
-        }
-
-        const data = snap.data() || {};
-        const values = data.values || {};
-        const incomingJson = JSON.stringify(values);
-        const currentJson = JSON.stringify(collectFormData());
-        const remoteUpdatedAtMs = data.updatedAt && typeof data.updatedAt.toMillis === 'function' ? data.updatedAt.toMillis() : 0;
-
-        lastRemoteJson = incomingJson;
-        lastLoadedAt = new Date();
-
-        let valuesToApply = values;
-        let useLocalDraft = false;
-        if (localDraft && localDraft.values) {
-          const localJson = JSON.stringify(localDraft.values);
-          if (localJson !== incomingJson && localDraft.updatedAtMs > remoteUpdatedAtMs) {
-            valuesToApply = localDraft.values;
-            useLocalDraft = true;
-            lastRemoteJson = localJson;
-          }
-        }
-
-        const targetJson = JSON.stringify(valuesToApply);
-        if (targetJson !== currentJson) {
-          suppressAutoSave = true;
-          applyFormData(valuesToApply);
-          suppressAutoSave = false;
-        }
-
-        lastSavedJson = JSON.stringify(collectFormData());
-        saveLocalDraft(collectFormData());
-
-        if (useLocalDraft) {
-          setFirebaseStatus('기기 임시저장 내용 복구됨 · 서버와 다시 동기화 중', true);
-          queueAutoSave(50);
-        } else if (data.updatedBy && data.updatedBy !== clientId) {
-          setFirebaseStatus('다른 기기 변경 내용 실시간 반영됨', true);
+      onValue(ref(db, SYNC_PATH), (snapshot) => {
+        const value = snapshot.val();
+        if (value && value.formData) {
+          applyFormData(value.formData);
+          setFirebaseStatus('실시간 동기화 연결됨 · 다른 화면 변경도 반영 중', true);
         } else {
-          setFirebaseStatus('실시간 동기화 연결됨', true);
+          setFirebaseStatus('실시간 동기화 연결됨 · 새 문서 상태', true);
+          saveFormData();
         }
       }, (error) => {
-        console.error('startRealtimeSync error:', error);
-        setFirebaseStatus('실시간 동기화 실패: Firestore 규칙 또는 설정 확인 필요');
+        console.error(error);
+        setFirebaseStatus('실시간 수신 실패: 데이터베이스 규칙 또는 주소를 확인하세요.', false);
       });
     }
 
-
-    function flushBeforeLeave() {
-      persistLocalSnapshot();
-      window.clearTimeout(autoSaveTimer);
-      queueAutoSave(0);
-    }
-
-    function bindLifecycleSave() {
-      window.addEventListener('pagehide', flushBeforeLeave);
-      window.addEventListener('beforeunload', flushBeforeLeave);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-          flushBeforeLeave();
-        }
-      });
-    }
-
-    function bindAutoSaveEvents() {
-      getEditableFields().forEach((el) => {
-        el.addEventListener('input', () => queueAutoSave(350));
-        el.addEventListener('change', () => queueAutoSave(150));
-        el.addEventListener('blur', () => queueAutoSave(100));
-        el.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-            event.preventDefault();
-            focusNextEmptyField(el);
-          }
-        });
-      });
-    }
+    window.firebaseAppReady = null;
 
     if (hasRealFirebaseConfig(firebaseConfig)) {
       try {
         const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
+        db = getDatabase(app);
+        window.firebaseAppReady = app;
         setFirebaseStatus(`Firebase 연결 완료: ${firebaseConfig.projectId}`, true);
+        bindRealtimeSync();
 
         try {
           const supported = await analyticsSupported();
@@ -807,24 +680,12 @@
         } catch (analyticsError) {
           console.warn('Analytics 초기화 건너뜀', analyticsError);
         }
-
-        bindAutoSaveEvents();
-        bindLifecycleSave();
-        const bootLocalDraft = loadLocalDraft();
-        if (bootLocalDraft && bootLocalDraft.values) {
-          suppressAutoSave = true;
-          applyFormData(bootLocalDraft.values);
-          suppressAutoSave = false;
-          lastSavedJson = JSON.stringify(collectFormData());
-          setFirebaseStatus('기기 임시저장 불러오는 중...', true);
-        }
-        startRealtimeSync();
       } catch (error) {
-        console.error('firebase init error:', error);
-        setFirebaseStatus('Firebase 초기화 오류: 등록 코드 또는 Firestore 설정 확인');
+        console.error(error);
+        setFirebaseStatus('Firebase 초기화 오류: 등록 코드 또는 databaseURL을 다시 확인하세요.', false);
       }
     } else {
-      setFirebaseStatus('Firebase 등록 코드가 비어 있습니다.');
+      setFirebaseStatus('Firebase 설정값이 비어 있습니다.', false);
     }
   </script>
 
