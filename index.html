@@ -6,6 +6,11 @@
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      overflow: auto;
+    }
     body {
       margin: 0;
       padding: 10px;
@@ -14,6 +19,7 @@
       color: #111;
       touch-action: pan-x pan-y pinch-zoom;
       overscroll-behavior: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .sheet {
       width: 1045px;
@@ -22,8 +28,10 @@
     }
     .mobile-fit-wrap {
       width: 100%;
+      max-width: 100%;
+      max-height: 100vh;
       overflow-x: auto;
-      overflow-y: visible;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x pan-y pinch-zoom;
       overscroll-behavior: contain;
@@ -351,7 +359,7 @@
   </style>
 </head>
 <body>
-  <!-- mobile-zoom-enabled -->
+  <!-- mobile-zoom-enabled / both-axis-scroll-enabled -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
@@ -665,7 +673,8 @@
       wrap.style.width = '100%';
       wrap.style.height = 'auto';
       wrap.style.overflowX = 'auto';
-      wrap.style.overflowY = 'visible';
+      wrap.style.overflowY = 'auto';
+      document.documentElement.style.overflow = 'auto';
       document.body.style.overflow = 'auto';
 
       viewportMeta.setAttribute(
