@@ -280,6 +280,7 @@
       body {
         padding: 4px;
         overflow: auto;
+        touch-action: pan-x pan-y;
       }
       .mobile-fit-wrap.landscape-fit {
         overflow: visible;
@@ -670,9 +671,20 @@
 
       let initialScale = 1;
       if (isMobileLike) {
-        initialScale = 0.25;
         if (isLandscape) {
+          const naturalWidth = 1045;
+          const naturalHeight = Math.ceil(sheet.scrollHeight || sheet.offsetHeight || 0);
+          const availableWidth = Math.max(viewportWidth - 8, 280);
+          const availableHeight = Math.max(viewportHeight - 8, 200);
+
+          initialScale = Math.min(
+            1,
+            availableWidth / naturalWidth,
+            naturalHeight > 0 ? availableHeight / naturalHeight : 1
+          );
           wrap.classList.add('landscape-fit');
+        } else {
+          initialScale = 0.25;
         }
       }
 
