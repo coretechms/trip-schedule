@@ -12,6 +12,8 @@
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
       background: #ffffff;
       color: #111;
+      touch-action: pan-x pan-y pinch-zoom;
+      overscroll-behavior: auto;
     }
     .sheet {
       width: 1045px;
@@ -23,6 +25,7 @@
       overflow-x: auto;
       overflow-y: visible;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y pinch-zoom;
     }
 
     .title-bar {
@@ -276,11 +279,24 @@
       table.plan { min-width: 1045px; }
     }
 
+    @media (orientation: portrait) and (max-width: 1024px) {
+      html,
+      body,
+      .mobile-fit-wrap {
+        touch-action: pan-x pan-y pinch-zoom;
+      }
+      body {
+        overflow: auto;
+      }
+      .mobile-fit-wrap {
+        overflow: auto;
+      }
+    }
+
     @media (orientation: landscape) and (max-width: 1024px) {
       body {
         padding: 4px;
         overflow: auto;
-        touch-action: pan-x pan-y;
       }
       .mobile-fit-wrap.landscape-fit {
         overflow: visible;
@@ -670,28 +686,27 @@
       document.body.style.overflow = '';
 
       let initialScale = 1;
-      if (isMobileLike) {
-        if (isLandscape) {
-          const naturalWidth = 1045;
-          const naturalHeight = Math.ceil(sheet.scrollHeight || sheet.offsetHeight || 0);
-          const availableWidth = Math.max(viewportWidth - 8, 280);
-          const availableHeight = Math.max(viewportHeight - 8, 200);
+      if (isLandscape && isMobileLike) {
+        const naturalWidth = 1045;
+        const naturalHeight = Math.ceil(sheet.scrollHeight || sheet.offsetHeight || 0);
+        const availableWidth = Math.max(viewportWidth - 8, 280);
+        const availableHeight = Math.max(viewportHeight - 8, 200);
 
-          initialScale = Math.min(
-            1,
-            availableWidth / naturalWidth,
-            naturalHeight > 0 ? availableHeight / naturalHeight : 1
-          );
-          wrap.classList.add('landscape-fit');
-        } else {
-          initialScale = 0.25;
-        }
+        initialScale = Math.min(
+          1,
+          availableWidth / naturalWidth,
+          naturalHeight > 0 ? availableHeight / naturalHeight : 1
+        );
+
+        wrap.classList.add('landscape-fit');
       }
 
-      const clampedScale = Math.max(0.25, Math.min(initialScale, 1));
+      const minScale = isLandscape && isMobileLike ? 0.25 : 0.5;
+      const maxScale = 10.0;
+      const clampedScale = Math.max(minScale, Math.min(initialScale, 1));
       viewportMeta.setAttribute(
         'content',
-        `width=device-width, initial-scale=${clampedScale.toFixed(3)}, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain`
+        `width=device-width, initial-scale=${clampedScale.toFixed(3)}, minimum-scale=${minScale.toFixed(2)}, maximum-scale=${maxScale.toFixed(1)}, user-scalable=yes, viewport-fit=contain`
       );
     }
 
