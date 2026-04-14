@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes" />
+  <meta name="viewport" id="dynamic-viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
@@ -115,10 +115,11 @@
     .input-cell {
       background: #ffffff !important;
       padding: 0;
+      vertical-align: top;
     }
     .cell-input {
       width: 100%;
-      height: 100%;
+      height: auto;
       min-height: 28px;
       border: 0;
       outline: none;
@@ -145,9 +146,55 @@
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
+      text-align: center;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+    textarea.cell-input.left {
+      text-align: left;
+    }
+
+    .mountain-name-cell {
+      vertical-align: middle !important;
+      padding: 0 !important;
+    }
+    .mountain-name-input {
+      text-align: center !important;
+      overflow: hidden;
+      padding-top: 0;
+      padding-bottom: 0;
     }
     .meal-row .cell-input {
       min-height: 24px;
+    }
+
+    .one-line-autogrow-row textarea.cell-input {
+      min-height: 24px;
+      height: 24px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      line-height: 1.2;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .gimbap-one-line-autogrow-row textarea.cell-input {
+      min-height: 24px;
+      height: 24px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      line-height: 1.2;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .two-line-cell textarea.cell-input {
+      min-height: 42px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      line-height: 1.15;
     }
     .gray { color: #111; }
     .amount { font-size: 14px; font-weight: 700; }
@@ -157,8 +204,8 @@
     .h20 td { height: 20px; }
     .h22 td { height: 22px; }
     .h26 td { height: 26px; }
-    .h30 td { height: 30px; }
-    .h38 td { height: 38px; }
+    .h30 td { min-height: 30px; height: auto; }
+    .h38 td { min-height: 38px; height: auto; }
     .h50 td { height: 50px; }
     .h58 td { height: 58px; }
     .h62 td { height: 62px; }
@@ -217,13 +264,11 @@
     @media (orientation: landscape) and (max-width: 1024px) {
       body {
         padding: 4px;
-        overflow: hidden;
+        overflow: auto;
       }
       .mobile-fit-wrap.landscape-fit {
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
+        overflow: visible;
+        display: block;
       }
     }
     @media (max-width: 768px) {
@@ -318,23 +363,26 @@
       </colgroup>
 
       <tr class="h30">
-        <td class="fixed">회 비</td>
-        <td colspan="2" class="input-cell"><input class="cell-input bold amount-input" value=" 원" /></td>
+        <td class="fixed" rowspan="2">회 비</td>
+        <td colspan="2" rowspan="2" class="input-cell"><input class="cell-input bold amount-input" value="" /></td>
         <td colspan="3" class="fixed left">특별 추가회비 :</td>
-        <td class="fixed blue">산행날자</td>
-        <td class="input-cell"><input class="cell-input blue" value=" 월  일" /></td>
+        <td class="fixed blue" rowspan="2">산행날자</td>
+        <td rowspan="2" class="input-cell"><input class="cell-input blue" value=" 월  일" /></td>
+      </tr>
+      <tr class="h30">
+        <td colspan="3" class="input-cell"><input class="cell-input amount-input" value="" /></td>
       </tr>
 
       <tr class="h30">
         <td class="fixed" rowspan="2">산행지</td>
-        <td colspan="2" rowspan="2" class="input-cell"><input class="cell-input red" value=' ' /></td>
+        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell"><textarea class="cell-input red mountain-name-input"> </textarea></td>
         <td colspan="2" class="fixed spaced">주 소</td>
         <td class="fixed gray">입 장 료 / 주차료</td>
         <td class="fixed gray">예 약 제</td>
         <td class="fixed gray">도 선 료 왕복</td>
       </tr>
-      <tr class="h38">
-        <td colspan="2" class="input-cell"><input class="cell-input" value=" " /></td>
+      <tr class="h30">
+        <td colspan="2" class="input-cell"><input class="cell-input left" value="" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
@@ -349,7 +397,7 @@
         <td class="fixed">은 행</td>
         <td colspan="2" class="fixed">계좌번호</td>
       </tr>
-      <tr class="h38">
+      <tr class="h30">
         <td class="input-cell"><input class="cell-input amount-input" /></td>
         <td class="input-cell"><input class="cell-input" value="" /></td>
         <td class="input-cell"><input class="cell-input" value="" /></td>
@@ -408,14 +456,12 @@
         <td class="fixed">주류 반입 :</td>
         <td class="fixed bold">가 능</td>
       </tr>
-      <tr class="h30 meal-row">
-        <td class="input-cell"><input class="cell-input" value=" " /></td>
-        <td class="input-cell"><textarea class="cell-input">
-</textarea></td>
-        <td class="input-cell"><textarea class="cell-input"> </textarea></td>
-        <td class="input-cell"><textarea class="cell-input"> 
- </textarea></td>
-        <td class="input-cell"><input class="cell-input" /></td>
+      <tr class="h30 meal-row one-line-autogrow-row">
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
         <td class="fixed">식당 예약 인원 :</td>
         <td class="input-cell calc-cell"><input id="meal-count" class="cell-input bold" value=" 명" readonly /></td>
       </tr>
@@ -451,13 +497,10 @@
         <td class="fixed">주문수량 :</td>
         <td class="input-cell calc-cell"><input id="gimbap-count" class="cell-input bold" value="  줄" readonly /></td>
       </tr>
-      <tr class="h38">
-        <td colspan="2" class="input-cell"><textarea class="cell-input"> 
- 
- </textarea></td>
-        <td class="input-cell"><textarea class="cell-input"> 
- </textarea></td>
-        <td class="input-cell"><input id="gimbap-price" class="cell-input amount-input" value="  원" /></td>
+      <tr class="h30 gimbap-one-line-autogrow-row">
+        <td colspan="2" class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
+        <td class="input-cell"><input id="gimbap-price" class="cell-input amount-input" value="" /></td>
         <td class="fixed bold">금 액 :</td>
         <td class="input-cell calc-cell"><input id="gimbap-total" class="cell-input bold" value="  원" readonly /></td>
       </tr>
@@ -499,37 +542,26 @@
     }
 
 
-    function formatAmountInputValue(rawValue, suffix) {
-      const hasSuffix = String(rawValue || '').includes(suffix);
-      const digits = String(rawValue || '').replace(/[^\d.-]/g, '');
-      if (!digits || digits === '-' || digits === '.' || digits === '-.') {
-        return hasSuffix ? (' ' + suffix) : '';
-      }
-      const number = Number(digits);
-      if (!Number.isFinite(number)) {
-        return hasSuffix ? (' ' + suffix) : '';
-      }
-      return formatNumber(number) + ' ' + suffix;
-    }
-
     function bindAmountFormatting() {
       const amountFields = Array.from(document.querySelectorAll('input.amount-input'));
       amountFields.forEach((el) => {
-        const suffix = /원/.test(el.value) ? '원' : '';
         el.addEventListener('input', function() {
-          const endDigits = String(el.value || '').replace(/[^\d]/g, '').length;
-          if (suffix) {
-            el.value = formatAmountInputValue(el.value, suffix);
-          } else {
-            const digits = String(el.value || '').replace(/[^\d.-]/g, '');
-            el.value = digits ? formatNumber(Number(digits)) : '';
+          const raw = String(el.value || '');
+          const digits = raw.replace(/[^\d.-]/g, '');
+          if (!digits || digits === '-' || digits === '.' || digits === '-.') {
+            el.value = '';
+            return;
           }
+          const number = Number(digits);
+          el.value = Number.isFinite(number) ? formatNumber(number) : '';
         });
-        if (suffix) {
-          el.value = formatAmountInputValue(el.value, suffix);
+
+        const initialDigits = String(el.value || '').replace(/[^\d.-]/g, '');
+        if (!initialDigits || initialDigits === '-' || initialDigits === '.' || initialDigits === '-.') {
+          el.value = '';
         } else {
-          const digits = String(el.value || '').replace(/[^\d.-]/g, '');
-          el.value = digits ? formatNumber(Number(digits)) : '';
+          const number = Number(initialDigits);
+          el.value = Number.isFinite(number) ? formatNumber(number) : '';
         }
       });
     }
@@ -603,44 +635,99 @@
       if (el) el.addEventListener('input', updateGimbapTotals);
     });
 
-    function applyLandscapeFit() {
+    function updateDynamicViewport() {
+      const viewportMeta = document.getElementById('dynamic-viewport');
       const wrap = document.getElementById('mobile-fit-wrap');
       const sheet = document.getElementById('capture-area');
-      if (!wrap || !sheet) return;
+      if (!viewportMeta || !wrap || !sheet) return;
 
-      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
       const isMobileLike = Math.min(viewportWidth, viewportHeight) <= 1024;
 
-      sheet.style.transform = 'scale(1)';
+      sheet.style.transform = 'none';
       sheet.style.margin = '0 auto';
       wrap.classList.remove('landscape-fit');
       wrap.style.width = '100%';
       wrap.style.height = 'auto';
+      document.body.style.overflow = '';
 
-      if (!(isLandscape && isMobileLike)) {
-        document.body.style.overflow = '';
-        return;
+      let initialScale = 1;
+      if (isLandscape && isMobileLike) {
+        const naturalWidth = 1045;
+        const naturalHeight = Math.ceil(sheet.scrollHeight || sheet.offsetHeight || 0);
+        const availableWidth = Math.max(viewportWidth - 8, 280);
+        const availableHeight = Math.max(viewportHeight - 8, 200);
+
+        initialScale = Math.min(
+          1,
+          availableWidth / naturalWidth,
+          naturalHeight > 0 ? availableHeight / naturalHeight : 1
+        );
+
+        wrap.classList.add('landscape-fit');
       }
 
-      const rect = sheet.getBoundingClientRect();
-      const naturalWidth = 1045;
-      const naturalHeight = Math.ceil(rect.height);
-      const availableWidth = Math.max(viewportWidth - 8, 280);
-      const availableHeight = Math.max(viewportHeight - 8, 200);
-      const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
-
-      wrap.classList.add('landscape-fit');
-      wrap.style.width = `${Math.floor(naturalWidth * scale)}px`;
-      wrap.style.height = `${Math.floor(naturalHeight * scale)}px`;
-      sheet.style.transform = `scale(${scale})`;
-      document.body.style.overflow = 'hidden';
+      const clampedScale = Math.max(0.25, Math.min(initialScale, 1));
+      viewportMeta.setAttribute(
+        'content',
+        `width=device-width, initial-scale=${clampedScale.toFixed(3)}, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain`
+      );
     }
 
     bindAmountFormatting();
     updateExpectedTimes();
     updateGimbapTotals();
+    bindClearOnFirstInput();
+
+
+    function shouldAutoClearField(el) {
+      if (!el || el.readOnly || el.disabled) return false;
+      if (!el.matches('input.cell-input, textarea.cell-input')) return false;
+      const initialValue = el.dataset.initialValue ?? '';
+      const currentValue = el.value ?? '';
+      if (el.dataset.userEdited === 'true') return false;
+      if (el.dataset.autoCleared === 'true') return false;
+      if (!initialValue.length) return false;
+      return currentValue === initialValue;
+    }
+
+    function autoClearField(el) {
+      if (!shouldAutoClearField(el)) return;
+      el.value = '';
+      el.dataset.autoCleared = 'true';
+      if (typeof autoResizeTextarea === 'function' && el.tagName === 'TEXTAREA') {
+        autoResizeTextarea(el);
+      }
+    }
+
+    function bindClearOnFirstInput() {
+      const fields = Array.from(document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])'));
+      fields.forEach((el) => {
+        if (el.dataset.clearBindingApplied === 'true') return;
+        el.dataset.clearBindingApplied = 'true';
+        el.dataset.initialValue = el.value ?? '';
+        el.dataset.userEdited = 'false';
+        el.dataset.autoCleared = 'false';
+
+        el.addEventListener('focus', function() {
+          autoClearField(el);
+        });
+
+        el.addEventListener('pointerdown', function() {
+          autoClearField(el);
+        }, { passive: true });
+
+        el.addEventListener('input', function() {
+          const initialValue = el.dataset.initialValue ?? '';
+          el.dataset.userEdited = (el.value !== initialValue) ? 'true' : 'false';
+          if (el.value === initialValue) {
+            el.dataset.autoCleared = 'false';
+          }
+        });
+      });
+    }
 
     function isLikelyDesktop() {
       return window.matchMedia('(hover: hover) and (pointer: fine)').matches && window.innerWidth > 768;
@@ -679,14 +766,24 @@
     }, true);
 
 
-    applyLandscapeFit();
-    window.addEventListener('resize', applyLandscapeFit);
-    window.addEventListener('orientationchange', applyLandscapeFit);
+    updateDynamicViewport();
+    window.addEventListener('resize', updateDynamicViewport);
+    window.addEventListener('orientationchange', updateDynamicViewport);
+    window.addEventListener('load', updateDynamicViewport);
 
     function autoResizeTextarea(el) {
       if (!el) return;
+      const minHeight = Number(el.dataset.minHeight || 30);
       el.style.height = 'auto';
-      el.style.height = Math.max(el.scrollHeight, 30) + 'px';
+      el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
+      const td = el.closest('td');
+      if (td) {
+        td.style.height = 'auto';
+      }
+      const tr = el.closest('tr');
+      if (tr) {
+        tr.style.height = 'auto';
+      }
     }
 
     function expandCellsForCapture(target) {
@@ -728,8 +825,31 @@
       };
     }
 
+    function alignMountainNameCenter() {
+      const el = document.querySelector('.mountain-name-input');
+      const td = document.querySelector('.mountain-name-cell');
+      if (!el || !td) return;
 
-    function buildCaptureClone(target) {
+      el.style.paddingTop = '0px';
+      el.style.paddingBottom = '0px';
+
+      const tdHeight = td.clientHeight || 0;
+      const contentHeight = el.scrollHeight || 0;
+      const extraSpace = Math.max(tdHeight - contentHeight, 0);
+      const topPad = Math.floor(extraSpace / 2);
+      const bottomPad = Math.max(extraSpace - topPad, 0);
+
+      el.style.paddingTop = topPad + 'px';
+      el.style.paddingBottom = bottomPad + 'px';
+      el.style.textAlign = 'center';
+    }
+
+
+function resizeAllTextareas(root = document) {
+      root.querySelectorAll('textarea.cell-input').forEach((el) => autoResizeTextarea(el));
+    }
+
+        function buildCaptureClone(target) {
       const clone = target.cloneNode(true);
       clone.id = 'capture-clone-' + Date.now();
       clone.style.position = 'fixed';
@@ -819,8 +939,18 @@
       autoResizeTextarea(el);
       el.addEventListener('input', function() {
         autoResizeTextarea(el);
+        alignMountainNameCenter();
+      });
+      el.addEventListener('change', function() {
+        autoResizeTextarea(el);
+        alignMountainNameCenter();
       });
     });
+    resizeAllTextareas(document);
+    alignMountainNameCenter();
+    updateDynamicViewport();
+    window.addEventListener('resize', alignMountainNameCenter);
+    window.addEventListener('load', alignMountainNameCenter);
 
     const captureButton = document.getElementById('capture-button');
     if (captureButton) captureButton.addEventListener('click', capturePlan);
