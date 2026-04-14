@@ -9,7 +9,7 @@
     html, body {
       width: 100%;
       min-height: 100%;
-      overflow: auto;
+      overflow: visible;
     }
     body {
       margin: 0;
@@ -17,9 +17,8 @@
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
       background: #ffffff;
       color: #111;
-      touch-action: pan-x pan-y pinch-zoom;
+      touch-action: pinch-zoom;
       overscroll-behavior: auto;
-      -webkit-overflow-scrolling: touch;
     }
     .sheet {
       width: 1045px;
@@ -29,12 +28,10 @@
     .mobile-fit-wrap {
       width: 100%;
       max-width: 100%;
-      max-height: 100vh;
-      overflow-x: auto;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      touch-action: pan-x pan-y pinch-zoom;
-      overscroll-behavior: contain;
+      max-height: none;
+      overflow: visible;
+      touch-action: pinch-zoom;
+      overscroll-behavior: auto;
     }
 
     .title-bar {
@@ -295,6 +292,34 @@
       }
       .mobile-fit-wrap {
         overflow: auto;
+      }
+    }
+    @media (max-width: 1024px) {
+      html, body {
+        overflow: auto;
+      }
+      body {
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y pinch-zoom;
+      }
+      .mobile-fit-wrap {
+        max-height: 100vh;
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y pinch-zoom;
+        overscroll-behavior: contain;
+      }
+      .mobile-fit-wrap::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      .mobile-fit-wrap::-webkit-scrollbar-thumb {
+        background: rgba(80, 80, 80, 0.65);
+        border-radius: 999px;
+      }
+      .mobile-fit-wrap::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.08);
       }
     }
     @media (max-width: 768px) {
@@ -670,12 +695,15 @@
       sheet.style.transform = 'none';
       sheet.style.margin = '0 auto';
       wrap.classList.remove('landscape-fit');
+      const isMobile = window.matchMedia('(max-width: 1024px)').matches;
       wrap.style.width = '100%';
-      wrap.style.height = 'auto';
-      wrap.style.overflowX = 'auto';
-      wrap.style.overflowY = 'auto';
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
+      wrap.style.height = isMobile ? '100vh' : 'auto';
+      wrap.style.overflowX = isMobile ? 'auto' : 'visible';
+      wrap.style.overflowY = isMobile ? 'auto' : 'visible';
+      document.documentElement.style.overflow = isMobile ? 'auto' : 'visible';
+      document.body.style.overflow = isMobile ? 'auto' : 'visible';
+      document.body.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
+      wrap.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
 
       viewportMeta.setAttribute(
         'content',
