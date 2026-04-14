@@ -24,7 +24,6 @@
       width: 1045px;
       margin: 0;
       transform-origin: top left;
-      will-change: transform;
     }
     .mobile-fit-wrap {
       width: 100%;
@@ -374,7 +373,7 @@
   </style>
 </head>
 <body>
-  <!-- mobile-zoom-enabled / both-axis-scroll-enabled / file-made-scrollbars-removed -->
+  <!-- free-zoom-pan-enabled / file-made-scrollbars-removed -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
@@ -683,24 +682,20 @@
       if (!viewportMeta || !wrap || !sheet) return;
 
       const isMobile = window.matchMedia('(max-width: 1024px)').matches;
-      const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
-      const bodyStyles = window.getComputedStyle(document.body);
-      const horizontalPadding = (parseFloat(bodyStyles.paddingLeft) || 0) + (parseFloat(bodyStyles.paddingRight) || 0);
-      const availableWidth = Math.max(viewportWidth - horizontalPadding, 280);
-      const naturalWidth = 1045;
-      const fitScale = isMobile ? Math.min(1, availableWidth / naturalWidth) : 1;
 
-      sheet.style.width = naturalWidth + 'px';
-      sheet.style.transform = `scale(${fitScale})`;
+      sheet.style.width = '1045px';
+      sheet.style.transform = 'none';
       sheet.style.margin = '0';
 
-      const scaledHeight = (sheet.scrollHeight || sheet.offsetHeight || 0) * fitScale;
       wrap.style.width = '100%';
       wrap.style.height = isMobile ? '100vh' : 'auto';
-      wrap.style.minHeight = scaledHeight > 0 ? Math.ceil(scaledHeight) + 'px' : '';
+      wrap.style.minHeight = '';
+      wrap.style.maxHeight = isMobile ? '100vh' : 'none';
       wrap.style.overflowX = 'auto';
       wrap.style.overflowY = 'auto';
       wrap.style.touchAction = 'pan-x pan-y pinch-zoom';
+      wrap.style.webkitOverflowScrolling = 'touch';
+      wrap.style.overscrollBehavior = 'contain';
 
       document.documentElement.style.overflow = 'auto';
       document.body.style.overflow = 'auto';
