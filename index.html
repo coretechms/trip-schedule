@@ -22,15 +22,15 @@
     }
     .sheet {
       width: 1045px;
-      margin: 0 auto;
+      margin: 0;
       transform-origin: top left;
+      will-change: transform;
     }
     .mobile-fit-wrap {
       width: 100%;
       max-width: 100%;
-      max-height: none;
-      overflow: visible;
-      touch-action: pinch-zoom;
+      overflow: auto;
+      touch-action: pan-x pan-y pinch-zoom;
       overscroll-behavior: auto;
     }
 
@@ -310,17 +310,7 @@
         touch-action: pan-x pan-y pinch-zoom;
         overscroll-behavior: contain;
       }
-      .mobile-fit-wrap::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-      }
-      .mobile-fit-wrap::-webkit-scrollbar-thumb {
-        background: rgba(80, 80, 80, 0.65);
-        border-radius: 999px;
-      }
-      .mobile-fit-wrap::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.08);
-      }
+
     }
     @media (max-width: 768px) {
       body { padding: 8px; }
@@ -358,59 +348,6 @@
       }
     }
   
-
-    .mobile-scrollbar-indicator-x,
-    .mobile-scrollbar-indicator-y {
-      display: none;
-    }
-
-    @media (max-width: 1024px) {
-      .mobile-scrollbar-indicator-x,
-      .mobile-scrollbar-indicator-y {
-        display: block;
-        position: fixed;
-        z-index: 9999;
-        pointer-events: none;
-        opacity: 1;
-      }
-      .mobile-scrollbar-indicator-x {
-        left: 10px;
-        right: 10px;
-        bottom: 8px;
-        height: 10px;
-        border-radius: 999px;
-        background: rgba(0, 0, 0, 0.12);
-      }
-      .mobile-scrollbar-indicator-x .thumb {
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        min-width: 36px;
-        border-radius: 999px;
-        background: rgba(70, 70, 70, 0.78);
-        transform: translateX(0);
-      }
-      .mobile-scrollbar-indicator-y {
-        top: 10px;
-        right: 8px;
-        bottom: 28px;
-        width: 10px;
-        border-radius: 999px;
-        background: rgba(0, 0, 0, 0.12);
-      }
-      .mobile-scrollbar-indicator-y .thumb {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        min-height: 36px;
-        border-radius: 999px;
-        background: rgba(70, 70, 70, 0.78);
-        transform: translateY(0);
-      }
-    }
-
     .firebase-panel {
       display: none !important;
       margin: 10px 0 14px;
@@ -437,7 +374,7 @@
   </style>
 </head>
 <body>
-  <!-- mobile-zoom-enabled / both-axis-scroll-enabled -->
+  <!-- mobile-zoom-enabled / both-axis-scroll-enabled / file-made-scrollbars-removed -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
     <div class="title-bar">
@@ -745,22 +682,33 @@
       const sheet = document.getElementById('capture-area');
       if (!viewportMeta || !wrap || !sheet) return;
 
-      sheet.style.transform = 'none';
-      sheet.style.margin = '0 auto';
-      wrap.classList.remove('landscape-fit');
       const isMobile = window.matchMedia('(max-width: 1024px)').matches;
+      const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
+      const bodyStyles = window.getComputedStyle(document.body);
+      const horizontalPadding = (parseFloat(bodyStyles.paddingLeft) || 0) + (parseFloat(bodyStyles.paddingRight) || 0);
+      const availableWidth = Math.max(viewportWidth - horizontalPadding, 280);
+      const naturalWidth = 1045;
+      const fitScale = isMobile ? Math.min(1, availableWidth / naturalWidth) : 1;
+
+      sheet.style.width = naturalWidth + 'px';
+      sheet.style.transform = `scale(${fitScale})`;
+      sheet.style.margin = '0';
+
+      const scaledHeight = (sheet.scrollHeight || sheet.offsetHeight || 0) * fitScale;
       wrap.style.width = '100%';
       wrap.style.height = isMobile ? '100vh' : 'auto';
-      wrap.style.overflowX = isMobile ? 'auto' : 'visible';
-      wrap.style.overflowY = isMobile ? 'auto' : 'visible';
-      document.documentElement.style.overflow = isMobile ? 'auto' : 'visible';
-      document.body.style.overflow = isMobile ? 'auto' : 'visible';
-      document.body.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
-      wrap.style.touchAction = isMobile ? 'pan-x pan-y pinch-zoom' : 'pinch-zoom';
+      wrap.style.minHeight = scaledHeight > 0 ? Math.ceil(scaledHeight) + 'px' : '';
+      wrap.style.overflowX = 'auto';
+      wrap.style.overflowY = 'auto';
+      wrap.style.touchAction = 'pan-x pan-y pinch-zoom';
+
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
+      document.body.style.touchAction = 'pan-x pan-y pinch-zoom';
 
       viewportMeta.setAttribute(
         'content',
-        'width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
+        'width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain'
       );
     }
 
@@ -840,65 +788,10 @@
     }
 
 
-
-    function updateMobileScrollbarIndicators() {
-      const isMobile = window.matchMedia('(max-width: 1024px)').matches;
-      const wrap = document.getElementById('mobile-fit-wrap');
-      const barX = document.getElementById('mobile-scrollbar-indicator-x');
-      const barY = document.getElementById('mobile-scrollbar-indicator-y');
-      const thumbX = document.getElementById('mobile-scrollbar-thumb-x');
-      const thumbY = document.getElementById('mobile-scrollbar-thumb-y');
-      if (!wrap || !barX || !barY || !thumbX || !thumbY) return;
-
-      if (!isMobile) {
-        barX.style.display = 'none';
-        barY.style.display = 'none';
-        return;
-      }
-
-      barX.style.display = 'block';
-      barY.style.display = 'block';
-
-      const viewportWidth = wrap.clientWidth || 1;
-      const viewportHeight = wrap.clientHeight || 1;
-      const scrollWidth = wrap.scrollWidth || viewportWidth;
-      const scrollHeight = wrap.scrollHeight || viewportHeight;
-      const maxScrollLeft = Math.max(scrollWidth - viewportWidth, 0);
-      const maxScrollTop = Math.max(scrollHeight - viewportHeight, 0);
-
-      const barXWidth = Math.max(barX.clientWidth, 1);
-      const barYHeight = Math.max(barY.clientHeight, 1);
-
-      if (maxScrollLeft <= 0) {
-        thumbX.style.width = barXWidth + 'px';
-        thumbX.style.transform = 'translateX(0px)';
-      } else {
-        const thumbWidth = Math.max((viewportWidth / scrollWidth) * barXWidth, 36);
-        const travelX = Math.max(barXWidth - thumbWidth, 0);
-        const posX = (wrap.scrollLeft / maxScrollLeft) * travelX;
-        thumbX.style.width = thumbWidth + 'px';
-        thumbX.style.transform = `translateX(${posX}px)`;
-      }
-
-      if (maxScrollTop <= 0) {
-        thumbY.style.height = barYHeight + 'px';
-        thumbY.style.transform = 'translateY(0px)';
-      } else {
-        const thumbHeight = Math.max((viewportHeight / scrollHeight) * barYHeight, 36);
-        const travelY = Math.max(barYHeight - thumbHeight, 0);
-        const posY = (wrap.scrollTop / maxScrollTop) * travelY;
-        thumbY.style.height = thumbHeight + 'px';
-        thumbY.style.transform = `translateY(${posY}px)`;
-      }
-    }
-
     updateDynamicViewport();
     window.addEventListener('resize', updateDynamicViewport);
-    window.addEventListener('resize', updateMobileScrollbarIndicators);
     window.addEventListener('orientationchange', updateDynamicViewport);
-    window.addEventListener('orientationchange', updateMobileScrollbarIndicators);
     window.addEventListener('load', updateDynamicViewport);
-    window.addEventListener('load', updateMobileScrollbarIndicators);
 
     function autoResizeTextarea(el) {
       if (!el) return;
@@ -1088,12 +981,6 @@ function resizeAllTextareas(root = document) {
     const captureButton = document.getElementById('capture-button');
     if (captureButton) captureButton.addEventListener('click', capturePlan);
 
-    const mobileFitWrap = document.getElementById('mobile-fit-wrap');
-    if (mobileFitWrap) {
-      mobileFitWrap.addEventListener('scroll', updateMobileScrollbarIndicators, { passive: true });
-    }
-    updateMobileScrollbarIndicators();
-
   </script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
@@ -1248,9 +1135,6 @@ function resizeAllTextareas(root = document) {
       setFirebaseStatus('Firebase 설정값이 비어 있습니다.', false);
     }
   </script>
-
-  <div class="mobile-scrollbar-indicator-x" id="mobile-scrollbar-indicator-x" aria-hidden="true"><div class="thumb" id="mobile-scrollbar-thumb-x"></div></div>
-  <div class="mobile-scrollbar-indicator-y" id="mobile-scrollbar-indicator-y" aria-hidden="true"><div class="thumb" id="mobile-scrollbar-thumb-y"></div></div>
 
 </body>
 </html>
