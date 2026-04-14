@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=0.6, minimum-scale=0.6, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
+  <meta name="viewport" content="width=device-width, initial-scale=0.25, minimum-scale=0.25, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
@@ -181,9 +181,9 @@
     }
     .address-input {
       text-align: left !important;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       min-height: 24px;
       height: 24px;
       padding-top: 3px;
@@ -197,12 +197,15 @@
     .one-line-autogrow-row textarea.cell-input {
       min-height: 24px;
       height: 24px;
+      max-height: none;
       padding-top: 3px;
       padding-bottom: 3px;
       line-height: 1.2;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
+      overflow: hidden;
+      resize: none;
     }
 
     .gimbap-one-line-autogrow-row textarea.cell-input {
@@ -363,6 +366,11 @@
       word-break: break-word;
     }
 
+  
+    .key-font-14 {
+      font-size: 14px !important;
+    }
+
   </style>
 </head>
 <body>
@@ -397,10 +405,10 @@
 
       <tr class="h30">
         <td class="fixed" rowspan="2">회 비</td>
-        <td colspan="2" rowspan="2" class="input-cell"><input class="cell-input bold amount-input" value="" /></td>
+        <td colspan="2" rowspan="2" class="input-cell"><input id="fee-amount" class="cell-input bold amount-input key-font-14" value="" /></td>
         <td colspan="3" class="fixed left">특별산행 / 추가비용 :</td>
         <td class="fixed blue" rowspan="2">산행날자</td>
-        <td rowspan="2" class="input-cell"><input class="cell-input blue" value=" 월  일" /></td>
+        <td rowspan="2" class="input-cell"><input id="hike-date" class="cell-input blue key-font-14" value=" 월  일" /></td>
       </tr>
       <tr class="h30">
         <td colspan="3" class="input-cell"><input class="cell-input amount-input" value="" /></td>
@@ -408,14 +416,14 @@
 
       <tr class="h30">
         <td class="fixed" rowspan="2">산행지</td>
-        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell"><textarea class="cell-input red mountain-name-input"> </textarea></td>
+        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell calc-cell"><textarea id="mountain-name" class="cell-input red mountain-name-input" readonly> </textarea></td>
         <td colspan="2" class="fixed spaced">주 소</td>
         <td class="fixed gray">입 장 료 / 주차료</td>
         <td class="fixed gray">예 약 제</td>
         <td class="fixed gray">도 선 료 왕복</td>
       </tr>
       <tr class="h30">
-        <td colspan="2" class="input-cell address-cell"><textarea class="cell-input left address-input" data-min-height="24"></textarea></td>
+        <td colspan="2" class="input-cell address-cell"><input class="cell-input left address-input" value="" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
         <td class="input-cell"><input class="cell-input" /></td>
@@ -461,22 +469,22 @@
 
       <tr class="h20 expected-top">
         <td class="fixed" rowspan="2">예상 시간</td>
-        <td class="input-cell"><input id="base-time" class="cell-input red" value="06:30" /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold" value="09:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-2" class="cell-input bold" value="13:30 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-3" class="cell-input bold" value="14:20 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-4" class="cell-input bold" value="15:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold" value="16:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold" value="17:00 ->" readonly /></td>
+        <td class="input-cell"><input id="base-time" class="cell-input red key-font-14" value="06:30" /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold key-font-14" value="09:00 ->" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-2" class="cell-input bold key-font-14" value="13:30 ->" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-3" class="cell-input bold key-font-14" value="14:20 ->" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-4" class="cell-input bold key-font-14" value="15:00 ->" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold key-font-14" value="16:00 ->" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold key-font-14" value="17:00 ->" readonly /></td>
       </tr>
       <tr class="h20 expected-bottom">
-        <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input" value="09:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold" value="13:30" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input" value="14:20" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-4" class="cell-input" value="15:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-5" class="cell-input" value="16:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-6" class="cell-input" value="17:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-7" class="cell-input blue bold" value="19:40" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input key-font-14" value="09:00" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold key-font-14" value="13:30" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input key-font-14" value="14:20" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-4" class="cell-input key-font-14" value="15:00" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-5" class="cell-input key-font-14" value="16:00" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-6" class="cell-input key-font-14" value="17:00" readonly /></td>
+        <td class="input-cell readonly-cell"><input id="calc-bottom-7" class="cell-input blue bold key-font-14" value="19:40" readonly /></td>
       </tr>
 
       <tr class="h30">
@@ -504,19 +512,17 @@
         <td class="fixed">물</td>
         <td class="fixed">소주 / 막걸리</td>
         <td class="fixed">커피믹스 / 블랙</td>
-        <td class="fixed">소모품</td>
+        <td colspan="2" class="fixed">소모품</td>
         <td class="fixed">총 인원</td>
         <td class="fixed">추가인원</td>
-        <td class="fixed"></td>
       </tr>
-      <tr class="h38">
+      <tr class="h30">
         <td class="input-cell"><input class="cell-input" value=" " /></td>
         <td class="input-cell"><input class="cell-input" value="  /  " /></td>
         <td class="input-cell"><input class="cell-input" value="  /  " /></td>
-        <td class="input-cell"><input class="cell-input" value="  /  " /></td>
+        <td colspan="2" class="input-cell one-line-autogrow-row"><textarea class="cell-input" rows="1" data-min-height="24"></textarea></td>
         <td class="input-cell"><input id="total-people" class="cell-input" value=" " /></td>
         <td class="input-cell"><input id="extra-people" class="cell-input blue" value=" " /></td>
-        <td class="input-cell"><input class="cell-input" /></td>
       </tr>
 
       <tr class="h30">
@@ -572,6 +578,56 @@
 
     function formatNumber(value) {
       return Number(value || 0).toLocaleString('ko-KR');
+    }
+
+    function setBusSeatMountainTitle(titleText, dateText = '') {
+      const mountainEl = document.getElementById('mountain-name');
+      const dateEl = document.getElementById('hike-date');
+      if (mountainEl) {
+        const nextText = String(titleText || '').trim() || ' ';
+        mountainEl.value = nextText;
+        if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
+        if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
+      }
+      if (dateEl) {
+        dateEl.value = String(dateText || '').trim() || ' ';
+      }
+    }
+
+    function extractBusSeatMountainInfo(snapshotValue) {
+      if (!snapshotValue || typeof snapshotValue !== 'object') {
+        return { title: '', date: '' };
+      }
+
+      const rawTitle = String(snapshotValue?.busInfo?.titleMain || '').trim();
+      let dateText = '';
+
+      const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+      if (monthDayMatch) {
+        dateText = `${Number(monthDayMatch[1])}월${Number(monthDayMatch[2])}일`;
+      } else {
+        const ymdMatch = rawTitle.match(/(\d{4})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{1,2})/);
+        if (ymdMatch) {
+          dateText = `${Number(ymdMatch[2])}월${Number(ymdMatch[3])}일`;
+        } else {
+          const mdMatch = rawTitle.match(/(\d{1,2})\s*[./-]\s*(\d{1,2})/);
+          if (mdMatch) {
+            dateText = `${Number(mdMatch[1])}월${Number(mdMatch[2])}일`;
+          }
+        }
+      }
+
+      const titleText = rawTitle
+        .replace(/\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}/g, ' ')
+        .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, ' ')
+        .replace(/\d{1,2}\s*[./-]\s*\d{1,2}/g, ' ')
+        .replace(/\d{1,2}\s*월/g, ' ')
+        .replace(/\d{1,2}\s*일/g, ' ')
+        .replace(/[()\[\]<>]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      return { title: titleText, date: dateText };
     }
 
 
@@ -947,7 +1003,7 @@ function resizeAllTextareas(root = document) {
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getDatabase, ref, set, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -960,6 +1016,17 @@ function resizeAllTextareas(root = document) {
       messagingSenderId: "955421835998",
       appId: "1:955421835998:web:14219864c96fa4d32d384f"
     };
+
+    const busSeatFirebaseConfig = {
+      apiKey: "AIzaSyBbN8CF35V00kAQzVCZoZoonXDGKTqPfZA",
+      authDomain: "bus-set-no1.firebaseapp.com",
+      databaseURL: "https://bus-set-no1-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      projectId: "bus-set-no1",
+      storageBucket: "bus-set-no1.firebasestorage.app",
+      messagingSenderId: "744201337161",
+      appId: "1:744201337161:web:a63c6118182a4ed8dd0298"
+    };
+    const BUS_SEAT_ROOT_PATH = 'busSeatApp';
 
     const statusEl = document.getElementById('firebase-status');
     const SYNC_PATH = 'tripSchedule/sharedPlan';
@@ -985,7 +1052,7 @@ function resizeAllTextareas(root = document) {
 
     function getEditableFields() {
       return Array.from(document.querySelectorAll('input.cell-input, textarea.cell-input'))
-        .filter((el) => !el.readOnly && !el.disabled);
+        .filter((el) => !el.readOnly && !el.disabled && el.id !== 'mountain-name');
     }
 
     function ensureSyncKeys() {
@@ -1017,6 +1084,7 @@ function resizeAllTextareas(root = document) {
       applyingRemote = false;
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+      if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
     }
 
     async function saveFormData(showSuccessMessage = true) {
@@ -1071,6 +1139,24 @@ function resizeAllTextareas(root = document) {
       });
     }
 
+
+    function bindBusSeatMountainRealtimeSync() {
+      try {
+        const existingBusSeatApp = getApps().find((app) => app.name === 'bus-seat-app');
+        const busSeatApp = existingBusSeatApp || initializeApp(busSeatFirebaseConfig, 'bus-seat-app');
+        const busSeatDb = getDatabase(busSeatApp);
+
+        onValue(ref(busSeatDb, BUS_SEAT_ROOT_PATH), (snapshot) => {
+          const nextInfo = extractBusSeatMountainInfo(snapshot.val());
+          setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+        }, (error) => {
+          console.error('bus-seat 산행지 실시간 수신 실패:', error);
+        });
+      } catch (error) {
+        console.error('bus-seat Firebase 초기화 오류:', error);
+      }
+    }
+
     window.firebaseAppReady = null;
 
     if (hasRealFirebaseConfig(firebaseConfig)) {
@@ -1080,6 +1166,7 @@ function resizeAllTextareas(root = document) {
         window.firebaseAppReady = app;
         setFirebaseStatus(`Firebase 연결 완료: ${firebaseConfig.projectId}`, true);
         bindRealtimeSync();
+        bindBusSeatMountainRealtimeSync();
 
         try {
           const supported = await analyticsSupported();
@@ -1095,6 +1182,7 @@ function resizeAllTextareas(root = document) {
       }
     } else {
       setFirebaseStatus('Firebase 설정값이 비어 있습니다.', false);
+      bindBusSeatMountainRealtimeSync();
     }
   </script>
 
