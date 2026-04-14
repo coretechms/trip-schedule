@@ -669,9 +669,11 @@
       document.body.style.overflow = '';
 
       let initialScale = 1;
-      if (isLandscape && isMobileLike) {
+      if (isMobileLike) {
         initialScale = 0.25;
-        wrap.classList.add('landscape-fit');
+        if (isLandscape) {
+          wrap.classList.add('landscape-fit');
+        }
       }
 
       const clampedScale = Math.max(0.25, Math.min(initialScale, 1));
