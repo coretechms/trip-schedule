@@ -354,7 +354,7 @@
     }
   
     .firebase-panel {
-      display: block !important;
+      display: none !important;
       margin: 10px 0 14px;
       padding: 10px 12px;
       border: 1px solid #cfd8ff;
@@ -611,11 +611,21 @@
       return Number(value || 0).toLocaleString('ko-KR');
     }
 
+    function removeDateTextForMountainTitle(text) {
+      return String(text || '')
+        .replace(/\b\d{1,2}\s*월\s*\d{1,2}\s*일\b/g, ' ')
+        .replace(/\b\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}\b/g, ' ')
+        .replace(/\b\d{1,2}\s*[./-]\s*\d{1,2}\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
     function setBusSeatMountainTitle(titleText, dateText = '') {
       const mountainEl = document.getElementById('mountain-name');
       const dateEl = document.getElementById('hike-date');
       if (mountainEl) {
-        const nextText = String(titleText || '').trim() || ' ';
+        const cleanedTitle = removeDateTextForMountainTitle(titleText);
+        const nextText = cleanedTitle || ' ';
         mountainEl.value = nextText;
         if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
         if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
@@ -639,12 +649,77 @@
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
     }
 
+    function countNamedSeats(seatSource) {
+      const seats = Array.isArray(seatSource)
+        ? seatSource
+        : (seatSource && typeof seatSource === 'object')
+          ? Object.values(seatSource)
+          : [];
+
+      return seats.filter((seat) => {
+        if (!seat || typeof seat !== 'object') return false;
+        const name = String(
+          seat.name ??
+          seat.userName ??
+          seat.memberName ??
+          seat.displayName ??
+          seat.member ??
+          ''
+        ).trim();
+        return !!name;
+      }).length;
+    }
+
+    function extractBusSeatAttendeeCount(snapshotValue) {
+      if (!snapshotValue || typeof snapshotValue !== 'object') return '';
+
+      const numericCandidates = [
+        snapshotValue?.occupiedCount,
+        snapshotValue?.['occupied-count'],
+        snapshotValue?.summaryFilled,
+        snapshotValue?.['summary-filled'],
+        snapshotValue?.summary?.filled,
+        snapshotValue?.summary?.['filled'],
+        snapshotValue?.busInfo?.summaryFilled,
+        snapshotValue?.busInfo?.['summary-filled'],
+        snapshotValue?.busInfo?.occupiedCount
+      ];
+
+      for (const candidate of numericCandidates) {
+        const raw = String(candidate ?? '').trim();
+        const digits = raw.replace(/[^\d.-]/g, '');
+        if (!digits || digits === '-' || digits === '.' || digits === '-.') continue;
+        const number = Number(digits);
+        if (Number.isFinite(number)) {
+          return number;
+        }
+      }
+
+      const directSeatSources = [
+        snapshotValue?.seats,
+        snapshotValue?.seatData,
+        snapshotValue?.busInfo?.seats,
+        snapshotValue?.busInfo?.seatData
+      ];
+
+      for (const seatSource of directSeatSources) {
+        const count = countNamedSeats(seatSource);
+        if (count > 0) return count;
+      }
+
+      return '';
+    }
+
     function extractBusSeatMountainInfo(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') {
         return { title: '', date: '' };
       }
 
-      const rawTitle = String(snapshotValue?.busInfo?.titleMain || '').trim();
+      const rawTitle = String(
+        snapshotValue?.infoTitleMain ??
+        snapshotValue?.busInfo?.titleMain ??
+        ''
+      ).trim();
       let dateText = '';
 
       const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -663,9 +738,9 @@
       }
 
       const titleText = rawTitle
-        .replace(/\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}/g, ' ')
-        .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, ' ')
-        .replace(/\d{1,2}\s*[./-]\s*\d{1,2}/g, ' ')
+        .replace(/[[(（]?\s*\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}\s*[)\]）]?/g, ' ')
+        .replace(/[[(（]?\s*\d{1,2}\s*월\s*\d{1,2}\s*일\s*[)\]）]?/g, ' ')
+        .replace(/[[(（]?\s*\d{1,2}\s*[./-]\s*\d{1,2}\s*[)\]）]?/g, ' ')
         .replace(/\d{1,2}\s*월/g, ' ')
         .replace(/\d{1,2}\s*일/g, ' ')
         .replace(/[()\[\]<>]/g, ' ')
@@ -1014,6 +1089,15 @@ function resizeAllTextareas(root = document) {
   appId: "1:937582511238:web:72e16b57e9f622e15a7d07"
 };
 
+    const busSeatFirebaseConfig = {
+      apiKey: "AIzaSyBbN8CF35V00kAQzVCZoZoonXDGKTqPfZA",
+      authDomain: "bus-set-no1.firebaseapp.com",
+      databaseURL: "https://bus-set-no1-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      projectId: "bus-set-no1",
+      storageBucket: "bus-set-no1.firebasestorage.app",
+      messagingSenderId: "744201337161",
+      appId: "1:744201337161:web:a63c6118182a4ed8dd0298"
+    };
     const BUS_SEAT_ROOT_PATH = 'busSeatApp';
 
     const statusEl = document.getElementById('firebase-status');
@@ -1204,17 +1288,19 @@ function resizeAllTextareas(root = document) {
           const nextInfo = extractBusSeatMountainInfo(snapshotValue);
           setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
 
-          const summaryFilledValue =
-            snapshotValue?.['summary-filled'] ??
-            snapshotValue?.summaryFilled ??
-            snapshotValue?.summary?.filled ??
-            snapshotValue?.summary?.['filled'] ??
-            snapshotValue?.busInfo?.['summary-filled'] ??
-            snapshotValue?.busInfo?.summaryFilled ??
-            '';
-          setBusSeatSummaryFilled(summaryFilledValue);
+          const attendeeCount = extractBusSeatAttendeeCount(snapshotValue);
+          if (attendeeCount !== '') {
+            setBusSeatSummaryFilled(attendeeCount);
+          }
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
+        });
+
+        onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/seats`), (snapshot) => {
+          const seatCount = countNamedSeats(snapshot.val());
+          setBusSeatSummaryFilled(seatCount > 0 ? seatCount : '');
+        }, (error) => {
+          console.error('bus-seat seats 참석인원 실시간 수신 실패:', error);
         });
       } catch (error) {
         console.error('bus-seat Firebase 초기화 오류:', error);
