@@ -1004,25 +1004,16 @@ function resizeAllTextareas(root = document) {
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getDatabase, ref, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAyhe5GGDNlPrOMXQYCeKzJYZeTw3VHIKo",
-      authDomain: "trip-schedule-754f4.firebaseapp.com",
-      databaseURL: "https://trip-schedule-754f4-default-rtdb.firebaseio.com",
-      projectId: "trip-schedule-754f4",
-      storageBucket: "trip-schedule-754f4.firebasestorage.app",
-      messagingSenderId: "955421835998",
-      appId: "1:955421835998:web:14219864c96fa4d32d384f"
-    };
+   const firebaseConfig = {
+  apiKey: "AIzaSyAmp9G9ZZ-CzK5LqR-b66U1wBRmUrp8W_c",
+  authDomain: "trip-schedule-52faf.firebaseapp.com",
+  databaseURL: "https://trip-schedule-52faf-default-rtdb.firebaseio.com",
+  projectId: "trip-schedule-52faf",
+  storageBucket: "trip-schedule-52faf.firebasestorage.app",
+  messagingSenderId: "937582511238",
+  appId: "1:937582511238:web:72e16b57e9f622e15a7d07"
+};
 
-    const busSeatFirebaseConfig = {
-      apiKey: "AIzaSyBbN8CF35V00kAQzVCZoZoonXDGKTqPfZA",
-      authDomain: "bus-set-no1.firebaseapp.com",
-      databaseURL: "https://bus-set-no1-default-rtdb.asia-southeast1.firebasedatabase.app/",
-      projectId: "bus-set-no1",
-      storageBucket: "bus-set-no1.firebasestorage.app",
-      messagingSenderId: "744201337161",
-      appId: "1:744201337161:web:a63c6118182a4ed8dd0298"
-    };
     const BUS_SEAT_ROOT_PATH = 'busSeatApp';
 
     const statusEl = document.getElementById('firebase-status');
