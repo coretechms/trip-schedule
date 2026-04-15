@@ -249,6 +249,11 @@
       user-select: none;
       font-weight: 400;
     }
+    .mountain-name-input[readonly] {
+      pointer-events: none;
+      user-select: none;
+      caret-color: transparent;
+    }
     .expected-top .cell-input.bold {
       font-weight: 700 !important;
     }
@@ -437,7 +442,7 @@
 
       <tr class="h30">
         <td class="fixed" rowspan="2">산행지</td>
-        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell calc-cell"><textarea id="mountain-name" class="cell-input red mountain-name-input" readonly> </textarea></td>
+        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell calc-cell"><textarea id="mountain-name" class="cell-input red mountain-name-input" readonly tabindex="-1"> </textarea></td>
         <td colspan="2" class="fixed spaced">주 소</td>
         <td class="fixed gray">입 장 료 / 주차료</td>
         <td class="fixed gray">예 약 제</td>
@@ -542,7 +547,7 @@
         <td class="input-cell"><input class="cell-input" value="  /  " /></td>
         <td class="input-cell"><input class="cell-input" value="  /  " /></td>
         <td colspan="2" class="input-cell one-line-autogrow-row"><textarea class="cell-input" rows="1" data-min-height="24"></textarea></td>
-        <td class="input-cell"><input id="total-people" class="cell-input" value=" " /></td>
+        <td class="input-cell"><input id="total-people" class="cell-input" value=" " readonly /></td>
         <td class="input-cell"><input id="extra-people" class="cell-input blue" value=" " /></td>
       </tr>
 
@@ -613,6 +618,20 @@
       if (dateEl) {
         dateEl.value = String(dateText || '').trim() || ' ';
       }
+    }
+
+    function setBusSeatSummaryFilled(summaryValue) {
+      const totalPeopleEl = document.getElementById('total-people');
+      if (!totalPeopleEl) return;
+      const raw = String(summaryValue ?? '').trim();
+      const digits = raw.replace(/[^\d.-]/g, '');
+      if (!digits || digits === '-' || digits === '.' || digits === '-.') {
+        totalPeopleEl.value = ' ';
+      } else {
+        const number = Number(digits);
+        totalPeopleEl.value = Number.isFinite(number) ? formatNumber(number) : ' ';
+      }
+      if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
     }
 
     function extractBusSeatMountainInfo(snapshotValue) {
@@ -757,55 +776,7 @@
     bindAmountFormatting();
     updateExpectedTimes();
     updateGimbapTotals();
-    bindClearOnFirstInput();
 
-
-    function shouldAutoClearField(el) {
-      if (!el || el.readOnly || el.disabled) return false;
-      if (!el.matches('input.cell-input, textarea.cell-input')) return false;
-      const initialValue = el.dataset.initialValue ?? '';
-      const currentValue = el.value ?? '';
-      if (el.dataset.userEdited === 'true') return false;
-      if (el.dataset.autoCleared === 'true') return false;
-      if (!initialValue.length) return false;
-      return currentValue === initialValue;
-    }
-
-    function autoClearField(el) {
-      if (!shouldAutoClearField(el)) return;
-      el.value = '';
-      el.dataset.autoCleared = 'true';
-      if (typeof autoResizeTextarea === 'function' && el.tagName === 'TEXTAREA') {
-        autoResizeTextarea(el);
-      }
-    }
-
-    function bindClearOnFirstInput() {
-      const fields = Array.from(document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])'));
-      fields.forEach((el) => {
-        if (el.dataset.clearBindingApplied === 'true') return;
-        el.dataset.clearBindingApplied = 'true';
-        el.dataset.initialValue = el.value ?? '';
-        el.dataset.userEdited = 'false';
-        el.dataset.autoCleared = 'false';
-
-        el.addEventListener('focus', function() {
-          autoClearField(el);
-        });
-
-        el.addEventListener('pointerdown', function() {
-          autoClearField(el);
-        }, { passive: true });
-
-        el.addEventListener('input', function() {
-          const initialValue = el.dataset.initialValue ?? '';
-          el.dataset.userEdited = (el.value !== initialValue) ? 'true' : 'false';
-          if (el.value === initialValue) {
-            el.dataset.autoCleared = 'false';
-          }
-        });
-      });
-    }
 
     function isLikelyDesktop() {
       return window.matchMedia('(hover: hover) and (pointer: fine)').matches && window.innerWidth > 768;
@@ -1026,7 +997,7 @@ function resizeAllTextareas(root = document) {
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-    import { getDatabase, ref, set, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAyhe5GGDNlPrOMXQYCeKzJYZeTw3VHIKo",
@@ -1051,6 +1022,8 @@ function resizeAllTextareas(root = document) {
 
     const statusEl = document.getElementById('firebase-status');
     const SYNC_PATH = 'tripSchedule/sharedPlan';
+    const SYNC_FORMDATA_PATH = `${SYNC_PATH}/formData`;
+    const LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
     let db = null;
     let applyingRemote = false;
 
@@ -1058,6 +1031,10 @@ function resizeAllTextareas(root = document) {
       if (!statusEl) return;
       statusEl.textContent = message;
       statusEl.style.color = ok ? '#0b7a28' : '#b42318';
+    }
+
+    function showSaveFailureAlert(message) {
+      alert(message || '저장에 실패했습니다. 데이터베이스 주소 또는 규칙을 확인하세요.');
     }
 
     function hasRealFirebaseConfig(config) {
@@ -1105,31 +1082,57 @@ function resizeAllTextareas(root = document) {
       applyingRemote = false;
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+      if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
       if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
+    }
+
+    function cacheFormDataLocally(data) {
+      try {
+        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data || {}));
+      } catch (error) {
+        console.warn('로컬 캐시 저장 실패:', error);
+      }
+    }
+
+    function restoreCachedFormData() {
+      try {
+        const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return false;
+        applyFormData(parsed);
+        setFirebaseStatus('앱 시작 시 저장된 로컬 내용을 우선 복원함', true);
+        return true;
+      } catch (error) {
+        console.warn('로컬 캐시 복원 실패:', error);
+        return false;
+      }
     }
 
     async function saveFormData(showSuccessMessage = true) {
       if (!db || applyingRemote) return;
+      const formData = collectFormData();
+      cacheFormDataLocally(formData);
+
       try {
-        const payload = {
-          formData: collectFormData(),
-          updatedAt: serverTimestamp()
-        };
-        await set(ref(db, SYNC_PATH), payload);
+        await update(ref(db, SYNC_FORMDATA_PATH), formData);
+        await update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() });
+
         if (showSuccessMessage) {
-          setFirebaseStatus('실시간 동기화 연결됨 · 저장 완료', true);
+          setFirebaseStatus('실시간 동기화 연결됨 · 부분 저장 완료', true);
         } else {
           setFirebaseStatus('실시간 동기화 연결됨 · 데이터 반영 중', true);
         }
       } catch (error) {
         console.error(error);
         setFirebaseStatus('저장 실패: 데이터베이스 주소 또는 규칙을 확인하세요.', false);
+        showSaveFailureAlert('저장에 실패했습니다. 데이터베이스 주소 또는 규칙을 확인하세요.');
       }
     }
 
-
     function bindRealtimeSync() {
       ensureSyncKeys();
+      restoreCachedFormData();
 
       const saveButton = document.getElementById('save-button');
       if (saveButton) {
@@ -1146,11 +1149,12 @@ function resizeAllTextareas(root = document) {
         });
       }
 
-      onValue(ref(db, SYNC_PATH), (snapshot) => {
+      onValue(ref(db, SYNC_FORMDATA_PATH), (snapshot) => {
         const value = snapshot.val();
-        if (value && value.formData) {
-          applyFormData(value.formData);
-          setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 중', true);
+        if (value && typeof value === 'object') {
+          applyFormData(value);
+          cacheFormDataLocally(value);
+          setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 복원 완료', true);
         } else {
           setFirebaseStatus('실시간 동기화 연결됨 · 아직 저장된 데이터 없음', true);
         }
@@ -1168,10 +1172,21 @@ function resizeAllTextareas(root = document) {
         const busSeatDb = getDatabase(busSeatApp);
 
         onValue(ref(busSeatDb, BUS_SEAT_ROOT_PATH), (snapshot) => {
-          const nextInfo = extractBusSeatMountainInfo(snapshot.val());
+          const snapshotValue = snapshot.val();
+          const nextInfo = extractBusSeatMountainInfo(snapshotValue);
           setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+
+          const summaryFilledValue =
+            snapshotValue?.['summary-filled'] ??
+            snapshotValue?.summaryFilled ??
+            snapshotValue?.summary?.filled ??
+            snapshotValue?.summary?.['filled'] ??
+            snapshotValue?.busInfo?.['summary-filled'] ??
+            snapshotValue?.busInfo?.summaryFilled ??
+            '';
+          setBusSeatSummaryFilled(summaryFilledValue);
         }, (error) => {
-          console.error('bus-seat 산행지 실시간 수신 실패:', error);
+          console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
         });
       } catch (error) {
         console.error('bus-seat Firebase 초기화 오류:', error);
