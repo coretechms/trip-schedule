@@ -100,6 +100,11 @@
     .save-btn:active {
       transform: translateY(1px);
     }
+    .save-btn[disabled] {
+      opacity: 0.75;
+      cursor: default;
+      filter: none;
+    }
 
     table.plan {
       width: 100%;
@@ -349,7 +354,7 @@
     }
   
     .firebase-panel {
-      display: none !important;
+      display: block !important;
       margin: 10px 0 14px;
       padding: 10px 12px;
       border: 1px solid #cfd8ff;
@@ -406,14 +411,14 @@
     <div class="title-bar">
       <div class="title">정기산행 계획</div>
       <div class="action-buttons">
-        <button type="button" id="save-button" class="save-btn">[저장하기]</button>
+        <button type="button" id="save-button" class="save-btn" disabled aria-disabled="true">[실시간 동기화]</button>
         <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
       </div>
     </div>
 
     <div class="firebase-panel" id="firebase-panel">
       <div class="firebase-title">실시간 동기화 상태</div>
-      <div>이 문서는 Firebase Realtime Database와 연결되며 입력 후 [저장하기]를 누르면 저장되고 다른 화면에도 반영됩니다.</div>
+      <div>이 문서는 Firebase Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
       <div class="firebase-status" id="firebase-status">Firebase 연결 준비 중...</div>
     </div>
 
@@ -1109,14 +1114,37 @@ function resizeAllTextareas(root = document) {
       }
     }
 
+    let realtimeSaveTimer = null;
+
+    function withTimeout(promise, ms = 8000) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('저장 시간 초과')), ms))
+      ]);
+    }
+
+    function scheduleRealtimeSave() {
+      if (!db || applyingRemote) return;
+      if (realtimeSaveTimer) clearTimeout(realtimeSaveTimer);
+      setFirebaseStatus('실시간 동기화 연결됨 · 입력 내용 자동 저장 중', true);
+      realtimeSaveTimer = setTimeout(async () => {
+        realtimeSaveTimer = null;
+        try {
+          await saveFormData(false);
+        } catch (error) {
+          console.error('자동 저장 실패:', error);
+        }
+      }, 250);
+    }
+
     async function saveFormData(showSuccessMessage = true) {
       if (!db || applyingRemote) return;
       const formData = collectFormData();
       cacheFormDataLocally(formData);
 
       try {
-        await update(ref(db, SYNC_FORMDATA_PATH), formData);
-        await update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() });
+        await withTimeout(update(ref(db, SYNC_FORMDATA_PATH), formData), 8000);
+        await withTimeout(update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() }), 8000);
 
         if (showSuccessMessage) {
           setFirebaseStatus('실시간 동기화 연결됨 · 부분 저장 완료', true);
@@ -1136,31 +1164,40 @@ function resizeAllTextareas(root = document) {
 
       const saveButton = document.getElementById('save-button');
       if (saveButton) {
-        saveButton.addEventListener('click', async () => {
-          const originalText = saveButton.textContent;
-          saveButton.textContent = '[저장중]';
-          saveButton.disabled = true;
-          try {
-            await saveFormData(true);
-          } finally {
-            saveButton.textContent = originalText;
-            saveButton.disabled = false;
-          }
-        });
+        saveButton.textContent = '[실시간 동기화]';
+        saveButton.disabled = true;
+        saveButton.setAttribute('aria-disabled', 'true');
+        saveButton.title = '입력 내용이 자동으로 저장됩니다.';
       }
+
+      getEditableFields().forEach((el) => {
+        if (el.dataset.realtimeSaveBound === 'true') return;
+        el.dataset.realtimeSaveBound = 'true';
+        el.addEventListener('input', () => {
+          if (applyingRemote) return;
+          cacheFormDataLocally(collectFormData());
+          scheduleRealtimeSave();
+        });
+        el.addEventListener('change', () => {
+          if (applyingRemote) return;
+          cacheFormDataLocally(collectFormData());
+          scheduleRealtimeSave();
+        });
+      });
 
       onValue(ref(db, SYNC_FORMDATA_PATH), (snapshot) => {
         const value = snapshot.val();
         if (value && typeof value === 'object') {
           applyFormData(value);
           cacheFormDataLocally(value);
-          setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 복원 완료', true);
+          setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 완료', true);
         } else {
-          setFirebaseStatus('실시간 동기화 연결됨 · 아직 저장된 데이터 없음', true);
+          setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 대기 중', true);
         }
       }, (error) => {
         console.error(error);
         setFirebaseStatus('실시간 수신 실패: 데이터베이스 규칙 또는 주소를 확인하세요.', false);
+        alert('실시간 수신에 실패했습니다. 데이터베이스 규칙 또는 주소를 확인하세요.');
       });
     }
 
