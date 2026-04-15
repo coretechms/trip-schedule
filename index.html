@@ -45,7 +45,7 @@
     }
     .title {
       font-size: 18px;
-      font-weight: 700;
+      font-weight: 600;
       color: #1737c9;
       margin: 0;
       letter-spacing: -0.3px;
@@ -111,7 +111,7 @@
       border-collapse: collapse;
       table-layout: fixed;
       border: 2px solid #222;
-      font-size: 13px;
+      font-size: 14px;
       background: #ececec;
     }
     .plan td, .plan th {
@@ -412,6 +412,7 @@
       <div class="title">정기산행 계획</div>
       <div class="action-buttons">
         <button type="button" id="save-button" class="save-btn" disabled aria-disabled="true">[실시간 동기화]</button>
+        <button type="button" id="member-capture-button" class="capture-btn">[회원용 캡쳐]</button>
         <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
       </div>
     </div>
@@ -1010,9 +1011,7 @@ function resizeAllTextareas(root = document) {
       return clone;
     }
 
-    async function capturePlan() {
-      const target = document.getElementById('capture-area');
-      const button = document.getElementById('capture-button');
+    async function captureElementAsImage(target, button, fileName, errorMessage) {
       if (!target || !button) return;
 
       const originalText = button.textContent;
@@ -1037,17 +1036,114 @@ function resizeAllTextareas(root = document) {
 
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
-        link.download = '정기산행_앱화면.png';
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         link.remove();
       } catch (error) {
-        alert('앱 화면 캡쳐 저장 중 오류가 발생했습니다.');
+        alert(errorMessage);
         console.error(error);
       } finally {
         if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
         button.textContent = originalText;
       }
+    }
+
+    async function capturePlan() {
+      const target = document.getElementById('capture-area');
+      const button = document.getElementById('capture-button');
+      await captureElementAsImage(
+        target,
+        button,
+        '정기산행_앱화면.png',
+        '앱 화면 캡쳐 저장 중 오류가 발생했습니다.'
+      );
+    }
+
+    function buildMemberCaptureClone() {
+      const sourceTable = document.querySelector('#capture-area table.plan');
+      if (!sourceTable) return null;
+
+      const cloneTable = sourceTable.cloneNode(true);
+      cloneTable.style.width = getComputedStyle(sourceTable).width;
+      cloneTable.style.tableLayout = 'fixed';
+
+      const allRows = Array.from(cloneTable.querySelectorAll('tr'));
+      const memberRows = allRows.slice(6, 12);
+
+      if (!memberRows.length) return null;
+
+      const wrapper = document.createElement('div');
+      wrapper.id = 'member-capture-clone-' + Date.now();
+      wrapper.style.position = 'fixed';
+      wrapper.style.left = '-100000px';
+      wrapper.style.top = '0';
+      wrapper.style.zIndex = '-1';
+      wrapper.style.background = '#ffffff';
+      wrapper.style.padding = '0';
+      wrapper.style.margin = '0';
+
+      const table = document.createElement('table');
+      table.className = 'plan';
+      table.style.width = getComputedStyle(sourceTable).width;
+      table.style.borderCollapse = 'collapse';
+      table.style.tableLayout = 'fixed';
+      table.style.background = '#ececec';
+
+      const sourceColgroup = sourceTable.querySelector('colgroup');
+      if (sourceColgroup) {
+        table.appendChild(sourceColgroup.cloneNode(true));
+      }
+
+      const tbody = document.createElement('tbody');
+      memberRows.forEach((row) => tbody.appendChild(row));
+      table.appendChild(tbody);
+      wrapper.appendChild(table);
+
+      wrapper.querySelectorAll('input.cell-input, textarea.cell-input').forEach((field) => {
+        const div = document.createElement('div');
+        div.className = 'capture-render';
+        Array.from(field.classList || []).forEach((cls) => {
+          if (cls !== 'cell-input' && cls !== 'amount-input') div.classList.add(cls);
+        });
+
+        const value = field.value == null ? '' : String(field.value);
+        div.textContent = value.trim() ? value : ' ';
+        div.style.minHeight = Math.max(field.offsetHeight || 28, 28) + 'px';
+
+        const td = field.closest('td');
+        if (td) {
+          td.style.height = 'auto';
+          td.style.verticalAlign = 'middle';
+          td.style.paddingTop = '3px';
+          td.style.paddingBottom = '3px';
+        }
+
+        field.replaceWith(div);
+      });
+
+      wrapper.querySelectorAll('tr').forEach((row) => {
+        row.style.height = 'auto';
+      });
+
+      wrapper.querySelectorAll('table.plan, table.plan td, table.plan th').forEach((el) => {
+        el.style.borderStyle = 'solid';
+      });
+
+      return wrapper;
+    }
+
+    async function captureMemberImage() {
+      const button = document.getElementById('member-capture-button');
+      const target = buildMemberCaptureClone();
+      if (!target) return;
+
+      await captureElementAsImage(
+        target,
+        button,
+        '정기산행_회원용_이미지.png',
+        '회원용 이미지 캡쳐 저장 중 오류가 발생했습니다.'
+      );
     }
 
 
@@ -1070,6 +1166,9 @@ function resizeAllTextareas(root = document) {
 
     const captureButton = document.getElementById('capture-button');
     if (captureButton) captureButton.addEventListener('click', capturePlan);
+
+    const memberCaptureButton = document.getElementById('member-capture-button');
+    if (memberCaptureButton) memberCaptureButton.addEventListener('click', captureMemberImage);
 
   </script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
