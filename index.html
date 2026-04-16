@@ -3,6 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=0.53, minimum-scale=0.53, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
+  <style id="trip-plan-gate-style">body{display:none !important;}</style>
+  <script>
+    (function () {
+      const TICKET_KEY = 'trip-plan-access-ticket-v1';
+      const FALLBACK_TTL_MS = 500;
+      let allowed = false;
+      let message = '';
+      try {
+        const raw = sessionStorage.getItem(TICKET_KEY);
+        if (!raw) {
+          message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
+        } else {
+          const ticket = JSON.parse(raw);
+          const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
+          const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
+          const source = String(ticket && ticket.source ? ticket.source : '');
+          const now = Date.now();
+          if (source !== 'bus-seat') {
+            message = '유효하지 않은 산행계획 입장권입니다.';
+          } else if (!issuedAt || now > expiresAt) {
+            message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
+          } else {
+            allowed = true;
+          }
+        }
+      } catch (error) {
+        message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+      }
+
+      try {
+        sessionStorage.removeItem(TICKET_KEY);
+      } catch (error) {}
+
+      window.__TRIP_PLAN_GATE__ = { allowed, message };
+      if (allowed) {
+        document.addEventListener('DOMContentLoaded', function () {
+          const styleEl = document.getElementById('trip-plan-gate-style');
+          if (styleEl) styleEl.remove();
+        }, { once: true });
+      }
+    })();
+  </script>
   <title>정기산행 계획</title>
   <style>
     * { box-sizing: border-box; }
@@ -405,6 +447,31 @@
   </style>
 </head>
 <body>
+  <script>
+    (function () {
+      const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
+      if (gate.allowed) return;
+      const styleEl = document.getElementById('trip-plan-gate-style');
+      if (styleEl) styleEl.remove();
+      document.body.innerHTML = '';
+      document.body.style.display = 'flex';
+      document.body.style.alignItems = 'center';
+      document.body.style.justifyContent = 'center';
+      document.body.style.minHeight = '100vh';
+      document.body.style.padding = '24px';
+      document.body.innerHTML = `
+        <div style="max-width:420px;width:100%;border:1px solid #d0d7de;border-radius:16px;padding:20px;background:#fff;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+          <div style="font-size:18px;font-weight:700;color:#1737c9;margin-bottom:10px;">직접 진입 차단</div>
+          <div style="font-size:14px;line-height:1.6;color:#222;white-space:pre-line;">${gate.message}</div>
+        </div>
+      `;
+      setTimeout(function () {
+        if (document.referrer) history.back();
+        else window.location.replace('https://coretechms.github.io/bus-seat/');
+      }, 0);
+      throw new Error('trip-plan-direct-access-blocked');
+    })();
+  </script>
   <!-- free-pan-zoom-enabled -->
   <div class="mobile-fit-wrap" id="mobile-fit-wrap">
     <div class="sheet" id="capture-area">
