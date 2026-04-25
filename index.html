@@ -24,9 +24,14 @@
       message = '직접 진입 차단이 수정 모드에서 꺼져 있습니다.';
     } else {
       try {
+        const referrer = String(document.referrer || '');
+        const fromBusSeat = /https?:\/\/coretechms\.github\.io\/bus-seat\/?/i.test(referrer);
         const raw = sessionStorage.getItem(TICKET_KEY);
-        if (!raw) {
+
+        if (!fromBusSeat) {
           message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
+        } else if (!raw) {
+          message = '산행계획 입장권이 없습니다. bus-seat에서 다시 진입하세요.';
         } else {
           const ticket = JSON.parse(raw);
           const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
@@ -1669,6 +1674,9 @@ function resizeAllTextareas(root = document) {
 
     function applyFormData(data) {
       if (!data || typeof data !== 'object') return;
+      if (window.__tripScheduleLocalSelectionSavingUntil && Date.now() < window.__tripScheduleLocalSelectionSavingUntil) {
+        return;
+      }
       applyingRemote = true;
       ensureSyncKeys();
       getEditableFields().forEach((el) => {
@@ -1750,6 +1758,20 @@ function resizeAllTextareas(root = document) {
         showSaveFailureAlert('저장에 실패했습니다. 데이터베이스 주소 또는 규칙을 확인하세요.');
       }
     }
+
+    window.__tripScheduleForceSaveNow = async function () {
+      try {
+        if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+        ensureSyncKeys();
+        if (!db || applyingRemote) return false;
+        await saveFormData(false);
+        return true;
+      } catch (error) {
+        console.error('선택 동기화 즉시 저장 실패:', error);
+        return false;
+      }
+    };
 
     function bindRealtimeSync() {
       ensureSyncKeys();
@@ -2037,8 +2059,13 @@ function resizeAllTextareas(root = document) {
       function setFormFieldValue(field, value) {
         if (!field) return;
         const nextValue = normalizeText(value);
-        if ('value' in field) field.value = nextValue;
-        else field.textContent = nextValue;
+        if ('value' in field) {
+          field.value = nextValue;
+          field.setAttribute('value', nextValue);
+          if (field.tagName === 'TEXTAREA') field.textContent = nextValue;
+        } else {
+          field.textContent = nextValue;
+        }
         field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
         if (field.tagName === 'TEXTAREA' && typeof autoResizeTextarea === 'function') {
@@ -2051,6 +2078,46 @@ function resizeAllTextareas(root = document) {
         if (!planTable || !planTable.rows[rowIndex] || !planTable.rows[rowIndex].cells[cellIndex]) return;
         const target = planTable.rows[rowIndex].cells[cellIndex].querySelector(selector || 'input, textarea');
         setFormFieldValue(target, value);
+      }
+
+      function freezeCurrentFormValues(root = document) {
+        root.querySelectorAll('input, textarea, select').forEach((field) => {
+          if (field.tagName === 'TEXTAREA') {
+            field.textContent = field.value || '';
+          } else if (field.tagName === 'SELECT') {
+            Array.from(field.options || []).forEach((option) => {
+              if (option.selected) option.setAttribute('selected', 'selected');
+              else option.removeAttribute('selected');
+            });
+          } else {
+            if (field.type === 'checkbox' || field.type === 'radio') {
+              if (field.checked) field.setAttribute('checked', 'checked');
+              else field.removeAttribute('checked');
+            }
+            field.setAttribute('value', field.value || '');
+          }
+        });
+      }
+
+      function persistSyncedPlanFields() {
+        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+        freezeCurrentFormValues(document);
+        document.querySelectorAll('table.plan input.cell-input, table.plan textarea.cell-input').forEach((field) => {
+          if (field.readOnly || field.disabled || field.id === 'mountain-name') return;
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+
+      async function forceSaveSyncedPlanFields() {
+        persistSyncedPlanFields();
+        try {
+          if (typeof window.__tripScheduleForceSaveNow === 'function') {
+            await window.__tripScheduleForceSaveNow();
+          }
+        } catch (error) {
+          console.error('선택 동기화 Firebase 즉시 저장 실패:', error);
+        }
       }
 
       function readInfoRowData(row) {
@@ -2095,6 +2162,7 @@ function resizeAllTextareas(root = document) {
       }
 
       function syncSelectedInfoRowToPlan(row) {
+        window.__tripScheduleLocalSelectionSavingUntil = Date.now() + 3000;
         const table = row ? row.closest('.info-section-table') : null;
         if (!table || !row || row.parentElement.tagName !== 'TBODY') return;
         if (table.id === 'info-main-table') {
@@ -2102,6 +2170,8 @@ function resizeAllTextareas(root = document) {
         } else if (table.id === 'info-company-table') {
           syncCompanyInfoToPlan(row);
         }
+        forceSaveSyncedPlanFields();
+        saveInfoForm(false);
       }
 
       function addRow() {
@@ -2190,9 +2260,14 @@ function resizeAllTextareas(root = document) {
         clearSelection();
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
+        if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+        freezeCurrentFormValues(document);
 
         const clone = document.documentElement.cloneNode(true);
+        freezeCurrentFormValues(clone);
         clone.querySelectorAll('.info-selected').forEach((cell) => cell.classList.remove('info-selected'));
+        clone.querySelectorAll('.info-row-selected').forEach((row) => row.classList.remove('info-row-selected'));
 
         const html = '<!DOCTYPE html>\n' + clone.outerHTML;
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -2277,6 +2352,7 @@ function resizeAllTextareas(root = document) {
 
 <script>
   (function () {
+    const TICKET_KEY = 'trip-plan-access-ticket-v1';
     const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
 
     // 직접진입 차단 ON/OFF 변경은 관리자 비밀번호 확인 후에만 허용합니다.
@@ -2380,10 +2456,15 @@ function resizeAllTextareas(root = document) {
     }
     function setGateOff(value) {
       try {
-        if (value) localStorage.setItem(GATE_OFF_KEY, 'true');
-        else localStorage.removeItem(GATE_OFF_KEY);
+        if (value) {
+          localStorage.setItem(GATE_OFF_KEY, 'true');
+        } else {
+          localStorage.removeItem(GATE_OFF_KEY);
+          sessionStorage.removeItem(TICKET_KEY);
+        }
       } catch (error) {}
     }
+
     function updateGateToggleButton() {
       const button = document.getElementById('gate-toggle-button');
       if (!button) return;
