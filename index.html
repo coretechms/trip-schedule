@@ -1,52 +1,52 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=0.8, minimum-scale=0.35, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" />
-  <style id="trip-plan-gate-style">body{display:none !important;}</style>
-  <script>
-    (function () {
-      const TICKET_KEY = 'trip-plan-access-ticket-v1';
-      const FALLBACK_TTL_MS = 500;
-      let allowed = false;
-      let message = '';
-      try {
-        const raw = sessionStorage.getItem(TICKET_KEY);
-        if (!raw) {
-          message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
+<html lang="ko" style="overflow: auto;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=0.8, minimum-scale=0.35, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" name="viewport">
+
+<style id="trip-plan-gate-style">body{display:none !important;}</style>
+<script>
+  (function () {
+    const TICKET_KEY = 'trip-plan-access-ticket-v1';
+    const FALLBACK_TTL_MS = 500;
+    let allowed = false;
+    let message = '';
+    try {
+      const raw = sessionStorage.getItem(TICKET_KEY);
+      if (!raw) {
+        message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
+      } else {
+        const ticket = JSON.parse(raw);
+        const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
+        const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
+        const source = String(ticket && ticket.source ? ticket.source : '');
+        const now = Date.now();
+        if (source !== 'bus-seat') {
+          message = '유효하지 않은 산행계획 입장권입니다.';
+        } else if (!issuedAt || now > expiresAt) {
+          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
         } else {
-          const ticket = JSON.parse(raw);
-          const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
-          const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
-          const source = String(ticket && ticket.source ? ticket.source : '');
-          const now = Date.now();
-          if (source !== 'bus-seat') {
-            message = '유효하지 않은 산행계획 입장권입니다.';
-          } else if (!issuedAt || now > expiresAt) {
-            message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
-          } else {
-            allowed = true;
-          }
+          allowed = true;
         }
-      } catch (error) {
-        message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
       }
+    } catch (error) {
+      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+    }
 
-      try {
-        sessionStorage.removeItem(TICKET_KEY);
-      } catch (error) {}
+    try {
+      sessionStorage.removeItem(TICKET_KEY);
+    } catch (error) {}
 
-      window.__TRIP_PLAN_GATE__ = { allowed, message };
-      if (allowed) {
-        document.addEventListener('DOMContentLoaded', function () {
-          const styleEl = document.getElementById('trip-plan-gate-style');
-          if (styleEl) styleEl.remove();
-        }, { once: true });
-      }
-    })();
-  </script>
-  <title>정기산행 계획</title>
-  <style>
+    window.__TRIP_PLAN_GATE__ = { allowed, message };
+    if (allowed) {
+      document.addEventListener('DOMContentLoaded', function () {
+        const styleEl = document.getElementById('trip-plan-gate-style');
+        if (styleEl) styleEl.remove();
+      }, { once: true });
+    }
+  })();
+</script>
+<title>정기산행 계획</title>
+<style>
     * { box-sizing: border-box; }
     html, body {
       width: 100%;
@@ -444,208 +444,439 @@
       border-bottom: 2px solid #222 !important;
     }
 
+
+
+    .gimbap-wrapper-cell {
+      background: #ffffff !important;
+      padding: 0 !important;
+    }
+    .gimbap-inner-table {
+      width: auto;
+      min-width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+      margin: 0;
+      background: #ececec;
+      font-size: 14px;
+    }
+    .gimbap-inner-table td {
+      border: 1px dotted #444;
+      padding: 3px 4px;
+      text-align: center;
+      vertical-align: middle;
+      height: 30px;
+      word-break: keep-all;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+    .gimbap-inner-table .input-cell {
+      background: #ffffff !important;
+      padding: 0;
+    }
+    .gimbap-inner-table .gimbap-one-line-autogrow-row,
+    .gimbap-inner-table .gimbap-one-line-autogrow-row td {
+      height: 30px !important;
+      min-height: 30px !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    .gimbap-inner-table .gimbap-one-line-autogrow-row td {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    .gimbap-inner-table .gimbap-one-line-autogrow-row textarea.cell-input,
+    .gimbap-inner-table .gimbap-one-line-autogrow-row input.cell-input {
+      height: 28px !important;
+      min-height: 28px !important;
+      padding: 3px 4px !important;
+      line-height: 22px !important;
+      overflow: hidden;
+      white-space: nowrap;
+      text-align: center !important;
+      vertical-align: middle !important;
+      display: block;
+    }
+    .gimbap-inner-table .gimbap-one-line-autogrow-row .fixed,
+    .gimbap-inner-table .gimbap-one-line-autogrow-row .gimbap-total-label-cell,
+    .gimbap-inner-table .gimbap-one-line-autogrow-row .gimbap-total-value-cell {
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    .gimbap-total-label-cell {
+      width: 62px;
+      min-width: 62px;
+      white-space: nowrap;
+    }
+    .gimbap-total-value-cell {
+      width: auto;
+      min-width: 78px;
+      white-space: nowrap;
+    }
+    #gimbap-total {
+      width: auto;
+      min-width: 72px;
+      white-space: nowrap;
+      text-align: center;
+      display: inline-block;
+    }
+
+
+
+    /* 정보 모음 폼 - 산행계획 표 아래 */
+    .info-form-wrap {
+      width: 100%;
+      margin-top: 18px;
+      padding: 0;
+      background: #ffffff;
+      border: 1px solid #d7d7d7;
+      border-radius: 0 18px 0 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      font-size: 14px;
+    }
+    .info-title {
+      width: 270px;
+      height: 38px;
+      line-height: 38px;
+      background: #fff200;
+      color: #111;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 8px 0;
+    }
+    .info-toolbar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 0 0 8px 0;
+      padding: 0 0 0 0;
+    }
+    .info-toolbar button {
+      height: 31px;
+      padding: 3px 10px;
+      border: 1px solid #999;
+      background: #f3f3f3;
+      color: #111;
+      border-radius: 2px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .info-toolbar button:active { transform: translateY(1px); }
+    .info-section-table {
+      width: 100%;
+      min-width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin: 0 0 14px 0;
+      border: 1px solid #111;
+      background: #fff;
+      font-size: 14px;
+    }
+    .info-section-table th,
+    .info-section-table td {
+      border: 1px dotted #444;
+      height: 28px;
+      padding: 3px 5px;
+      text-align: center;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+      font-weight: 400;
+      outline: none;
+    }
+    .info-section-table th {
+      background: #d9d9d9;
+      font-weight: 400;
+    }
+    .info-section-table td { background: #ffffff; }
+    .info-section-table td.info-selected,
+    .info-section-table th.info-selected {
+      outline: 2px solid #1737c9;
+      outline-offset: -2px;
+    }
+
+    .info-select-col {
+      width: 58px !important;
+      min-width: 58px;
+      background: #e9e9e9 !important;
+      text-align: center !important;
+    }
+    .info-row-select-btn {
+      min-width: 42px;
+      height: 22px;
+      padding: 1px 6px;
+      border: 1px solid #777;
+      background: #f8f8f8;
+      color: #111;
+      border-radius: 2px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      line-height: 1.1;
+    }
+    .info-row-select-btn:active { transform: translateY(1px); }
+    .info-section-table tr.info-row-selected > td,
+    .info-section-table tr.info-row-selected > th {
+      background-color: #fff8c6;
+    }
+    .info-help {
+      margin: -2px 0 2px 0;
+      color: #555;
+      font-size: 12px;
+      line-height: 1.5;
+    }
   </style>
 </head>
-<body>
-  <script>
-    (function () {
-      const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
-      if (gate.allowed) return;
-      const styleEl = document.getElementById('trip-plan-gate-style');
-      if (styleEl) styleEl.remove();
-      document.body.innerHTML = '';
-      document.body.style.display = 'flex';
-      document.body.style.alignItems = 'center';
-      document.body.style.justifyContent = 'center';
-      document.body.style.minHeight = '100vh';
-      document.body.style.padding = '24px';
-      document.body.innerHTML = `
-        <div style="max-width:420px;width:100%;border:1px solid #d0d7de;border-radius:16px;padding:20px;background:#fff;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
-          <div style="font-size:18px;font-weight:700;color:#1737c9;margin-bottom:10px;">직접 진입 차단</div>
-          <div style="font-size:14px;line-height:1.6;color:#222;white-space:pre-line;">${gate.message}</div>
-        </div>
-      `;
-      setTimeout(function () {
-        if (document.referrer) history.back();
-        else window.location.replace('https://coretechms.github.io/bus-seat/');
-      }, 0);
-      throw new Error('trip-plan-direct-access-blocked');
-    })();
-  </script>
-  <!-- free-pan-zoom-enabled -->
-  <div class="mobile-fit-wrap" id="mobile-fit-wrap">
-    <div class="sheet" id="capture-area">
-    <div class="title-bar">
-      <div class="title">정기산행 계획</div>
-      <div class="action-buttons">
-        <button type="button" id="save-button" class="save-btn" disabled aria-disabled="true">[실시간 동기화]</button>
-        <button type="button" id="member-capture-button" class="capture-btn">[회원용 캡쳐]</button>
-        <button type="button" id="capture-button" class="capture-btn">[캡쳐]</button>
+<body style="overflow: auto;">
+<script>
+  (function () {
+    const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
+    if (gate.allowed) return;
+    const styleEl = document.getElementById('trip-plan-gate-style');
+    if (styleEl) styleEl.remove();
+    document.body.innerHTML = '';
+    document.body.style.display = 'flex';
+    document.body.style.alignItems = 'center';
+    document.body.style.justifyContent = 'center';
+    document.body.style.minHeight = '100vh';
+    document.body.style.padding = '24px';
+    document.body.innerHTML = `
+      <div style="max-width:420px;width:100%;border:1px solid #d0d7de;border-radius:16px;padding:20px;background:#fff;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+        <div style="font-size:18px;font-weight:700;color:#1737c9;margin-bottom:10px;">직접 진입 차단</div>
+        <div style="font-size:14px;line-height:1.6;color:#222;white-space:pre-line;">${gate.message}</div>
       </div>
-    </div>
+    `;
+    setTimeout(function () {
+      if (document.referrer) history.back();
+      else window.location.replace('https://coretechms.github.io/bus-seat/');
+    }, 0);
+    throw new Error('trip-plan-direct-access-blocked');
+  })();
+</script>
 
-    <div class="firebase-panel" id="firebase-panel">
-      <div class="firebase-title">실시간 동기화 상태</div>
-      <div>이 문서는 Firebase Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
-      <div class="firebase-status" id="firebase-status">Firebase 연결 준비 중...</div>
-    </div>
-
-    <table class="plan">
-      <colgroup>
-        <col style="width: 6.5%;">
-        <col style="width: 13.5%;">
-        <col style="width: 13.5%;">
-        <col style="width: 13.2%;">
-        <col style="width: 13.2%;">
-        <col style="width: 13.2%;">
-        <col style="width: 13.2%;">
-        <col style="width: 13.2%;">
-      </colgroup>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">회 비</td>
-        <td colspan="2" rowspan="2" class="input-cell"><input id="fee-amount" class="cell-input bold amount-input key-font-14" value="" /></td>
-        <td colspan="3" class="fixed left">특별산행 / 추가비용 :</td>
-        <td class="fixed blue" rowspan="2">산행날자</td>
-        <td rowspan="2" class="input-cell"><input id="hike-date" class="cell-input blue key-font-14" value=" 월  일" /></td>
-      </tr>
-      <tr class="h30">
-        <td colspan="3" class="input-cell"><input class="cell-input amount-input" value="" /></td>
-      </tr>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">산행지</td>
-        <td colspan="2" rowspan="2" class="input-cell mountain-name-cell calc-cell"><textarea id="mountain-name" class="cell-input red mountain-name-input" readonly tabindex="-1"> </textarea></td>
-        <td colspan="2" class="fixed spaced">주 소</td>
-        <td class="fixed gray">입 장 료 / 주차료</td>
-        <td class="fixed gray">예 약 제</td>
-        <td class="fixed gray">도 선 료 왕복</td>
-      </tr>
-      <tr class="h30">
-        <td colspan="2" class="input-cell address-cell"><input class="cell-input left address-input" value="" /></td>
-        <td class="input-cell"><input class="cell-input" /></td>
-        <td class="input-cell"><input class="cell-input" /></td>
-        <td class="input-cell"><input class="cell-input" /></td>
-      </tr>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">관광 버스</td>
-        <td class="fixed">기본 운임비</td>
-        <td class="fixed">차량정보</td>
-        <td class="fixed">차량번호</td>
-        <td class="fixed">이   름</td>
-        <td class="fixed">전화번호</td>
-        <td colspan="2" class="fixed">계좌번호</td>
-      </tr>
-      <tr class="h30">
-        <td class="input-cell"><input class="cell-input amount-input" /></td>
-        <td class="input-cell"><input class="cell-input" value="" /></td>
-        <td class="input-cell"><input class="cell-input" value="" /></td>
-        <td class="input-cell"><input class="cell-input" value="" /></td>
-        <td class="input-cell"><input class="cell-input" value="" /></td>
-        <td colspan="2" class="input-cell"><input class="cell-input" value="" /></td>
-      </tr>
-
-      <tr class="h26 duration-top-line">
-        <td class="fixed" rowspan="2">소요시간</td>
-        <td class="fixed bold">출 발</td>
-        <td class="input-cell sky-cell"><input class="cell-input bold" value="산행 시간" /></td>
-        <td class="input-cell sky-cell"><input class="cell-input" value="집결 -> 이동" /></td>
-        <td class="input-cell sky-cell"><input class="cell-input" value=" " /></td>
-        <td class="input-cell sky-cell"><input class="cell-input" value="식사" /></td>
-        <td class="input-cell sky-cell"><input class="cell-input" value=" " /></td>
-        <td class="fixed bold">귀 가</td>
-      </tr>
-      <tr class="h14">
-        <td class="input-cell"><input id="duration-start" class="cell-input" value="2:30 예정" /></td>
-        <td class="input-cell"><input id="duration-hike" class="cell-input" value="4:30 예정" /></td>
-        <td class="input-cell"><input id="duration-move" class="cell-input" value="00:50 예정" /></td>
-        <td class="input-cell"><input id="duration-stop1" class="cell-input" value="00:40 예정" /></td>
-        <td class="input-cell"><input id="duration-meal" class="cell-input" value="1:00 예정" /></td>
-        <td class="input-cell"><input id="duration-skywalk" class="cell-input" value="1:00 예정" /></td>
-        <td class="input-cell"><input id="duration-home" class="cell-input" value="2:40 예정" /></td>
-      </tr>
-
-      <tr class="h20 expected-top">
-        <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
-        <td class="input-cell"><input id="base-time" class="cell-input red key-font-14" value="06:30" /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-1" class="cell-input bold key-font-14" value="09:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-2" class="cell-input bold key-font-14" value="13:30 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-3" class="cell-input bold key-font-14" value="14:20 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-4" class="cell-input bold key-font-14" value="15:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-5" class="cell-input bold key-font-14" value="16:00 ->" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-top-6" class="cell-input bold key-font-14" value="17:00 ->" readonly /></td>
-      </tr>
-      <tr class="h20 expected-bottom expected-bottom-bold-line">
-        <td class="input-cell readonly-cell"><input id="calc-bottom-1" class="cell-input key-font-14" value="09:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-2" class="cell-input bold key-font-14" value="13:30" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-3" class="cell-input key-font-14" value="14:20" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-4" class="cell-input key-font-14" value="15:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-5" class="cell-input key-font-14" value="16:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-6" class="cell-input key-font-14" value="17:00" readonly /></td>
-        <td class="input-cell readonly-cell"><input id="calc-bottom-7" class="cell-input blue bold key-font-14" value="19:40" readonly /></td>
-      </tr>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">식 당</td>
-        <td class="fixed">식 당</td>
-        <td class="fixed">연락처</td>
-        <td class="fixed">주 소</td>
-        <td class="fixed">메 뉴</td>
-        <td class="fixed">비 고</td>
-        <td class="fixed">주류 반입 :</td>
-        <td class="fixed">예약 인원 :</td>
-      </tr>
-      <tr class="h30 meal-row one-line-autogrow-row">
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell one-line-autogrow-row"><textarea class="cell-input" data-min-height="24">가 능</textarea></td>
-        <td class="input-cell calc-cell"><input id="meal-count" class="cell-input bold" value=" 명" readonly /></td>
-      </tr>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">비 품</td>
-        <td class="fixed">물</td>
-        <td class="fixed">소주 / 막걸리</td>
-        <td class="fixed">커피믹스 / 블랙</td>
-        <td colspan="2" class="fixed">소모품</td>
-        <td class="fixed">총 인원</td>
-        <td class="fixed">추가인원(기사)</td>
-      </tr>
-      <tr class="h30">
-        <td class="input-cell"><input class="cell-input" value=" " /></td>
-        <td class="input-cell"><input class="cell-input" value="  /  " /></td>
-        <td class="input-cell"><input class="cell-input" value="  /  " /></td>
-        <td colspan="2" class="input-cell one-line-autogrow-row"><textarea class="cell-input" rows="1" data-min-height="24"></textarea></td>
-        <td class="input-cell"><input id="total-people" class="cell-input" value=" " readonly /></td>
-        <td class="input-cell"><input id="extra-people" class="cell-input blue" value=" " /></td>
-      </tr>
-
-      <tr class="h30">
-        <td class="fixed" rowspan="2">김 밥</td>
-        <td class="input-cell" rowspan="2"><textarea class="cell-input"> 
-
- </textarea></td>
-        <td colspan="2" class="fixed">계좌번호</td>
-        <td class="fixed">전화번호</td>
-        <td class="fixed">단가</td>
-        <td class="fixed">주문수량 :</td>
-        <td class="input-cell calc-cell"><input id="gimbap-count" class="cell-input bold" value="  줄" readonly /></td>
-      </tr>
-      <tr class="h30 gimbap-one-line-autogrow-row">
-        <td colspan="2" class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><textarea class="cell-input" data-min-height="24"></textarea></td>
-        <td class="input-cell"><input id="gimbap-price" class="cell-input amount-input" value="" /></td>
-        <td class="fixed bold">금 액 :</td>
-        <td class="input-cell calc-cell"><input id="gimbap-total" class="cell-input bold" value="  원" readonly /></td>
-      </tr>
-    </table>
-    </div>
-  </div>
-  <script>
+<!-- free-pan-zoom-enabled -->
+<div class="mobile-fit-wrap" id="mobile-fit-wrap">
+<div class="sheet" id="capture-area" style="transform: none; margin: 0px auto;">
+<div class="title-bar">
+<div class="title">정기산행 계획</div>
+<div class="action-buttons">
+<button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
+<button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
+<button class="capture-btn" id="capture-button" type="button">[캡쳐]</button>
+</div>
+</div>
+<div class="firebase-panel" id="firebase-panel">
+<div class="firebase-title">실시간 동기화 상태</div>
+<div>이 문서는 Firebase Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
+<div class="firebase-status" id="firebase-status" style="color: rgb(11, 122, 40);">실시간 동기화 연결됨 · 저장된 내용 반영 완료</div>
+</div>
+<table class="plan">
+<colgroup>
+<col style="width: 6.5%;">
+<col style="width: 13.5%;">
+<col style="width: 13.5%;">
+<col style="width: 13.2%;">
+<col style="width: 13.2%;">
+<col style="width: 13.2%;">
+<col style="width: 13.2%;">
+<col style="width: 13.2%;">
+</colgroup>
+<tbody><tr class="h30">
+<td class="fixed" rowspan="2">회 비</td>
+<td class="input-cell" colspan="2" rowspan="2"><input class="cell-input bold amount-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:fee-amount" id="fee-amount" value=""></td>
+<td class="fixed left" colspan="3">특별산행 / 추가비용 :</td>
+<td class="fixed blue" rowspan="2">산행날자</td>
+<td class="input-cell" rowspan="2"><input class="cell-input blue key-font-14" data-realtime-save-bound="true" data-sync-key="id:hike-date" id="hike-date" value=" 월  일"></td>
+</tr>
+<tr class="h30">
+<td class="input-cell" colspan="3"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:2" value=""></td>
+</tr>
+<tr class="h30" style="height: auto;">
+<td class="fixed" rowspan="2">산행지</td>
+<td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
+<td class="fixed spaced" colspan="2">주 소</td>
+<td class="fixed gray">입 장 료 / 주차료</td>
+<td class="fixed gray">예 약 제</td>
+<td class="fixed gray">도 선 료 왕복</td>
+</tr>
+<tr class="h30">
+<td class="input-cell address-cell" colspan="2"><input class="cell-input left address-input" data-realtime-save-bound="true" data-sync-key="field:3" value=""></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:4"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:5"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:6"></td>
+</tr>
+<tr class="h30">
+<td class="fixed" rowspan="2">관광 버스</td>
+<td class="fixed">기본 운임비</td>
+<td class="fixed">차량정보</td>
+<td class="fixed">차량번호</td>
+<td class="fixed">이   름</td>
+<td class="fixed">전화번호</td>
+<td class="fixed" colspan="2">계좌번호</td>
+</tr>
+<tr class="h30">
+<td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:7"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:8" value=""></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:9" value=""></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:10" value=""></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:11" value=""></td>
+<td class="input-cell" colspan="2"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:12" value=""></td>
+</tr>
+<tr class="h26 duration-top-line">
+<td class="fixed" rowspan="2">소요시간</td>
+<td class="fixed bold">출 발</td>
+<td class="input-cell sky-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="field:13" value="산행 시간"></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:14" value="집결 -&gt; 이동"></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:15" value=" "></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:16" value="식사"></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:17" value=" "></td>
+<td class="fixed bold">귀 가</td>
+</tr>
+<tr class="h14">
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="2:30 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="4:30 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="00:50 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-stop1" id="duration-stop1" value="00:40 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-meal" id="duration-meal" value="1:00 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="1:00 예정"></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="2:40 예정"></td>
+</tr>
+<tr class="h20 expected-top">
+<td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
+<td class="input-cell"><input class="cell-input red key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="09:00 -&gt;"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-2" readonly="" value="13:30 -&gt;"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-3" readonly="" value="14:20 -&gt;"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-4" readonly="" value="15:00 -&gt;"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-5" readonly="" value="16:00 -&gt;"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-6" readonly="" value="17:00 -&gt;"></td>
+</tr>
+<tr class="h20 expected-bottom expected-bottom-bold-line">
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-1" readonly="" value="09:00"></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-bottom-2" readonly="" value="13:30"></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-3" readonly="" value="14:20"></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" value="15:00"></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" value="16:00"></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" value="17:00"></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" value="19:40"></td>
+</tr>
+<tr class="h30">
+<td class="fixed" rowspan="2">식 당</td>
+<td class="fixed">식 당</td>
+<td class="fixed">연락처</td>
+<td class="fixed">주 소</td>
+<td class="fixed">메 뉴</td>
+<td class="fixed">비 고</td>
+<td class="fixed">주류 반입 :</td>
+<td class="fixed">예약 인원 :</td>
+</tr>
+<tr class="h30 meal-row one-line-autogrow-row" style="height: auto;">
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:26" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:27" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:28" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:29" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:30" style="height: 40px;"></textarea></td>
+<td class="input-cell one-line-autogrow-row" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:31" style="height: 40px;">가 능</textarea></td>
+<td class="input-cell calc-cell"><input class="cell-input bold" id="meal-count" readonly="" value=" 명"></td>
+</tr>
+<tr class="h30">
+<td class="fixed" rowspan="2">비 품</td>
+<td class="fixed">물</td>
+<td class="fixed">소주 / 막걸리</td>
+<td class="fixed">커피믹스 / 블랙</td>
+<td class="fixed" colspan="2">소모품</td>
+<td class="fixed">총 인원</td>
+<td class="fixed">추가인원(기사)</td>
+</tr>
+<tr class="h30" style="height: auto;">
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:32" value=" "></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:33" value="  /  "></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:34" value="  /  "></td>
+<td class="input-cell one-line-autogrow-row" colspan="2" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:35" rows="1" style="height: 24px;"></textarea></td>
+<td class="input-cell"><input class="cell-input" id="total-people" readonly="" value=" "></td>
+<td class="input-cell"><input class="cell-input blue" data-realtime-save-bound="true" data-sync-key="id:extra-people" id="extra-people" value=" "></td>
+</tr>
+<tr class="h30 gimbap-wrapper-row" style="height: auto;">
+<td class="input-cell gimbap-wrapper-cell" colspan="8" style="height: auto; padding: 0;">
+<table class="gimbap-inner-table" style="table-layout: auto; width: auto; min-width: 100%;">
+<colgroup>
+<col style="width: 11%;"><col style="width: 13%;"><col style="width: 10%;"><col style="width: 13%;"><col style="width: 13%;"><col style="width: 18%;"><col style="width: 8%;"><col style="width: 7%;"><col style="width: 7%;">
+</colgroup>
+<tbody>
+<tr class="h30" style="height: auto;">
+<td class="fixed">위치</td>
+<td class="fixed">상호</td>
+<td class="fixed">이름</td>
+<td class="fixed">전화번호</td>
+<td class="fixed">휴대폰</td>
+<td class="fixed">계좌번호</td>
+<td class="fixed">단가</td>
+<td class="fixed">주문수량 :</td>
+<td class="input-cell calc-cell"><input class="cell-input bold" id="gimbap-count" readonly="" value="0 줄"></td>
+</tr>
+<tr class="h30 gimbap-one-line-autogrow-row" style="height: auto;">
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-location" id="gimbap-location" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-shop" id="gimbap-shop" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-name" id="gimbap-name" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-phone" id="gimbap-phone" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-mobile" id="gimbap-mobile" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-account" id="gimbap-account" style="height: 28px;"></textarea></td>
+<td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="id:gimbap-price" id="gimbap-price" value=""></td>
+<td class="fixed bold gimbap-total-label-cell">금 액 :</td>
+<td class="input-cell calc-cell gimbap-total-value-cell" style="width: 82px; min-width: 82px;"><input class="cell-input bold" id="gimbap-total" readonly="" value="0 원" style="width: 72px;"></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody></table>
+<div class="info-form-wrap" id="info-form-wrap">
+<div class="info-title">정보 모음</div>
+<div class="info-toolbar">
+<button data-info-action="add-row" type="button">선택행 아래 추가</button>
+<button data-info-action="delete-row" type="button">선택행 삭제</button>
+<button data-info-action="add-col" type="button">선택칸 오른쪽 칸 추가</button>
+<button data-info-action="delete-col" type="button">선택칸 열 삭제</button>
+<button data-info-action="save" type="button">저장</button>
+<button data-info-action="load" type="button">불러오기</button>
+</div>
+<table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
+<colgroup><col class="info-select-col-def" style="width: 58px;"><col style="width: 106px;"><col style="width: 148px;"><col style="width: 81px;"><col style="width: 140px;"><col style="width: 148px;"><col style="width: 227px;"><col style="width: 102px;"></colgroup>
+<thead>
+<tr class=""><th class="info-select-col" contenteditable="false">선택</th>
+<th contenteditable="true">위치</th><th contenteditable="true">상호</th><th contenteditable="true">이름</th><th contenteditable="true">전화 번호</th>
+<th contenteditable="true">휴대폰</th><th contenteditable="true">계좌번호</th><th contenteditable="true">단가</th>
+</tr>
+</thead>
+<tbody>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true" class="">검암2지구</td><td contenteditable="true">깨솔솔꼬마김밥</td><td contenteditable="true">김혜경</td><td contenteditable="true">032 562 1123</td><td contenteditable="true">010 3932 0327</td><td contenteditable="true" class="">신한 110 467 342 765</td><td contenteditable="true">3,500 원</td></tr>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true" class="">검암2지구</td><td contenteditable="true">은 빛 분 식</td><td contenteditable="true">김유미</td><td contenteditable="true">032 564 7049</td><td contenteditable="true">010 6851 0818</td><td contenteditable="true" class="">농협 2170 5352 1270 50</td><td contenteditable="true">3,000 원</td></tr>
+<tr><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+</tbody>
+</table>
+<table class="info-section-table" id="info-company-table" style="width: 1016px; min-width: 100%; table-layout: fixed;">
+<colgroup><col class="info-select-col-def" style="width: 58px;"><col style="width: 89px;"><col style="width: 94px;"><col style="width: 171px;"><col style="width: 143px;"><col style="width: 164px;"><col style="width: 282px;"></colgroup>
+<thead>
+<tr class=""><th class="info-select-col" contenteditable="false">선택</th>
+<th contenteditable="true" class="">차량번호</th><th contenteditable="true">이 름</th><th contenteditable="true">전화번호</th><th class="" contenteditable="true">기본 운임비</th>
+<th class="" contenteditable="true">차량정보</th><th contenteditable="true">계좌번호</th>
+</tr>
+</thead>
+<tbody>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true" class=""><br></td><td class="" contenteditable="true">윤명순</td><td contenteditable="true">010 2750 8163</td><td contenteditable="true">850,000</td><td class="" contenteditable="true">45 블루스카이<br></td><td class="" contenteditable="true">우체국&nbsp; 1074 2502 048 557</td></tr>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true" class=""></td><td contenteditable="true">김정택</td><td contenteditable="true">010 4321 5993</td><td contenteditable="true">750,000</td><td class="" contenteditable="true">45 화이트<br></td><td class="" contenteditable="true">우리&nbsp; 1002 761 801 016</td></tr>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true" class=""></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+<tr class=""><td class="info-select-col" contenteditable="false"><button class="info-row-select-btn" type="button">선택</button></td><td class="" contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+</tbody>
+</table>
+<div class="info-help">셀을 클릭하면 수정할 수 있고, 선택 버튼을 누르면 해당 행 정보가 위 산행계획 표에 자동 반영됩니다.</div>
+</div>
+</div>
+</div>
+<script>
     function parseDuration(text) {
       const raw = String(text || '').replace(/예정/g, '').trim();
       const match = raw.match(/(\d{1,2})\s*:\s*(\d{2})/);
@@ -678,6 +909,30 @@
     function formatNumber(value) {
       return Number(value || 0).toLocaleString('ko-KR');
     }
+
+    function adjustGimbapTotalWidth() {
+      const totalEl = document.getElementById('gimbap-total');
+      if (!totalEl) return;
+      const text = String(totalEl.value || '0 원');
+      let visualLength = 0;
+      Array.from(text).forEach((ch) => {
+        visualLength += /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(ch) ? 1.8 : 1;
+      });
+      const nextWidth = Math.max(72, Math.ceil(visualLength * 8.8) + 26);
+      totalEl.style.width = nextWidth + 'px';
+      const totalCell = totalEl.closest('td');
+      if (totalCell) {
+        totalCell.style.width = (nextWidth + 10) + 'px';
+        totalCell.style.minWidth = (nextWidth + 10) + 'px';
+      }
+      const table = totalEl.closest('table');
+      if (table) {
+        table.style.tableLayout = 'auto';
+        table.style.width = 'auto';
+        table.style.minWidth = '100%';
+      }
+    }
+
 
     function removeDateTextForMountainTitle(text) {
       return String(text || '')
@@ -862,6 +1117,7 @@
       if (mealCountEl) mealCountEl.value = formatNumber(mealCount) + ' 명';
       countEl.value = formatNumber(orderCount) + ' 줄';
       totalEl.value = formatNumber(totalPrice) + ' 원';
+      adjustGimbapTotalWidth();
     }
 
     function updateExpectedTimes() {
@@ -924,6 +1180,7 @@
     bindAmountFormatting();
     updateExpectedTimes();
     updateGimbapTotals();
+    adjustGimbapTotalWidth();
 
 
     function isLikelyDesktop() {
@@ -1238,9 +1495,8 @@ function resizeAllTextareas(root = document) {
     if (memberCaptureButton) memberCaptureButton.addEventListener('click', captureMemberImage);
 
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
-  <script type="module">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getDatabase, ref, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -1501,6 +1757,425 @@ function resizeAllTextareas(root = document) {
       bindBusSeatMountainRealtimeSync();
     }
   </script>
+<script>
+    (function () {
+      const STORAGE_KEY = 'tripSchedule.infoForm.tables.v2';
+      let selectedCell = null;
 
-</body>
-</html>
+      function infoTables() {
+        return Array.from(document.querySelectorAll('.info-section-table'));
+      }
+
+      function clearSelection() {
+        document.querySelectorAll('.info-selected').forEach((cell) => cell.classList.remove('info-selected'));
+        document.querySelectorAll('.info-row-selected').forEach((row) => row.classList.remove('info-row-selected'));
+      }
+
+      function selectCell(cell) {
+        if (!cell || !cell.closest('.info-section-table')) return;
+        clearSelection();
+        selectedCell = cell;
+        selectedCell.classList.add('info-selected');
+        const row = selectedCell.closest('tr');
+        if (row) row.classList.add('info-row-selected');
+      }
+
+      document.addEventListener('click', function (event) {
+        const selectButton = event.target.closest('.info-row-select-btn');
+        if (selectButton) {
+          const row = selectButton.closest('tr');
+          const firstEditableCell = row ? Array.from(row.cells).find((cell) => cell.contentEditable === 'true') : null;
+          selectCell(firstEditableCell || selectButton.closest('td'));
+          syncSelectedInfoRowToPlan(row);
+          event.preventDefault();
+          return;
+        }
+        const cell = event.target.closest('.info-section-table th, .info-section-table td');
+        if (cell) selectCell(cell);
+      });
+
+      document.addEventListener('input', function (event) {
+        const table = event.target.closest('.info-section-table');
+        if (table) {
+          syncColumnWidths(table);
+          saveInfoForm(false);
+        }
+      });
+
+      function getSelectedTable() {
+        if (selectedCell) return selectedCell.closest('.info-section-table');
+        return document.querySelector('.info-section-table');
+      }
+
+      function getColumnCount(table) {
+        const firstRow = table.querySelector('tr');
+        return firstRow ? firstRow.children.length : 0;
+      }
+
+      function getCellIndex(cell) {
+        return Array.prototype.indexOf.call(cell.parentElement.children, cell);
+      }
+
+      function getInfoCellTextWidth(text) {
+        const value = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!value) return 70;
+        let visualLength = 0;
+        Array.from(value).forEach((ch) => {
+          visualLength += /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(ch) ? 1.85 : 1;
+        });
+        return Math.ceil(visualLength * 8.2) + 28;
+      }
+
+      function syncColumnWidths(table) {
+        if (!table) return;
+        const colCount = getColumnCount(table);
+        if (!colCount) return;
+
+        let colgroup = table.querySelector('colgroup');
+        if (!colgroup) {
+          colgroup = document.createElement('colgroup');
+          table.insertBefore(colgroup, table.firstChild);
+        }
+
+        const widths = Array.from({ length: colCount }, () => 70);
+        if (colCount > 0) widths[0] = 58;
+        Array.from(table.rows).forEach((row) => {
+          Array.from(row.children).forEach((cell, index) => {
+            if (index >= colCount) return;
+            const textWidth = getInfoCellTextWidth(cell.innerText || cell.textContent || '');
+            if (index === 0 && cell.classList && cell.classList.contains('info-select-col')) {
+              widths[index] = 58;
+            } else {
+              widths[index] = Math.max(widths[index], Math.min(textWidth, 260));
+            }
+          });
+        });
+
+        const wrapper = document.getElementById('info-form-wrap');
+        const availableWidth = wrapper ? Math.max(wrapper.clientWidth - 2, 320) : 1024;
+        let totalWidth = widths.reduce((sum, width) => sum + width, 0);
+
+        if (totalWidth < availableWidth) {
+          const extra = availableWidth - totalWidth;
+          const totalWeight = widths.reduce((sum, width) => sum + width, 0) || colCount;
+          for (let i = 0; i < widths.length; i += 1) {
+            widths[i] += Math.floor(extra * (widths[i] / totalWeight));
+          }
+          totalWidth = widths.reduce((sum, width) => sum + width, 0);
+        }
+
+        table.style.width = totalWidth + 'px';
+        table.style.minWidth = '100%';
+        table.style.tableLayout = 'fixed';
+        colgroup.innerHTML = '';
+        widths.forEach((width, index) => {
+          const col = document.createElement('col');
+          if (index === 0) col.className = 'info-select-col-def';
+          col.style.width = (index === 0 ? 58 : Math.max(60, Math.ceil(width))) + 'px';
+          colgroup.appendChild(col);
+        });
+      }
+
+      function syncAllInfoTableColumnWidths() {
+        infoTables().forEach(syncColumnWidths);
+      }
+
+
+      function isInfoSelectCell(cell) {
+        return !!(cell && cell.classList && cell.classList.contains('info-select-col'));
+      }
+
+      function createSelectCell(isHeader) {
+        const cell = document.createElement(isHeader ? 'th' : 'td');
+        cell.className = 'info-select-col';
+        cell.contentEditable = 'false';
+        if (isHeader) {
+          cell.textContent = '선택';
+        } else {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'info-row-select-btn';
+          button.textContent = '선택';
+          cell.appendChild(button);
+        }
+        return cell;
+      }
+
+      function normalizeSelectColumn(table) {
+        if (!table) return;
+        Array.from(table.rows).forEach((row) => {
+          const isHeader = row.parentElement && row.parentElement.tagName === 'THEAD';
+          const first = row.children[0];
+          if (!first || !first.classList.contains('info-select-col')) {
+            row.insertBefore(createSelectCell(isHeader), first || null);
+          } else {
+            first.contentEditable = 'false';
+            first.classList.add('info-select-col');
+            if (isHeader) {
+              first.textContent = '선택';
+            } else if (!first.querySelector('.info-row-select-btn')) {
+              first.innerHTML = '<button type="button" class="info-row-select-btn">선택</button>';
+            }
+          }
+        });
+      }
+
+      function normalizeAllSelectColumns() {
+        infoTables().forEach(normalizeSelectColumn);
+      }
+
+
+
+      function normalizeText(value) {
+        return String(value || '')
+          .replace(/\u00a0/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function getCellText(cell) {
+        if (!cell) return '';
+        return normalizeText(cell.innerText || cell.textContent || '');
+      }
+
+      function setFormFieldValue(field, value) {
+        if (!field) return;
+        const nextValue = normalizeText(value);
+        if ('value' in field) field.value = nextValue;
+        else field.textContent = nextValue;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+        if (field.tagName === 'TEXTAREA' && typeof autoResizeTextarea === 'function') {
+          autoResizeTextarea(field);
+        }
+      }
+
+      function setPlanCellValue(rowIndex, cellIndex, selector, value) {
+        const planTable = document.querySelector('table.plan');
+        if (!planTable || !planTable.rows[rowIndex] || !planTable.rows[rowIndex].cells[cellIndex]) return;
+        const target = planTable.rows[rowIndex].cells[cellIndex].querySelector(selector || 'input, textarea');
+        setFormFieldValue(target, value);
+      }
+
+      function readInfoRowData(row) {
+        const table = row ? row.closest('.info-section-table') : null;
+        if (!table || !row) return {};
+        const headers = Array.from(table.querySelectorAll('thead th'));
+        const cells = Array.from(row.cells);
+        const data = {};
+        headers.forEach((header, index) => {
+          if (index === 0 || header.classList.contains('info-select-col')) return;
+          const key = getCellText(header).replace(/\s+/g, '');
+          if (!key) return;
+          data[key] = getCellText(cells[index]);
+        });
+        return data;
+      }
+
+      function syncGimbapInfoToPlan(row) {
+        const data = readInfoRowData(row);
+
+        setFormFieldValue(document.getElementById('gimbap-location'), data['위치'] || '');
+        setFormFieldValue(document.getElementById('gimbap-shop'), data['상호'] || '');
+        setFormFieldValue(document.getElementById('gimbap-name'), data['이름'] || '');
+        setFormFieldValue(document.getElementById('gimbap-phone'), data['전화번호'] || '');
+        setFormFieldValue(document.getElementById('gimbap-mobile'), data['휴대폰'] || '');
+        setFormFieldValue(document.getElementById('gimbap-account'), data['계좌번호'] || '');
+        setFormFieldValue(document.getElementById('gimbap-price'), data['단가'] || '');
+
+        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+        if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
+      }
+
+      function syncCompanyInfoToPlan(row) {
+        const data = readInfoRowData(row);
+
+        setPlanCellValue(5, 0, 'input', data['기본운임비'] || data['기본요금'] || '');
+        setPlanCellValue(5, 1, 'input', data['차량정보'] || data['차종'] || '');
+        setPlanCellValue(5, 2, 'input', data['차량번호'] || data['회사'] || data['회 사'] || '');
+        setPlanCellValue(5, 3, 'input', data['이름'] || '');
+        setPlanCellValue(5, 4, 'input', data['전화번호'] || '');
+        setPlanCellValue(5, 5, 'input', data['계좌번호'] || '');
+      }
+
+      function syncSelectedInfoRowToPlan(row) {
+        const table = row ? row.closest('.info-section-table') : null;
+        if (!table || !row || row.parentElement.tagName !== 'TBODY') return;
+        if (table.id === 'info-main-table') {
+          syncGimbapInfoToPlan(row);
+        } else if (table.id === 'info-company-table') {
+          syncCompanyInfoToPlan(row);
+        }
+      }
+
+      function addRow() {
+        const table = getSelectedTable();
+        if (!table) return;
+        const tbody = table.tBodies[0] || table.createTBody();
+        const colCount = getColumnCount(table) || 1;
+        const row = document.createElement('tr');
+        for (let i = 0; i < colCount; i += 1) {
+          if (i === 0) {
+            row.appendChild(createSelectCell(false));
+            continue;
+          }
+          const td = document.createElement('td');
+          td.contentEditable = 'true';
+          td.innerHTML = '';
+          row.appendChild(td);
+        }
+        const selectedRow = selectedCell ? selectedCell.closest('tr') : null;
+        if (selectedRow && selectedRow.parentElement === tbody) {
+          selectedRow.insertAdjacentElement('afterend', row);
+        } else {
+          tbody.appendChild(row);
+        }
+        selectCell(row.children[1] || row.children[0]);
+        saveInfoForm(false);
+      }
+
+      function deleteRow() {
+        if (!selectedCell) return;
+        const row = selectedCell.closest('tr');
+        const tbody = row && row.parentElement;
+        if (!row || !tbody || tbody.tagName !== 'TBODY') return;
+        if (tbody.rows.length <= 1) {
+          Array.from(row.cells).forEach((cell) => { if (!isInfoSelectCell(cell)) cell.innerHTML = ''; });
+        } else {
+          const next = row.nextElementSibling || row.previousElementSibling;
+          row.remove();
+          if (next && next.cells[1]) selectCell(next.cells[1]);
+        }
+        saveInfoForm(false);
+      }
+
+      function addColumn() {
+        const table = getSelectedTable();
+        if (!table) return;
+        const index = selectedCell ? Math.max(getCellIndex(selectedCell) + 1, 1) : getColumnCount(table);
+        let newSelectedCell = null;
+
+        Array.from(table.rows).forEach((row) => {
+          const isHeader = row.parentElement.tagName === 'THEAD';
+          const cell = document.createElement(isHeader ? 'th' : 'td');
+          cell.contentEditable = 'true';
+          cell.innerHTML = '';
+          row.insertBefore(cell, row.children[index] || null);
+          if (!newSelectedCell && !isHeader) newSelectedCell = cell;
+        });
+
+        syncColumnWidths(table);
+        if (newSelectedCell) selectCell(newSelectedCell);
+        saveInfoForm(false);
+      }
+
+      function deleteColumn() {
+        if (!selectedCell) return;
+        const table = selectedCell.closest('.info-section-table');
+        const index = getCellIndex(selectedCell);
+        if (index === 0) { alert('선택 버튼 칸은 삭제할 수 없습니다.'); return; }
+        if (getColumnCount(table) <= 2) return;
+        Array.from(table.rows).forEach((row) => {
+          if (row.children[index]) row.children[index].remove();
+        });
+        syncColumnWidths(table);
+        selectedCell = null;
+        clearSelection();
+        saveInfoForm(false);
+      }
+
+      function serializeTable(table) {
+        return Array.from(table.rows).map((row) => Array.from(row.cells).map((cell) => cell.innerHTML));
+      }
+
+      function downloadInfoFormCodeCopy() {
+        const active = document.activeElement;
+        if (active && active.blur) active.blur();
+        clearSelection();
+        normalizeAllSelectColumns();
+        syncAllInfoTableColumnWidths();
+
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('.info-selected').forEach((cell) => cell.classList.remove('info-selected'));
+
+        const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'Trip-Schedule-1_info_saved.html';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }
+
+      function saveInfoForm(showAlert) {
+        const data = infoTables().map(serializeTable);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          if (showAlert) {
+            downloadInfoFormCodeCopy();
+            alert('현재 정보가 코드에 반영된 HTML 파일로 저장됩니다.\n다운로드된 파일을 사용하면 지금 정보가 기본값으로 열립니다.');
+          }
+        } catch (error) {
+          if (showAlert) alert('저장 실패: 브라우저 저장 공간을 확인하세요.');
+        }
+      }
+
+      function loadInfoForm(showAlert) {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          if (showAlert) alert('저장된 정보 모음 데이터가 없습니다.');
+          return;
+        }
+        try {
+          const data = JSON.parse(raw);
+          infoTables().forEach((table, tableIndex) => {
+            const tableData = data[tableIndex];
+            if (!Array.isArray(tableData) || !tableData.length) return;
+            const thead = table.tHead || table.createTHead();
+            const tbody = table.tBodies[0] || table.createTBody();
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            tableData.forEach((rowData, rowIndex) => {
+              const row = document.createElement('tr');
+              rowData.forEach((html) => {
+                const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
+                cell.contentEditable = 'true';
+                cell.innerHTML = html || '';
+                row.appendChild(cell);
+              });
+              if (rowIndex === 0) thead.appendChild(row);
+              else tbody.appendChild(row);
+            });
+            normalizeSelectColumn(table);
+            syncColumnWidths(table);
+          });
+          if (showAlert) alert('정보 모음 불러오기 완료');
+        } catch (error) {
+          if (showAlert) alert('불러오기 실패: 저장 데이터 형식을 확인하세요.');
+        }
+      }
+
+      document.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-info-action]');
+        if (!button) return;
+        const action = button.dataset.infoAction;
+        if (action === 'add-row') addRow();
+        if (action === 'delete-row') deleteRow();
+        if (action === 'add-col') addColumn();
+        if (action === 'delete-col') deleteColumn();
+        if (action === 'save') saveInfoForm(true);
+        if (action === 'load') loadInfoForm(true);
+      });
+
+      window.addEventListener('DOMContentLoaded', function () {
+        normalizeAllSelectColumns();
+        syncAllInfoTableColumnWidths();
+        // 기본 정보는 HTML 코드에 들어있는 현재 표 내용을 사용합니다.
+        setTimeout(syncAllInfoTableColumnWidths, 0);
+      });
+      window.addEventListener('resize', syncAllInfoTableColumnWidths);
+    })();
+  </script>
+</body></html>
