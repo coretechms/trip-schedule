@@ -7,36 +7,50 @@
 <script>
   (function () {
     const TICKET_KEY = 'trip-plan-access-ticket-v1';
+    const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
     const FALLBACK_TTL_MS = 500;
     let allowed = false;
+    let gateDisabled = false;
     let message = '';
+
     try {
-      const raw = sessionStorage.getItem(TICKET_KEY);
-      if (!raw) {
-        message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
-      } else {
-        const ticket = JSON.parse(raw);
-        const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
-        const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
-        const source = String(ticket && ticket.source ? ticket.source : '');
-        const now = Date.now();
-        if (source !== 'bus-seat') {
-          message = '유효하지 않은 산행계획 입장권입니다.';
-        } else if (!issuedAt || now > expiresAt) {
-          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
-        } else {
-          allowed = true;
-        }
-      }
+      gateDisabled = localStorage.getItem(GATE_OFF_KEY) === 'true';
     } catch (error) {
-      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+      gateDisabled = false;
+    }
+
+    if (gateDisabled) {
+      allowed = true;
+      message = '직접 진입 차단이 수정 모드에서 꺼져 있습니다.';
+    } else {
+      try {
+        const raw = sessionStorage.getItem(TICKET_KEY);
+        if (!raw) {
+          message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
+        } else {
+          const ticket = JSON.parse(raw);
+          const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
+          const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
+          const source = String(ticket && ticket.source ? ticket.source : '');
+          const now = Date.now();
+          if (source !== 'bus-seat') {
+            message = '유효하지 않은 산행계획 입장권입니다.';
+          } else if (!issuedAt || now > expiresAt) {
+            message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
+          } else {
+            allowed = true;
+          }
+        }
+      } catch (error) {
+        message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+      }
     }
 
     try {
       sessionStorage.removeItem(TICKET_KEY);
     } catch (error) {}
 
-    window.__TRIP_PLAN_GATE__ = { allowed, message };
+    window.__TRIP_PLAN_GATE__ = { allowed, message, gateDisabled, gateOffKey: GATE_OFF_KEY };
     if (allowed) {
       document.addEventListener('DOMContentLoaded', function () {
         const styleEl = document.getElementById('trip-plan-gate-style');
@@ -623,11 +637,78 @@
       background-color: #fff8c6;
     }
     .info-help {
+      display: none !important;
       margin: -2px 0 2px 0;
       color: #555;
       font-size: 12px;
       line-height: 1.5;
     }
+
+    /* 관리자 비밀번호 입력 모달 */
+    .admin-password-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 16px;
+    }
+    .admin-password-modal-backdrop.is-open {
+      display: flex;
+    }
+    .admin-password-modal {
+      width: min(360px, 100%);
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.2);
+      text-align: center;
+      font-family: inherit;
+    }
+    .admin-password-modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1737c9;
+      margin-bottom: 10px;
+    }
+    .admin-password-modal-input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #999;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font: inherit;
+      text-align: center;
+      outline: none;
+    }
+    .admin-password-modal-input:focus {
+      border-color: #1737c9;
+      box-shadow: 0 0 0 2px rgba(23,55,201,0.12);
+    }
+    .admin-password-modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .admin-password-modal-actions button {
+      min-width: 82px;
+      height: 32px;
+      border-radius: 7px;
+      border: 1px solid #999;
+      background: #f3f3f3;
+      font: inherit;
+      cursor: pointer;
+    }
+    .admin-password-modal-actions .admin-password-ok {
+      border-color: #1737c9;
+      background: #1737c9;
+      color: #fff;
+    }
+
   </style>
 </head>
 <body style="overflow: auto;">
@@ -644,15 +725,29 @@
     document.body.style.minHeight = '100vh';
     document.body.style.padding = '24px';
     document.body.innerHTML = `
-      <div style="max-width:420px;width:100%;border:1px solid #d0d7de;border-radius:16px;padding:20px;background:#fff;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+      <div style="display:none !important;max-width:460px;width:100%;border:1px solid #d0d7de;border-radius:16px;padding:20px;background:#fff;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
         <div style="font-size:18px;font-weight:700;color:#1737c9;margin-bottom:10px;">직접 진입 차단</div>
-        <div style="font-size:14px;line-height:1.6;color:#222;white-space:pre-line;">${gate.message}</div>
+        <div style="display:none;font-size:14px;line-height:1.6;color:#222;white-space:pre-line;margin-bottom:14px;">${gate.message}</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button type="button" id="gate-edit-mode-button" style="border:1px solid #0b7a28;background:#0b7a28;color:#fff;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;">수정모드로 열기</button>
+          <button type="button" id="gate-bus-seat-button" style="border:1px solid #1737c9;background:#1737c9;color:#fff;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;">bus-seat로 이동</button>
+        </div>
+        <div style="display:none;font-size:12px;color:#666;line-height:1.5;margin-top:12px;">수정모드로 열면 이 브라우저에서 직접 진입 차단이 꺼집니다. 상단 버튼으로 다시 켤 수 있습니다.</div>
       </div>
     `;
-    setTimeout(function () {
-      if (document.referrer) history.back();
-      else window.location.replace('https://coretechms.github.io/bus-seat/');
-    }, 0);
+    const editButton = document.getElementById('gate-edit-mode-button');
+    const busSeatButton = document.getElementById('gate-bus-seat-button');
+    if (editButton) {
+      editButton.addEventListener('click', function () {
+        try { localStorage.setItem(gate.gateOffKey || 'trip-plan-direct-gate-disabled-v1', 'true'); } catch (error) {}
+        location.reload();
+      });
+    }
+    if (busSeatButton) {
+      busSeatButton.addEventListener('click', function () {
+        window.location.replace('https://coretechms.github.io/bus-seat/');
+      });
+    }
     throw new Error('trip-plan-direct-access-blocked');
   })();
 </script>
@@ -666,6 +761,7 @@
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
 <button class="capture-btn" id="capture-button" type="button">[캡쳐]</button>
+<button class="capture-btn" id="gate-toggle-button" type="button">[직접진입 차단: ON]</button>
 </div>
 </div>
 <div class="firebase-panel" id="firebase-panel">
@@ -2178,4 +2274,146 @@ function resizeAllTextareas(root = document) {
       window.addEventListener('resize', syncAllInfoTableColumnWidths);
     })();
   </script>
+
+<script>
+  (function () {
+    const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
+
+    // 직접진입 차단 ON/OFF 변경은 관리자 비밀번호 확인 후에만 허용합니다.
+    // 우선 브라우저에 저장된 관리자 비밀번호 후보를 확인하고, 없으면 기본값 1234를 사용합니다.
+    const ADMIN_PASSWORD_FALLBACK = '1234';
+    const ADMIN_PASSWORD_KEYS = [
+      'busSeatAdminPassword',
+      'bus-seat-admin-password',
+      'busSeat.adminPassword',
+      'busSeatApp.adminPassword',
+      'adminPassword',
+      'tripSchedule.adminPassword'
+    ];
+
+    function getStoredAdminPassword() {
+      for (const storage of [localStorage, sessionStorage]) {
+        for (const key of ADMIN_PASSWORD_KEYS) {
+          try {
+            const value = storage.getItem(key);
+            if (value && String(value).trim()) return String(value).trim();
+          } catch (error) {}
+        }
+      }
+      return ADMIN_PASSWORD_FALLBACK;
+    }
+
+    function ensureAdminPasswordModal() {
+      let backdrop = document.getElementById('admin-password-modal-backdrop');
+      if (backdrop) return backdrop;
+
+      backdrop = document.createElement('div');
+      backdrop.id = 'admin-password-modal-backdrop';
+      backdrop.className = 'admin-password-modal-backdrop';
+      backdrop.innerHTML = `
+        <div class="admin-password-modal" role="dialog" aria-modal="true" aria-labelledby="admin-password-modal-title">
+          <div class="admin-password-modal-title" id="admin-password-modal-title">관리자 비밀번호 입력</div>
+          <input type="password" class="admin-password-modal-input" id="admin-password-modal-input" autocomplete="current-password" inputmode="numeric" />
+          <div class="admin-password-modal-actions">
+            <button type="button" class="admin-password-cancel">취소</button>
+            <button type="button" class="admin-password-ok">확인</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+      return backdrop;
+    }
+
+    function requestAdminPassword() {
+      return new Promise((resolve) => {
+        const backdrop = ensureAdminPasswordModal();
+        const input = backdrop.querySelector('#admin-password-modal-input');
+        const okButton = backdrop.querySelector('.admin-password-ok');
+        const cancelButton = backdrop.querySelector('.admin-password-cancel');
+
+        function close(result) {
+          backdrop.classList.remove('is-open');
+          input.value = '';
+          okButton.removeEventListener('click', onOk);
+          cancelButton.removeEventListener('click', onCancel);
+          input.removeEventListener('keydown', onKeydown);
+          backdrop.removeEventListener('click', onBackdropClick);
+          resolve(result);
+        }
+
+        function onOk() {
+          const savedPassword = getStoredAdminPassword();
+          if (String(input.value).trim() === String(savedPassword).trim()) {
+            close(true);
+          } else {
+            input.value = '';
+            input.focus();
+            alert('관리자 비밀번호가 일치하지 않습니다.');
+          }
+        }
+
+        function onCancel() {
+          close(false);
+        }
+
+        function onKeydown(event) {
+          if (event.key === 'Enter') onOk();
+          if (event.key === 'Escape') onCancel();
+        }
+
+        function onBackdropClick(event) {
+          if (event.target === backdrop) onCancel();
+        }
+
+        okButton.addEventListener('click', onOk);
+        cancelButton.addEventListener('click', onCancel);
+        input.addEventListener('keydown', onKeydown);
+        backdrop.addEventListener('click', onBackdropClick);
+
+        backdrop.classList.add('is-open');
+        setTimeout(() => input.focus(), 0);
+      });
+    }
+
+    function getGateOff() {
+      try { return localStorage.getItem(GATE_OFF_KEY) === 'true'; } catch (error) { return false; }
+    }
+    function setGateOff(value) {
+      try {
+        if (value) localStorage.setItem(GATE_OFF_KEY, 'true');
+        else localStorage.removeItem(GATE_OFF_KEY);
+      } catch (error) {}
+    }
+    function updateGateToggleButton() {
+      const button = document.getElementById('gate-toggle-button');
+      if (!button) return;
+      const off = getGateOff();
+      button.textContent = off ? '[직접진입 차단: OFF]' : '[직접진입 차단: ON]';
+      button.title = off
+        ? '관리자 비밀번호 확인 후 직접 진입 차단을 다시 켭니다.'
+        : '관리자 비밀번호 확인 후 이 브라우저에서 직접 열기를 허용합니다.';
+      button.style.background = off ? '#b42318' : '#1737c9';
+      button.style.borderColor = off ? '#b42318' : '#1737c9';
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      const button = document.getElementById('gate-toggle-button');
+      updateGateToggleButton();
+      if (!button) return;
+      button.addEventListener('click', async function () {
+        if (!(await requestAdminPassword())) return;
+
+        const currentlyOff = getGateOff();
+        if (currentlyOff) {
+          setGateOff(false);
+          alert('직접 진입 차단을 켰습니다.\n이제 bus-seat의 산행계획 버튼으로 들어온 경우만 열립니다.');
+        } else {
+          setGateOff(true);
+          alert('직접 진입 차단을 껐습니다.\n이 브라우저에서는 파일을 직접 열어 수정할 수 있습니다.');
+        }
+        location.reload();
+      });
+    });
+  })();
+</script>
+
 </body></html>
