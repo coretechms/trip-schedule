@@ -908,7 +908,6 @@
 <button data-info-action="delete-row" type="button">선택행 삭제</button>
 <button data-info-action="add-col" type="button">선택칸 오른쪽 칸 추가</button>
 <button data-info-action="delete-col" type="button">선택칸 열 삭제</button>
-<button data-info-action="save" type="button">저장</button>
 <button data-info-action="load" type="button">불러오기</button>
 </div>
 <table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
@@ -2050,7 +2049,10 @@ function resizeAllTextareas(root = document) {
 
 
       function isInfoSelectCell(cell) {
-        return !!(cell && cell.classList && cell.classList.contains('info-select-col'));
+        if (!cell) return false;
+        if (cell.classList && cell.classList.contains('info-select-col')) return true;
+        const text = normalizeText(cell.innerText || cell.textContent || '');
+        return text === '선택' || !!cell.querySelector?.('.info-row-select-btn');
       }
 
       function createSelectCell(isHeader) {
@@ -2069,22 +2071,36 @@ function resizeAllTextareas(root = document) {
         return cell;
       }
 
+      function makeCellSelectColumn(cell, isHeader) {
+        if (!cell) return;
+        cell.classList.add('info-select-col');
+        cell.contentEditable = 'false';
+        if (isHeader) {
+          cell.textContent = '선택';
+        } else if (!cell.querySelector('.info-row-select-btn')) {
+          cell.innerHTML = '<button type="button" class="info-row-select-btn">선택</button>';
+        }
+      }
+
       function normalizeSelectColumn(table) {
         if (!table) return;
         Array.from(table.rows).forEach((row) => {
           const isHeader = row.parentElement && row.parentElement.tagName === 'THEAD';
-          const first = row.children[0];
-          if (!first || !first.classList.contains('info-select-col')) {
-            row.insertBefore(createSelectCell(isHeader), first || null);
-          } else {
-            first.contentEditable = 'false';
-            first.classList.add('info-select-col');
-            if (isHeader) {
-              first.textContent = '선택';
-            } else if (!first.querySelector('.info-row-select-btn')) {
-              first.innerHTML = '<button type="button" class="info-row-select-btn">선택</button>';
+          const cells = Array.from(row.children);
+          const selectCells = cells.filter(isInfoSelectCell);
+
+          if (selectCells.length > 0) {
+            const firstSelect = selectCells[0];
+            if (firstSelect !== row.children[0]) {
+              row.insertBefore(firstSelect, row.children[0] || null);
             }
+            makeCellSelectColumn(firstSelect, isHeader);
+            selectCells.slice(1).forEach((cell) => cell.remove());
+            return;
           }
+
+          // 선택 칸은 최초 1개만 생성하고, 불러오기 시 중복 생성은 차단합니다.
+          row.insertBefore(createSelectCell(isHeader), row.children[0] || null);
         });
       }
 
@@ -2301,7 +2317,17 @@ function resizeAllTextareas(root = document) {
       }
 
       function serializeTable(table) {
-        return Array.from(table.rows).map((row) => Array.from(row.cells).map((cell) => cell.innerHTML));
+        return Array.from(table.rows).map((row) => {
+          let selectSeen = false;
+          return Array.from(row.cells)
+            .filter((cell) => {
+              if (!isInfoSelectCell(cell)) return true;
+              if (selectSeen) return false;
+              selectSeen = true;
+              return true;
+            })
+            .map((cell) => cell.innerHTML);
+        });
       }
 
       function downloadInfoFormCodeCopy() {
