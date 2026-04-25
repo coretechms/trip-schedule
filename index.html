@@ -1761,14 +1761,36 @@ function resizeAllTextareas(root = document) {
 
     window.__tripScheduleForceSaveNow = async function () {
       try {
+        window.__tripScheduleLocalSelectionSavingUntil = Date.now() + 15000;
         if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
         if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
         ensureSyncKeys();
+        const formData = collectFormData();
+        cacheFormDataLocally(formData);
         if (!db || applyingRemote) return false;
-        await saveFormData(false);
+        await withTimeout(update(ref(db, SYNC_FORMDATA_PATH), formData), 8000);
+        await withTimeout(update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() }), 8000);
+        setFirebaseStatus('실시간 동기화 연결됨 · 선택 정보 저장 완료', true);
         return true;
       } catch (error) {
         console.error('선택 동기화 즉시 저장 실패:', error);
+        return false;
+      }
+    };
+
+    window.__tripScheduleSaveInfoTablesToFirebase = async function (infoTablesData) {
+      try {
+        if (!db || applyingRemote) return false;
+        window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
+        await withTimeout(update(ref(db, `${SYNC_PATH}/infoTables`), {
+          data: Array.isArray(infoTablesData) ? infoTablesData : [],
+          updatedAt: serverTimestamp()
+        }), 8000);
+        setFirebaseStatus('실시간 동기화 연결됨 · 정보 모음 저장 완료', true);
+        return true;
+      } catch (error) {
+        console.error('정보 모음 Firebase 저장 실패:', error);
+        setFirebaseStatus('정보 모음 저장 실패: 데이터베이스 규칙 또는 주소를 확인하세요.', false);
         return false;
       }
     };
@@ -1817,6 +1839,26 @@ function resizeAllTextareas(root = document) {
     }
 
 
+    function bindInfoTablesRealtimeSync() {
+      if (!db) return;
+      try {
+        onValue(ref(db, `${SYNC_PATH}/infoTables/data`), (snapshot) => {
+          const value = snapshot.val();
+          if (!Array.isArray(value)) return;
+          if (window.__tripScheduleInfoLocalSavingUntil && Date.now() < window.__tripScheduleInfoLocalSavingUntil) return;
+          if (typeof window.__tripScheduleApplyInfoTablesFromFirebase === 'function') {
+            window.__tripScheduleApplyInfoTablesFromFirebase(value, false);
+          } else {
+            window.__tripSchedulePendingInfoTablesData = value;
+          }
+        }, (error) => {
+          console.error('정보 모음 실시간 수신 실패:', error);
+        });
+      } catch (error) {
+        console.error('정보 모음 실시간 동기화 초기화 실패:', error);
+      }
+    }
+
     function bindBusSeatMountainRealtimeSync() {
       try {
         const existingBusSeatApp = getApps().find((app) => app.name === 'bus-seat-app');
@@ -1856,6 +1898,7 @@ function resizeAllTextareas(root = document) {
         window.firebaseAppReady = app;
         setFirebaseStatus(`Firebase 연결 완료: ${firebaseConfig.projectId}`, true);
         bindRealtimeSync();
+        bindInfoTablesRealtimeSync();
         bindBusSeatMountainRealtimeSync();
 
         try {
@@ -1896,6 +1939,46 @@ function resizeAllTextareas(root = document) {
         selectedCell.classList.add('info-selected');
         const row = selectedCell.closest('tr');
         if (row) row.classList.add('info-row-selected');
+      }
+
+      function applyInfoTablesData(data, showAlert) {
+        if (!Array.isArray(data)) return;
+        try {
+          infoTables().forEach((table, tableIndex) => {
+            const tableData = data[tableIndex];
+            if (!Array.isArray(tableData) || !tableData.length) return;
+            const thead = table.tHead || table.createTHead();
+            const tbody = table.tBodies[0] || table.createTBody();
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            tableData.forEach((rowData, rowIndex) => {
+              const row = document.createElement('tr');
+              rowData.forEach((html) => {
+                const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
+                cell.contentEditable = 'true';
+                cell.innerHTML = html || '';
+                row.appendChild(cell);
+              });
+              if (rowIndex === 0) thead.appendChild(row);
+              else tbody.appendChild(row);
+            });
+            normalizeSelectColumn(table);
+            syncColumnWidths(table);
+          });
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+          if (showAlert) alert('정보 모음 불러오기 완료');
+        } catch (error) {
+          if (showAlert) alert('불러오기 실패: 저장 데이터 형식을 확인하세요.');
+        }
+      }
+
+      window.__tripScheduleApplyInfoTablesFromFirebase = function (data, showAlert) {
+        applyInfoTablesData(data, !!showAlert);
+      };
+
+      if (Array.isArray(window.__tripSchedulePendingInfoTablesData)) {
+        applyInfoTablesData(window.__tripSchedulePendingInfoTablesData, false);
+        window.__tripSchedulePendingInfoTablesData = null;
       }
 
       document.addEventListener('click', function (event) {
@@ -2161,8 +2244,8 @@ function resizeAllTextareas(root = document) {
         setPlanCellValue(5, 5, 'input', data['계좌번호'] || '');
       }
 
-      function syncSelectedInfoRowToPlan(row) {
-        window.__tripScheduleLocalSelectionSavingUntil = Date.now() + 3000;
+      async function syncSelectedInfoRowToPlan(row) {
+        window.__tripScheduleLocalSelectionSavingUntil = Date.now() + 15000;
         const table = row ? row.closest('.info-section-table') : null;
         if (!table || !row || row.parentElement.tagName !== 'TBODY') return;
         if (table.id === 'info-main-table') {
@@ -2170,7 +2253,7 @@ function resizeAllTextareas(root = document) {
         } else if (table.id === 'info-company-table') {
           syncCompanyInfoToPlan(row);
         }
-        forceSaveSyncedPlanFields();
+        await forceSaveSyncedPlanFields();
         saveInfoForm(false);
       }
 
@@ -2284,6 +2367,10 @@ function resizeAllTextareas(root = document) {
         const data = infoTables().map(serializeTable);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
+          if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
+            window.__tripScheduleSaveInfoTablesToFirebase(data);
+          }
           if (showAlert) {
             downloadInfoFormCodeCopy();
             alert('현재 정보가 코드에 반영된 HTML 파일로 저장됩니다.\n다운로드된 파일을 사용하면 지금 정보가 기본값으로 열립니다.');
