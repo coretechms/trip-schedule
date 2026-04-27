@@ -704,6 +704,27 @@
       color: #fff;
     }
 
+
+    /* 모바일 수정 방식: 1초 이상 길게 누른 칸만 입력 가능 */
+    @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+      input.cell-input.mobile-longpress-locked,
+      textarea.cell-input.mobile-longpress-locked,
+      .info-section-table [contenteditable="false"].mobile-longpress-locked {
+        caret-color: transparent !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
+      }
+      input.cell-input.mobile-longpress-editing,
+      textarea.cell-input.mobile-longpress-editing,
+      .info-section-table .mobile-longpress-editing {
+        caret-color: auto !important;
+        -webkit-user-select: text !important;
+        user-select: text !important;
+        outline: 2px solid #1737c9 !important;
+        outline-offset: -2px !important;
+      }
+    }
+
   </style>
 </head>
 <body style="overflow: auto;">
@@ -1562,6 +1583,166 @@ function resizeAllTextareas(root = document) {
     if (memberCaptureButton) memberCaptureButton.addEventListener('click', captureMemberImage);
 
   </script>
+
+<script>
+  /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
+  (function () {
+    const LONG_PRESS_MS = 1000;
+    const MOVE_LIMIT = 12;
+    let pressTimer = null;
+    let startX = 0;
+    let startY = 0;
+    let targetEl = null;
+
+    function isMobileEditMode() {
+      return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+    }
+
+    function isEditableTarget(el) {
+      if (!el) return false;
+      const field = el.closest && el.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
+      if (field && field.id !== 'mountain-name') return field;
+      const infoCell = el.closest && el.closest('.info-section-table th, .info-section-table td');
+      if (infoCell && !infoCell.classList.contains('info-select-col') && !infoCell.querySelector('.info-row-select-btn')) return infoCell;
+      return null;
+    }
+
+    function lockInfoCell(cell) {
+      if (!cell || !cell.matches('.info-section-table th, .info-section-table td')) return;
+      if (cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return;
+      cell.dataset.mobileOriginalEditable = 'true';
+      cell.contentEditable = 'false';
+      cell.classList.add('mobile-longpress-locked');
+      cell.classList.remove('mobile-longpress-editing');
+    }
+
+    function lockAllExcept(exceptEl) {
+      if (!isMobileEditMode()) return;
+      document.querySelectorAll('.mobile-longpress-editing').forEach((el) => {
+        if (el === exceptEl) return;
+        el.classList.remove('mobile-longpress-editing');
+        el.classList.add('mobile-longpress-locked');
+        if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
+          el.contentEditable = 'false';
+        }
+      });
+      document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(lockInfoCell);
+    }
+
+    function enableEditing(el) {
+      if (!el) return;
+      lockAllExcept(el);
+      el.classList.remove('mobile-longpress-locked');
+      el.classList.add('mobile-longpress-editing');
+
+      if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
+        el.contentEditable = 'true';
+        el.focus();
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } catch (error) {}
+      } else if (typeof el.focus === 'function') {
+        el.focus();
+        try {
+          const len = String(el.value || '').length;
+          if (typeof el.setSelectionRange === 'function') el.setSelectionRange(len, len);
+        } catch (error) {}
+      }
+    }
+
+    function cancelPressTimer() {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      targetEl = null;
+    }
+
+    function initializeMobileLocks() {
+      if (!isMobileEditMode()) return;
+      document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach((el) => {
+        if (el.id === 'mountain-name') return;
+        if (!el.classList.contains('mobile-longpress-editing')) {
+          el.classList.add('mobile-longpress-locked');
+        }
+      });
+      document.querySelectorAll('.info-section-table th, .info-section-table td').forEach((cell) => {
+        if (!cell.classList.contains('mobile-longpress-editing')) lockInfoCell(cell);
+      });
+    }
+
+    document.addEventListener('pointerdown', function (event) {
+      if (!isMobileEditMode()) return;
+      const editable = isEditableTarget(event.target);
+      if (!editable) return;
+      if (editable.classList.contains('mobile-longpress-editing')) return;
+
+      targetEl = editable;
+      startX = event.clientX || 0;
+      startY = event.clientY || 0;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        enableEditing(targetEl);
+        pressTimer = null;
+      }, LONG_PRESS_MS);
+    }, true);
+
+    document.addEventListener('pointermove', function (event) {
+      if (!pressTimer) return;
+      const dx = Math.abs((event.clientX || 0) - startX);
+      const dy = Math.abs((event.clientY || 0) - startY);
+      if (dx > MOVE_LIMIT || dy > MOVE_LIMIT) cancelPressTimer();
+    }, true);
+
+    document.addEventListener('pointerup', cancelPressTimer, true);
+    document.addEventListener('pointercancel', cancelPressTimer, true);
+
+    document.addEventListener('click', function (event) {
+      if (!isMobileEditMode()) return;
+      const editable = isEditableTarget(event.target);
+      if (!editable) return;
+      if (!editable.classList.contains('mobile-longpress-editing')) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener('focusin', function (event) {
+      if (!isMobileEditMode()) return;
+      const editable = isEditableTarget(event.target);
+      if (!editable) return;
+      if (!editable.classList.contains('mobile-longpress-editing')) {
+        event.target.blur && event.target.blur();
+      }
+    }, true);
+
+    document.addEventListener('focusout', function (event) {
+      if (!isMobileEditMode()) return;
+      const editable = isEditableTarget(event.target);
+      if (!editable) return;
+      setTimeout(() => {
+        if (document.activeElement === editable) return;
+        editable.classList.remove('mobile-longpress-editing');
+        editable.classList.add('mobile-longpress-locked');
+        if (editable.matches && editable.matches('.info-section-table th, .info-section-table td')) {
+          editable.contentEditable = 'false';
+        }
+      }, 120);
+    }, true);
+
+    const observer = new MutationObserver(() => initializeMobileLocks());
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeMobileLocks();
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+    window.addEventListener('resize', initializeMobileLocks);
+    window.addEventListener('orientationchange', () => setTimeout(initializeMobileLocks, 250));
+  })();
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1774,15 +1955,22 @@ function resizeAllTextareas(root = document) {
       }
 
       getEditableFields().forEach((el) => {
-        if (el.dataset.realtimeSaveBound === 'true') return;
+        /* HTML에 data-realtime-save-bound="true"가 미리 저장되어 있어도
+           실제 자동저장 이벤트는 반드시 1회 연결되도록 DOM 내부 플래그를 사용합니다. */
+        if (el.__realtimeSaveBound === true) return;
+        el.__realtimeSaveBound = true;
         el.dataset.realtimeSaveBound = 'true';
         el.addEventListener('input', () => {
           if (applyingRemote) return;
+          if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+          if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
           cacheFormDataLocally(collectFormData());
           scheduleRealtimeSave();
         });
         el.addEventListener('change', () => {
           if (applyingRemote) return;
+          if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+          if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
           cacheFormDataLocally(collectFormData());
           scheduleRealtimeSave();
         });
