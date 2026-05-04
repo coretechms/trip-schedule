@@ -32,15 +32,15 @@
         const source = String(ticket && ticket.source ? ticket.source : '');
         const now = Date.now();
         if (source !== 'bus-seat') {
-          message = '유효하지 않은 산행계획 입장권입니다.';
+          message = '유효하지 않은 계획 입장권입니다.';
         } else if (!issuedAt || now > expiresAt) {
-          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
+          message = '계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
         } else {
           allowed = true;
         }
       }
     } catch (error) {
-      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+      message = '계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
     }
 
     try { sessionStorage.removeItem(TICKET_KEY); } catch (error) {}
@@ -54,7 +54,7 @@
     }
   })();
 </script>
-<title>정기산행 계획</title>
+<title>정기 계획</title>
 <style>
     * { box-sizing: border-box; }
     html, body {
@@ -531,7 +531,7 @@
 
 
 
-    /* 정보 모음 폼 - 산행계획 표 아래 */
+    /* 정보 모음 폼 - 계획 표 아래 */
     .info-form-wrap {
       width: 100%;
       margin-top: 18px;
@@ -769,7 +769,7 @@
 <div class="mobile-fit-wrap" id="mobile-fit-wrap">
 <div class="sheet" id="capture-area" style="transform: none; margin: 0px auto;">
 <div class="title-bar">
-<div class="title">정기산행 계획</div>
+<div class="title">정기 계획</div>
 <div class="action-buttons">
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
@@ -795,15 +795,15 @@
 <tbody><tr class="h30">
 <td class="fixed" rowspan="2">회 비</td>
 <td class="input-cell" colspan="2" rowspan="2"><input class="cell-input bold amount-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:fee-amount" id="fee-amount" value=""/></td>
-<td class="fixed left" colspan="3">특별산행 / 추가비용 :</td>
-<td class="fixed blue" rowspan="2">산행날자</td>
+<td class="fixed left" colspan="3">특별 / 추가비용 :</td>
+<td class="fixed blue" rowspan="2">날자</td>
 <td class="input-cell" rowspan="2"><input class="cell-input blue key-font-14" data-realtime-save-bound="true" data-sync-key="id:hike-date" id="hike-date" value=" 월  일"/></td>
 </tr>
 <tr class="h30">
 <td class="input-cell" colspan="3"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:2" value=""/></td>
 </tr>
 <tr class="h30" style="height: auto;">
-<td class="fixed" rowspan="2">산행지</td>
+<td class="fixed" rowspan="2">지</td>
 <td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
 <td class="fixed spaced" colspan="2">주 소</td>
 <td class="fixed gray">입 장 료 / 주차료</td>
@@ -836,10 +836,10 @@
 <tr class="h26 duration-top-line">
 <td class="fixed" rowspan="2">소요시간</td>
 <td class="fixed bold">출 발</td>
-<td class="input-cell sky-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="field:13" value="산행 시간"/></td>
-<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:14" value="집결 -&gt; 이동"/></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:13" value=" "/></td>
+<td class="input-cell sky-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="field:14" value=" "/></td>
 <td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:15" value=" "/></td>
-<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:16" value="식사"/></td>
+<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:16" value=" "/></td>
 <td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:17" value=" "/></td>
 <td class="fixed bold">귀 가</td>
 </tr>
