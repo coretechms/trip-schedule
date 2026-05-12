@@ -32,15 +32,15 @@
         const source = String(ticket && ticket.source ? ticket.source : '');
         const now = Date.now();
         if (source !== 'bus-seat') {
-          message = '유효하지 않은 계획 입장권입니다.';
+          message = '유효하지 않은 산행계획 입장권입니다.';
         } else if (!issuedAt || now > expiresAt) {
-          message = '계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
+          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
         } else {
           allowed = true;
         }
       }
     } catch (error) {
-      message = '계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
+      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
     }
 
     try { sessionStorage.removeItem(TICKET_KEY); } catch (error) {}
@@ -54,7 +54,7 @@
     }
   })();
 </script>
-<title>정기 계획</title>
+<title>정기산행 계획</title>
 <style>
     * { box-sizing: border-box; }
     html, body {
@@ -531,7 +531,7 @@
 
 
 
-    /* 정보 모음 폼 - 계획 표 아래 */
+    /* 정보 모음 폼 - 산행계획 표 아래 */
     .info-form-wrap {
       width: 100%;
       margin-top: 18px;
@@ -573,6 +573,14 @@
       cursor: pointer;
     }
     .info-toolbar button:active { transform: translateY(1px); }
+    .info-toolbar button[data-info-action$="-cell"] {
+      min-width: 58px;
+      font-weight: 700;
+    }
+    .info-toolbar button[data-info-action="text-red-cell"] { color: #c51616; }
+    .info-toolbar button[data-info-action="text-blue-cell"] { color: #203fd8; }
+    .info-toolbar button[data-info-action="bg-yellow-cell"] { background: #fff200; }
+    .info-toolbar button[data-info-action="bg-sky-cell"] { background: #eaf6ff; }
     .info-toolbar .info-json-btn{
       display:inline-flex !important;
       align-items:center !important;
@@ -769,7 +777,7 @@
 <div class="mobile-fit-wrap" id="mobile-fit-wrap">
 <div class="sheet" id="capture-area" style="transform: none; margin: 0px auto;">
 <div class="title-bar">
-<div class="title">정기 계획</div>
+<div class="title">정기산행 계획</div>
 <div class="action-buttons">
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
@@ -795,15 +803,15 @@
 <tbody><tr class="h30">
 <td class="fixed" rowspan="2">회 비</td>
 <td class="input-cell" colspan="2" rowspan="2"><input class="cell-input bold amount-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:fee-amount" id="fee-amount" value=""/></td>
-<td class="fixed left" colspan="3">특별 / 추가비용 :</td>
-<td class="fixed blue" rowspan="2">날자</td>
+<td class="fixed left" colspan="3">특별산행 / 추가비용 :</td>
+<td class="fixed blue" rowspan="2">산행날자</td>
 <td class="input-cell" rowspan="2"><input class="cell-input blue key-font-14" data-realtime-save-bound="true" data-sync-key="id:hike-date" id="hike-date" value=" 월  일"/></td>
 </tr>
 <tr class="h30">
 <td class="input-cell" colspan="3"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:2" value=""/></td>
 </tr>
 <tr class="h30" style="height: auto;">
-<td class="fixed" rowspan="2">지</td>
+<td class="fixed" rowspan="2">산행지</td>
 <td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
 <td class="fixed spaced" colspan="2">주 소</td>
 <td class="fixed gray">입 장 료 / 주차료</td>
@@ -836,7 +844,7 @@
 <tr class="h26 duration-top-line">
 <td class="fixed" rowspan="2">소요시간</td>
 <td class="fixed bold">출 발</td>
-<td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:13" value=" "/></td>
+<td class="input-cell sky-cell"><input class="cell-input " data-realtime-save-bound="true" data-sync-key="field:13" value=" "/></td>
 <td class="input-cell sky-cell"><input class="cell-input bold blue" data-realtime-save-bound="true" data-sync-key="field:14" value=" "/></td>
 <td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:15" value=" "/></td>
 <td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:16" value=" "/></td>
@@ -856,7 +864,7 @@
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
 <td class="input-cell"><input class="cell-input red key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="09:00 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold red key-font-14" id="calc-top-2" readonly="" value="13:30 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold blue key-font-14" id="calc-top-2" readonly="" value="13:30 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-3" readonly="" value="14:20 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-4" readonly="" value="15:00 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-5" readonly="" value="16:00 -&gt;"/></td>
@@ -869,7 +877,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" value="15:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" value="16:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" value="17:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-16" id="calc-bottom-7" readonly="" value="19:40"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" value="19:40"/></td>
 </tr>
 <tr class="h30">
 <td class="fixed" rowspan="2">식 당</td>
@@ -948,6 +956,14 @@
 <button data-info-action="delete-row" type="button">선택행 삭제</button>
 <button data-info-action="add-col" type="button">선택칸 오른쪽 칸 추가</button>
 <button data-info-action="delete-col" type="button">선택칸 열 삭제</button>
+<button data-info-action="toggle-bold-cell" type="button">굵게</button>
+<button data-info-action="text-black-cell" type="button">글자검정</button>
+<button data-info-action="text-red-cell" type="button">글자빨강</button>
+<button data-info-action="text-blue-cell" type="button">글자파랑</button>
+<button data-info-action="bg-white-cell" type="button">배경흰색</button>
+<button data-info-action="bg-yellow-cell" type="button">배경노랑</button>
+<button data-info-action="bg-sky-cell" type="button">배경하늘</button>
+<button data-info-action="clear-style-cell" type="button">서식해제</button>
 <button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
 <button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
 <input accept="application/json,.json" id="infoRestoreFile" style="display:none" type="file"/>
@@ -2105,6 +2121,59 @@ function resizeAllTextareas(root = document) {
         if (row) row.classList.add('info-row-selected');
       }
 
+      function applySerializedCellData(cell, item) {
+        if (!cell) return;
+        const value = (item && typeof item === 'object' && !Array.isArray(item)) ? item : { html: item };
+        cell.contentEditable = 'true';
+        cell.innerHTML = value.html || '';
+        if (value.style && typeof value.style === 'object') {
+          cell.style.fontWeight = value.style.fontWeight || '';
+          cell.style.color = value.style.color || '';
+          cell.style.backgroundColor = value.style.backgroundColor || '';
+        }
+      }
+
+      function serializeCellData(cell) {
+        const style = {};
+        if (cell.style.fontWeight) style.fontWeight = cell.style.fontWeight;
+        if (cell.style.color) style.color = cell.style.color;
+        if (cell.style.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
+        if (!Object.keys(style).length) return cell.innerHTML;
+        return { html: cell.innerHTML, style };
+      }
+
+      function applySelectedCellStyle(action) {
+        if (!selectedCell || !selectedCell.closest('.info-section-table')) {
+          alert('먼저 서식을 바꿀 칸을 클릭하세요.');
+          return;
+        }
+        if (isInfoSelectCell(selectedCell)) {
+          alert('선택 버튼 칸은 서식을 바꿀 수 없습니다.');
+          return;
+        }
+        if (action === 'toggle-bold-cell') {
+          const current = String(selectedCell.style.fontWeight || '').toLowerCase();
+          selectedCell.style.fontWeight = (current === '700' || current === 'bold') ? '' : '700';
+        } else if (action === 'text-black-cell') {
+          selectedCell.style.color = '#111111';
+        } else if (action === 'text-red-cell') {
+          selectedCell.style.color = '#c51616';
+        } else if (action === 'text-blue-cell') {
+          selectedCell.style.color = '#203fd8';
+        } else if (action === 'bg-white-cell') {
+          selectedCell.style.backgroundColor = '#ffffff';
+        } else if (action === 'bg-yellow-cell') {
+          selectedCell.style.backgroundColor = '#fff200';
+        } else if (action === 'bg-sky-cell') {
+          selectedCell.style.backgroundColor = '#eaf6ff';
+        } else if (action === 'clear-style-cell') {
+          selectedCell.style.fontWeight = '';
+          selectedCell.style.color = '';
+          selectedCell.style.backgroundColor = '';
+        }
+        saveInfoForm(false);
+      }
+
       function applyInfoTablesData(data, showAlert) {
         if (!Array.isArray(data)) return;
         try {
@@ -2117,10 +2186,9 @@ function resizeAllTextareas(root = document) {
             tbody.innerHTML = '';
             tableData.forEach((rowData, rowIndex) => {
               const row = document.createElement('tr');
-              rowData.forEach((html) => {
+              rowData.forEach((item) => {
                 const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
-                cell.contentEditable = 'true';
-                cell.innerHTML = html || '';
+                applySerializedCellData(cell, item);
                 row.appendChild(cell);
               });
               if (rowIndex === 0) thead.appendChild(row);
@@ -2524,7 +2592,7 @@ function resizeAllTextareas(root = document) {
               selectSeen = true;
               return true;
             })
-            .map((cell) => cell.innerHTML);
+            .map((cell) => serializeCellData(cell));
         });
       }
 
@@ -2658,10 +2726,9 @@ function resizeAllTextareas(root = document) {
             tbody.innerHTML = '';
             tableData.forEach((rowData, rowIndex) => {
               const row = document.createElement('tr');
-              rowData.forEach((html) => {
+              rowData.forEach((item) => {
                 const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
-                cell.contentEditable = 'true';
-                cell.innerHTML = html || '';
+                applySerializedCellData(cell, item);
                 row.appendChild(cell);
               });
               if (rowIndex === 0) thead.appendChild(row);
@@ -2686,6 +2753,11 @@ function resizeAllTextareas(root = document) {
         if (action === 'delete-col') deleteColumn();
         if (action === 'save') saveInfoForm(true);
         if (action === 'load') loadInfoForm(true);
+        if (['toggle-bold-cell', 'text-black-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'clear-style-cell'].includes(action)) {
+          applySelectedCellStyle(action);
+          event.preventDefault();
+          return;
+        }
         if (action === 'backup-json') backupInfoFormJson();
         if (action === 'restore-json') {
           const fileInput = document.getElementById('infoRestoreFile');
