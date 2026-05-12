@@ -762,6 +762,58 @@
   #infoBackupJsonBtn{background:#0b7a28!important;border:1px solid #0b7a28!important;}
   #infoRestoreJsonBtn{background:#1737c9!important;border:1px solid #1737c9!important;}
 </style>
+
+<style id="info-toolbar-grouped-style">
+  #info-form-wrap .info-toolbar.info-toolbar-grouped {
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    overflow: visible !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-toggle-btn {
+    height: 31px !important;
+    min-width: 82px !important;
+    padding: 3px 12px !important;
+    border: 1px solid #555 !important;
+    background: #f3f3f3 !important;
+    color: #111 !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-toggle-btn.is-open {
+    background: #1737c9 !important;
+    border-color: #1737c9 !important;
+    color: #fff !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel {
+    display: none !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+    padding: 6px !important;
+    border: 1px solid #d7d7d7 !important;
+    background: #fafafa !important;
+    border-radius: 6px !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel.is-open {
+    display: flex !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="admin"] {
+    background: #f6fff8 !important;
+    border-color: #b8e0c0 !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
+    background: #f7f9ff !important;
+    border-color: #cfd8ff !important;
+  }
+</style>
+
 </head>
 <body style="overflow: auto;">
 <script>
@@ -3056,4 +3108,85 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load', ensureInfoJsonButtons);
 })();
 </script>
+
+<script id="info-toolbar-grouped-script">
+(function(){
+  function groupInfoToolbarButtons(){
+    var toolbar = document.querySelector('#info-form-wrap .info-toolbar');
+    if(!toolbar || toolbar.dataset.groupedInfoToolbar === 'true') return;
+
+    var children = Array.from(toolbar.children);
+    var hiddenInputs = children.filter(function(el){ return el.tagName === 'INPUT'; });
+    var buttons = children.filter(function(el){ return el.tagName === 'BUTTON'; });
+    if(!buttons.length) return;
+
+    toolbar.innerHTML = '';
+    toolbar.classList.add('info-toolbar-grouped');
+    toolbar.dataset.groupedInfoToolbar = 'true';
+
+    var adminToggle = document.createElement('button');
+    adminToggle.type = 'button';
+    adminToggle.className = 'info-toolbar-toggle-btn';
+    adminToggle.textContent = '관리자';
+    adminToggle.setAttribute('aria-expanded', 'false');
+
+    var editToggle = document.createElement('button');
+    editToggle.type = 'button';
+    editToggle.className = 'info-toolbar-toggle-btn';
+    editToggle.textContent = '편집';
+    editToggle.setAttribute('aria-expanded', 'false');
+
+    var adminPanel = document.createElement('div');
+    adminPanel.className = 'info-toolbar-group-panel';
+    adminPanel.dataset.infoGroup = 'admin';
+
+    var editPanel = document.createElement('div');
+    editPanel.className = 'info-toolbar-group-panel';
+    editPanel.dataset.infoGroup = 'edit';
+
+    buttons.forEach(function(btn){
+      var action = btn.getAttribute('data-info-action') || '';
+      if(action === 'backup-json' || action === 'restore-json') {
+        adminPanel.appendChild(btn);
+      } else {
+        editPanel.appendChild(btn);
+      }
+    });
+
+    toolbar.appendChild(adminToggle);
+    toolbar.appendChild(editToggle);
+    toolbar.appendChild(adminPanel);
+    toolbar.appendChild(editPanel);
+    hiddenInputs.forEach(function(input){ toolbar.appendChild(input); });
+
+    function setOpen(target){
+      var isAdmin = target === 'admin';
+      var nextPanel = isAdmin ? adminPanel : editPanel;
+      var nextToggle = isAdmin ? adminToggle : editToggle;
+      var otherPanel = isAdmin ? editPanel : adminPanel;
+      var otherToggle = isAdmin ? editToggle : adminToggle;
+      var willOpen = !nextPanel.classList.contains('is-open');
+
+      otherPanel.classList.remove('is-open');
+      otherToggle.classList.remove('is-open');
+      otherToggle.setAttribute('aria-expanded', 'false');
+
+      nextPanel.classList.toggle('is-open', willOpen);
+      nextToggle.classList.toggle('is-open', willOpen);
+      nextToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
+
+    adminToggle.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); setOpen('admin'); });
+    editToggle.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); setOpen('edit'); });
+  }
+
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', groupInfoToolbarButtons);
+  } else {
+    groupInfoToolbarButtons();
+  }
+  window.addEventListener('load', groupInfoToolbarButtons);
+})();
+</script>
+
 </body></html>
