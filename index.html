@@ -1809,6 +1809,7 @@ function resizeAllTextareas(root = document) {
     const statusEl = document.getElementById('firebase-status');
     const SYNC_PATH = 'tripSchedule/sharedPlan';
     const SYNC_FORMDATA_PATH = `${SYNC_PATH}/formData`;
+    const SYNC_PLAN_STYLES_PATH = `${SYNC_PATH}/planStyles`;
     const LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
     let db = null;
     let applyingRemote = false;
@@ -1978,6 +1979,24 @@ function resizeAllTextareas(root = document) {
       }
     };
 
+    window.__tripScheduleSavePlanStylesToFirebase = async function (planStyleMap) {
+      try {
+        if (!db || applyingRemote) return false;
+        window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+        await withTimeout(update(ref(db, SYNC_PLAN_STYLES_PATH), {
+          data: (planStyleMap && typeof planStyleMap === 'object') ? planStyleMap : {},
+          updatedAt: serverTimestamp()
+        }), 8000);
+        setFirebaseStatus('실시간 동기화 연결됨 · 셀 서식 저장 완료', true);
+        return true;
+      } catch (error) {
+        console.error('셀 서식 Firebase 저장 실패:', error);
+        setFirebaseStatus('셀 서식 저장 실패: 데이터베이스 규칙 또는 주소를 확인하세요.', false);
+        return false;
+      }
+    };
+
+
     function bindRealtimeSync() {
       ensureSyncKeys();
       restoreCachedFormData();
@@ -2049,6 +2068,27 @@ function resizeAllTextareas(root = document) {
       }
     }
 
+
+    function bindPlanStylesRealtimeSync() {
+      if (!db) return;
+      try {
+        onValue(ref(db, `${SYNC_PLAN_STYLES_PATH}/data`), (snapshot) => {
+          const value = snapshot.val();
+          if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+          if (window.__tripSchedulePlanStyleLocalSavingUntil && Date.now() < window.__tripSchedulePlanStyleLocalSavingUntil) return;
+          if (typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') {
+            window.__tripScheduleApplyPlanStylesFromFirebase(value);
+          } else {
+            window.__tripSchedulePendingPlanStyleMap = value;
+          }
+        }, (error) => {
+          console.error('셀 서식 실시간 수신 실패:', error);
+        });
+      } catch (error) {
+        console.error('셀 서식 실시간 동기화 초기화 실패:', error);
+      }
+    }
+
     function bindBusSeatMountainRealtimeSync() {
       try {
         const existingBusSeatApp = getApps().find((app) => app.name === 'bus-seat-app');
@@ -2089,6 +2129,7 @@ function resizeAllTextareas(root = document) {
         setFirebaseStatus(`Firebase 연결 완료: ${firebaseConfig.projectId}`, true);
         bindRealtimeSync();
         bindInfoTablesRealtimeSync();
+        bindPlanStylesRealtimeSync();
         bindBusSeatMountainRealtimeSync();
 
         try {
@@ -2201,6 +2242,13 @@ function resizeAllTextareas(root = document) {
         }
       }
 
+      function publishPlanStyleMap(map) {
+        window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+        if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+          window.__tripScheduleSavePlanStylesToFirebase(map);
+        }
+      }
+
       function savePlanStyleForTarget(target) {
         const key = getPlanStyleKey(target);
         if (!key) return;
@@ -2214,6 +2262,7 @@ function resizeAllTextareas(root = document) {
         if (!style.fontWeight && !style.color && !style.backgroundColor) delete map[key];
         else map[key] = style;
         try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        publishPlanStyleMap(map);
       }
 
       function applyStyleToTarget(target, action) {
@@ -2272,6 +2321,13 @@ function resizeAllTextareas(root = document) {
           if (parts.cell && style.backgroundColor) parts.cell.style.backgroundColor = style.backgroundColor;
         });
       }
+
+
+      window.__tripScheduleApplyPlanStylesFromFirebase = function (styleMap) {
+        if (!styleMap || typeof styleMap !== 'object' || Array.isArray(styleMap)) return;
+        try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(styleMap)); } catch (e) {}
+        applyPlanStyleMap();
+      };
 
       function applySelectedCellStyle(action) {
         const target = selectedStyleTarget || selectedCell;
@@ -2900,6 +2956,10 @@ function resizeAllTextareas(root = document) {
       window.addEventListener('DOMContentLoaded', function () {
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
+        if (window.__tripSchedulePendingPlanStyleMap) {
+          window.__tripScheduleApplyPlanStylesFromFirebase(window.__tripSchedulePendingPlanStyleMap);
+          window.__tripSchedulePendingPlanStyleMap = null;
+        }
         applyPlanStyleMap();
         // 기본 정보는 HTML 코드에 들어있는 현재 표 내용을 사용합니다.
         setTimeout(function () {
