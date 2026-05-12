@@ -723,6 +723,16 @@
       color: #fff;
     }
 
+    /* 전체 칸 서식 선택 표시 */
+    .style-selected-cell {
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
+    }
+    input.cell-input.style-selected-cell,
+    textarea.cell-input.style-selected-cell {
+      box-shadow: inset 0 0 0 2px #1737c9 !important;
+    }
+
 
     /* 모바일 수정 방식: 1초 이상 길게 누른 칸만 입력 가능 */
     @media (max-width: 768px), (hover: none) and (pointer: coarse) {
@@ -2101,7 +2111,9 @@ function resizeAllTextareas(root = document) {
 <script>
     (function () {
       const STORAGE_KEY = 'tripSchedule.infoForm.tables.v2';
+      const PLAN_STYLE_STORAGE_KEY = 'tripSchedule.planCellStyles.v1';
       let selectedCell = null;
+      let selectedStyleTarget = null;
 
       function infoTables() {
         return Array.from(document.querySelectorAll('.info-section-table'));
@@ -2110,13 +2122,16 @@ function resizeAllTextareas(root = document) {
       function clearSelection() {
         document.querySelectorAll('.info-selected').forEach((cell) => cell.classList.remove('info-selected'));
         document.querySelectorAll('.info-row-selected').forEach((row) => row.classList.remove('info-row-selected'));
+        document.querySelectorAll('.style-selected-cell').forEach((el) => el.classList.remove('style-selected-cell'));
       }
 
       function selectCell(cell) {
         if (!cell || !cell.closest('.info-section-table')) return;
         clearSelection();
         selectedCell = cell;
+        selectedStyleTarget = cell;
         selectedCell.classList.add('info-selected');
+        selectedCell.classList.add('style-selected-cell');
         const row = selectedCell.closest('tr');
         if (row) row.classList.add('info-row-selected');
       }
@@ -2142,36 +2157,135 @@ function resizeAllTextareas(root = document) {
         return { html: cell.innerHTML, style };
       }
 
+      function selectPlanCell(target) {
+        if (!target) return;
+        const cell = target.closest('td, th');
+        clearSelection();
+        selectedCell = null;
+        selectedStyleTarget = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : cell;
+        if (cell) cell.classList.add('style-selected-cell');
+        if (selectedStyleTarget && selectedStyleTarget !== cell) selectedStyleTarget.classList.add('style-selected-cell');
+      }
+
+      function getStyleTargetParts(target) {
+        if (!target) return { main: null, cell: null, field: null };
+        const field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : target.querySelector?.('input.cell-input, textarea.cell-input');
+        const cell = target.closest ? target.closest('td, th') : null;
+        return { main: field || target, cell, field };
+      }
+
+      function getPlanStyleKey(target) {
+        const parts = getStyleTargetParts(target);
+        const field = parts.field;
+        if (field) {
+          if (field.id) return 'field-id:' + field.id;
+          if (field.dataset && field.dataset.syncKey) return 'field-sync:' + field.dataset.syncKey;
+        }
+        const cell = parts.cell || target.closest?.('td, th');
+        const table = cell ? cell.closest('table.plan, .gimbap-inner-table') : null;
+        const row = cell ? cell.parentElement : null;
+        if (!cell || !table || !row) return '';
+        const rowIndex = Array.prototype.indexOf.call(table.rows, row);
+        const cellIndex = Array.prototype.indexOf.call(row.children, cell);
+        const tableId = table.classList.contains('gimbap-inner-table') ? 'gimbap' : 'plan';
+        return tableId + ':r' + rowIndex + ':c' + cellIndex;
+      }
+
+      function loadPlanStyleMap() {
+        try {
+          const raw = localStorage.getItem(PLAN_STYLE_STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function savePlanStyleForTarget(target) {
+        const key = getPlanStyleKey(target);
+        if (!key) return;
+        const parts = getStyleTargetParts(target);
+        const style = {
+          fontWeight: parts.main?.style?.fontWeight || '',
+          color: parts.main?.style?.color || '',
+          backgroundColor: parts.cell?.style?.backgroundColor || parts.main?.style?.backgroundColor || ''
+        };
+        const map = loadPlanStyleMap();
+        if (!style.fontWeight && !style.color && !style.backgroundColor) delete map[key];
+        else map[key] = style;
+        try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+      }
+
+      function applyStyleToTarget(target, action) {
+        const parts = getStyleTargetParts(target);
+        const main = parts.main;
+        const cell = parts.cell;
+        if (!main) return;
+        if (action === 'toggle-bold-cell') {
+          const current = String(main.style.fontWeight || '').toLowerCase();
+          main.style.fontWeight = (current === '700' || current === 'bold') ? '' : '700';
+        } else if (action === 'text-black-cell') {
+          main.style.color = '#111111';
+        } else if (action === 'text-red-cell') {
+          main.style.color = '#c51616';
+        } else if (action === 'text-blue-cell') {
+          main.style.color = '#203fd8';
+        } else if (action === 'bg-white-cell') {
+          if (cell) cell.style.backgroundColor = '#ffffff';
+          main.style.backgroundColor = '#ffffff';
+        } else if (action === 'bg-yellow-cell') {
+          if (cell) cell.style.backgroundColor = '#fff200';
+          main.style.backgroundColor = '#fff200';
+        } else if (action === 'bg-sky-cell') {
+          if (cell) cell.style.backgroundColor = '#eaf6ff';
+          main.style.backgroundColor = '#eaf6ff';
+        } else if (action === 'clear-style-cell') {
+          main.style.fontWeight = '';
+          main.style.color = '';
+          main.style.backgroundColor = '';
+          if (cell) cell.style.backgroundColor = '';
+        }
+      }
+
+      function applyPlanStyleMap() {
+        const map = loadPlanStyleMap();
+        Object.entries(map).forEach(([key, style]) => {
+          let target = null;
+          if (key.startsWith('field-id:')) target = document.getElementById(key.slice('field-id:'.length));
+          if (!target && key.startsWith('field-sync:')) {
+            const syncKey = key.slice('field-sync:'.length).replace(/\"/g, '\\"');
+            target = document.querySelector('table.plan [data-sync-key="' + syncKey + '"]');
+          }
+          if (!target && /^(plan|gimbap):r\d+:c\d+$/.test(key)) {
+            const partsKey = key.match(/^(plan|gimbap):r(\d+):c(\d+)$/);
+            const table = partsKey[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan');
+            const row = table && table.rows[Number(partsKey[2])];
+            target = row && row.children[Number(partsKey[3])];
+          }
+          if (!target || !style) return;
+          const parts = getStyleTargetParts(target);
+          if (parts.main) {
+            parts.main.style.fontWeight = style.fontWeight || '';
+            parts.main.style.color = style.color || '';
+            if (style.backgroundColor) parts.main.style.backgroundColor = style.backgroundColor;
+          }
+          if (parts.cell && style.backgroundColor) parts.cell.style.backgroundColor = style.backgroundColor;
+        });
+      }
+
       function applySelectedCellStyle(action) {
-        if (!selectedCell || !selectedCell.closest('.info-section-table')) {
+        const target = selectedStyleTarget || selectedCell;
+        if (!target) {
           alert('먼저 서식을 바꿀 칸을 클릭하세요.');
           return;
         }
-        if (isInfoSelectCell(selectedCell)) {
+        if (selectedCell && selectedCell.closest('.info-section-table') && isInfoSelectCell(selectedCell)) {
           alert('선택 버튼 칸은 서식을 바꿀 수 없습니다.');
           return;
         }
-        if (action === 'toggle-bold-cell') {
-          const current = String(selectedCell.style.fontWeight || '').toLowerCase();
-          selectedCell.style.fontWeight = (current === '700' || current === 'bold') ? '' : '700';
-        } else if (action === 'text-black-cell') {
-          selectedCell.style.color = '#111111';
-        } else if (action === 'text-red-cell') {
-          selectedCell.style.color = '#c51616';
-        } else if (action === 'text-blue-cell') {
-          selectedCell.style.color = '#203fd8';
-        } else if (action === 'bg-white-cell') {
-          selectedCell.style.backgroundColor = '#ffffff';
-        } else if (action === 'bg-yellow-cell') {
-          selectedCell.style.backgroundColor = '#fff200';
-        } else if (action === 'bg-sky-cell') {
-          selectedCell.style.backgroundColor = '#eaf6ff';
-        } else if (action === 'clear-style-cell') {
-          selectedCell.style.fontWeight = '';
-          selectedCell.style.color = '';
-          selectedCell.style.backgroundColor = '';
-        }
-        saveInfoForm(false);
+        applyStyleToTarget(target, action);
+        if (selectedCell && selectedCell.closest('.info-section-table')) saveInfoForm(false);
+        else savePlanStyleForTarget(target);
       }
 
       function applyInfoTablesData(data, showAlert) {
@@ -2224,7 +2338,17 @@ function resizeAllTextareas(root = document) {
           return;
         }
         const cell = event.target.closest('.info-section-table th, .info-section-table td');
-        if (cell) selectCell(cell);
+        if (cell) {
+          selectCell(cell);
+          return;
+        }
+        const planTarget = event.target.closest('table.plan input.cell-input, table.plan textarea.cell-input, table.plan td, table.plan th');
+        if (planTarget) {
+          const planField = planTarget.matches && planTarget.matches('input.cell-input, textarea.cell-input')
+            ? planTarget
+            : (planTarget.querySelector && planTarget.querySelector('input.cell-input, textarea.cell-input')) || planTarget;
+          selectPlanCell(planField);
+        }
       });
 
       document.addEventListener('input', function (event) {
@@ -2236,7 +2360,7 @@ function resizeAllTextareas(root = document) {
       });
 
       function getSelectedTable() {
-        if (selectedCell) return selectedCell.closest('.info-section-table');
+        if (selectedCell && selectedCell.closest('.info-section-table')) return selectedCell.closest('.info-section-table');
         return document.querySelector('.info-section-table');
       }
 
@@ -2776,8 +2900,12 @@ function resizeAllTextareas(root = document) {
       window.addEventListener('DOMContentLoaded', function () {
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
+        applyPlanStyleMap();
         // 기본 정보는 HTML 코드에 들어있는 현재 표 내용을 사용합니다.
-        setTimeout(syncAllInfoTableColumnWidths, 0);
+        setTimeout(function () {
+          syncAllInfoTableColumnWidths();
+          applyPlanStyleMap();
+        }, 0);
       });
       window.addEventListener('resize', syncAllInfoTableColumnWidths);
     })();
