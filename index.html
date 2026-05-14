@@ -1121,18 +1121,44 @@
         .trim();
     }
 
+    // bus-seat 제목/날짜는 trip-schedule 자체 저장값보다 우선 적용합니다.
+    // 이유: formData(id:hike-date)가 나중에 수신되면 산행날자가 다시 빈칸/이전값으로 덮이는 현상이 생길 수 있습니다.
+    window.__tripScheduleBusSeatMountainInfo = window.__tripScheduleBusSeatMountainInfo || null;
+
     function setBusSeatMountainTitle(titleText, dateText = '') {
       const mountainEl = document.getElementById('mountain-name');
       const dateEl = document.getElementById('hike-date');
-      if (mountainEl) {
-        const cleanedTitle = removeDateTextForMountainTitle(titleText);
-        const nextText = cleanedTitle || ' ';
-        mountainEl.value = nextText;
+      const cleanedTitle = removeDateTextForMountainTitle(titleText);
+      const cleanedDate = String(dateText || '').replace(/\s+/g, '').trim();
+
+      window.__tripScheduleBusSeatMountainInfo = {
+        title: cleanedTitle || String(titleText || '').trim(),
+        date: cleanedDate,
+        updatedAt: Date.now()
+      };
+
+      if (mountainEl && cleanedTitle) {
+        mountainEl.value = cleanedTitle;
         if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
         if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
       }
-      if (dateEl) {
-        dateEl.value = String(dateText || '').trim() || ' ';
+      if (dateEl && cleanedDate) {
+        dateEl.value = cleanedDate;
+      }
+    }
+
+    function reapplyBusSeatMountainInfo() {
+      const info = window.__tripScheduleBusSeatMountainInfo;
+      if (!info || typeof info !== 'object') return;
+      const mountainEl = document.getElementById('mountain-name');
+      const dateEl = document.getElementById('hike-date');
+      if (mountainEl && info.title) {
+        mountainEl.value = info.title;
+        if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
+        if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
+      }
+      if (dateEl && info.date) {
+        dateEl.value = info.date;
       }
     }
 
@@ -1211,16 +1237,42 @@
       return '';
     }
 
+    function findBusSeatTitleText(snapshotValue) {
+      if (!snapshotValue || typeof snapshotValue !== 'object') return '';
+      const titleKeys = new Set([
+        'infoTitleMain', 'titleMain', 'mainTitle', 'tripTitle', 'hikeTitle',
+        'mountainTitle', 'scheduleTitle', 'title', 'name'
+      ]);
+      const queue = [snapshotValue];
+      const visited = new Set();
+      while (queue.length) {
+        const item = queue.shift();
+        if (!item || typeof item !== 'object' || visited.has(item)) continue;
+        visited.add(item);
+        for (const [key, value] of Object.entries(item)) {
+          if (titleKeys.has(key) && typeof value === 'string' && value.trim()) {
+            const candidate = value.trim();
+            if (/\d{1,2}\s*월\s*\d{1,2}\s*일|\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}|\d{1,2}\s*[./-]\s*\d{1,2}/.test(candidate)) {
+              return candidate;
+            }
+          }
+          if (value && typeof value === 'object') queue.push(value);
+        }
+      }
+      return String(
+        snapshotValue?.infoTitleMain ??
+        snapshotValue?.busInfo?.titleMain ??
+        snapshotValue?.busInfo?.infoTitleMain ??
+        ''
+      ).trim();
+    }
+
     function extractBusSeatMountainInfo(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') {
         return { title: '', date: '' };
       }
 
-      const rawTitle = String(
-        snapshotValue?.infoTitleMain ??
-        snapshotValue?.busInfo?.titleMain ??
-        ''
-      ).trim();
+      const rawTitle = findBusSeatTitleText(snapshotValue);
       let dateText = '';
 
       const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -1925,6 +1977,7 @@ function resizeAllTextareas(root = document) {
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
       if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
+      if (typeof reapplyBusSeatMountainInfo === 'function') reapplyBusSeatMountainInfo();
       if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
     }
 
@@ -2150,7 +2203,9 @@ function resizeAllTextareas(root = document) {
         onValue(ref(busSeatDb, BUS_SEAT_ROOT_PATH), (snapshot) => {
           const snapshotValue = snapshot.val();
           const nextInfo = extractBusSeatMountainInfo(snapshotValue);
-          setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+          if (nextInfo.title || nextInfo.date) {
+            setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+          }
 
           const attendeeCount = extractBusSeatAttendeeCount(snapshotValue);
           if (attendeeCount !== '') {
@@ -2158,6 +2213,17 @@ function resizeAllTextareas(root = document) {
           }
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
+        });
+
+        // 기존 ROOT_PATH가 실제 저장 위치와 달라도 산행 제목/날짜를 찾을 수 있도록 루트도 보조 감시합니다.
+        onValue(ref(busSeatDb), (snapshot) => {
+          const snapshotValue = snapshot.val();
+          const nextInfo = extractBusSeatMountainInfo(snapshotValue);
+          if (nextInfo.title || nextInfo.date) {
+            setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+          }
+        }, (error) => {
+          console.warn('bus-seat 전체 루트 산행날자 보조 수신 실패:', error);
         });
 
         onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/seats`), (snapshot) => {
