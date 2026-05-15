@@ -754,6 +754,47 @@
       }
     }
 
+    .phone-longpress-choice-box {
+      position: fixed;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid #777;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.24);
+      z-index: 100000;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .phone-longpress-choice-box.is-open { display: flex; }
+    .phone-longpress-choice-box button {
+      min-width: 74px;
+      height: 34px;
+      border: 1px solid #999;
+      border-radius: 8px;
+      background: #f4f4f4;
+      color: #111;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .phone-longpress-choice-box button[data-phone-choice="edit"] {
+      background: #1737c9;
+      border-color: #1737c9;
+      color: #fff;
+    }
+    .phone-longpress-choice-box button[data-phone-choice="call"] {
+      background: #0b7a28;
+      border-color: #0b7a28;
+      color: #fff;
+    }
+
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -1675,16 +1716,54 @@ function resizeAllTextareas(root = document) {
   </script>
 <script>
   /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
+  /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
   (function () {
     const LONG_PRESS_MS = 1000;
     const MOVE_LIMIT = 12;
+    const PHONE_SYNC_KEYS = new Set([
+      'field:11',          // 관광버스 행 전화번호
+      'field:27',          // 식당 행 연락처
+      'id:gimbap-phone',   // 위치/상호 행 전화번호
+      'id:gimbap-mobile'   // 위치/상호 행 휴대폰
+    ]);
+
     let pressTimer = null;
     let startX = 0;
     let startY = 0;
     let targetEl = null;
+    let phoneChoiceEl = null;
+    let phoneChoiceTarget = null;
 
     function isMobileEditMode() {
       return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+    }
+
+    function normalizeHeaderText(text) {
+      return String(text || '').replace(/\s+/g, '');
+    }
+
+    function getInfoColumnHeader(cell) {
+      const table = cell && cell.closest ? cell.closest('.info-section-table') : null;
+      if (!table || !cell.parentElement) return '';
+      const index = Array.prototype.indexOf.call(cell.parentElement.children, cell);
+      if (index < 0) return '';
+      const headerRow = table.querySelector('thead tr');
+      const headerCell = headerRow && headerRow.children[index];
+      return normalizeHeaderText(headerCell ? headerCell.textContent : '');
+    }
+
+    function isInfoPhoneValueCell(el) {
+      const cell = el && el.closest ? el.closest('.info-section-table tbody td') : null;
+      if (!cell || cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return false;
+      const header = getInfoColumnHeader(cell);
+      return header === '전화번호' || header === '전화번호' || header === '휴대폰' || header === '연락처';
+    }
+
+    function isPhoneChoiceTarget(el) {
+      if (!el) return false;
+      const field = el.matches && el.matches('input.cell-input, textarea.cell-input') ? el : (el.closest && el.closest('input.cell-input, textarea.cell-input'));
+      if (field && PHONE_SYNC_KEYS.has(String(field.dataset.syncKey || ''))) return true;
+      return isInfoPhoneValueCell(el);
     }
 
     function isEditableTarget(el) {
@@ -1720,6 +1799,7 @@ function resizeAllTextareas(root = document) {
 
     function enableEditing(el) {
       if (!el) return;
+      closePhoneChoiceBox();
       lockAllExcept(el);
       el.classList.remove('mobile-longpress-locked');
       el.classList.add('mobile-longpress-editing');
@@ -1744,6 +1824,76 @@ function resizeAllTextareas(root = document) {
       }
     }
 
+    function getPhoneText(el) {
+      if (!el) return '';
+      if ('value' in el) return String(el.value || '').trim();
+      return String(el.textContent || '').trim();
+    }
+
+    function buildTelHref(text) {
+      const raw = String(text || '').trim();
+      const compact = raw.replace(/[^0-9+]/g, '');
+      const digits = compact.replace(/\D/g, '');
+      if (digits.length < 8 || digits.length > 11) return '';
+      if (!/^(0\d{7,10}|\+82\d{8,10})$/.test(compact)) return '';
+      return 'tel:' + compact;
+    }
+
+    function ensurePhoneChoiceBox() {
+      if (phoneChoiceEl) return phoneChoiceEl;
+      phoneChoiceEl = document.createElement('div');
+      phoneChoiceEl.className = 'phone-longpress-choice-box';
+      phoneChoiceEl.innerHTML = '<button type="button" data-phone-choice="edit">편집</button><button type="button" data-phone-choice="call">전화연결</button><button type="button" data-phone-choice="cancel">취소</button>';
+      phoneChoiceEl.addEventListener('pointerdown', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+      phoneChoiceEl.addEventListener('click', function (event) {
+        const btn = event.target.closest('button[data-phone-choice]');
+        if (!btn) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const action = btn.dataset.phoneChoice;
+        const target = phoneChoiceTarget;
+        if (action === 'edit') {
+          enableEditing(target);
+          return;
+        }
+        if (action === 'call') {
+          const href = buildTelHref(getPhoneText(target));
+          closePhoneChoiceBox();
+          if (href) {
+            window.location.href = href;
+          } else {
+            alert('전화번호 형식이 아닙니다. 편집을 선택해서 내용을 확인하세요.');
+          }
+          return;
+        }
+        closePhoneChoiceBox();
+      }, true);
+      document.body.appendChild(phoneChoiceEl);
+      return phoneChoiceEl;
+    }
+
+    function closePhoneChoiceBox() {
+      if (phoneChoiceEl) phoneChoiceEl.classList.remove('is-open');
+      phoneChoiceTarget = null;
+    }
+
+    function showPhoneChoiceBox(el) {
+      if (!el) return;
+      phoneChoiceTarget = el;
+      lockAllExcept(el);
+      const box = ensurePhoneChoiceBox();
+      box.classList.add('is-open');
+      const rect = el.getBoundingClientRect();
+      const boxWidth = Math.max(box.offsetWidth || 230, 230);
+      const left = Math.min(Math.max(8, rect.left + rect.width / 2 - boxWidth / 2), window.innerWidth - boxWidth - 8);
+      const top = Math.min(Math.max(8, rect.bottom + 8), window.innerHeight - 62);
+      box.style.left = left + 'px';
+      box.style.top = top + 'px';
+    }
+
     function cancelPressTimer() {
       clearTimeout(pressTimer);
       pressTimer = null;
@@ -1766,15 +1916,29 @@ function resizeAllTextareas(root = document) {
     document.addEventListener('pointerdown', function (event) {
       if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
-      if (!editable) return;
+      if (!editable) {
+        if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
+          closePhoneChoiceBox();
+        }
+        return;
+      }
       if (editable.classList.contains('mobile-longpress-editing')) return;
+
+      if (isPhoneChoiceTarget(editable)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
 
       targetEl = editable;
       startX = event.clientX || 0;
       startY = event.clientY || 0;
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => {
-        enableEditing(targetEl);
+        if (isPhoneChoiceTarget(targetEl)) {
+          showPhoneChoiceBox(targetEl);
+        } else {
+          enableEditing(targetEl);
+        }
         pressTimer = null;
       }, LONG_PRESS_MS);
     }, true);
@@ -1791,6 +1955,7 @@ function resizeAllTextareas(root = document) {
 
     document.addEventListener('click', function (event) {
       if (!isMobileEditMode()) return;
+      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
       if (!editable.classList.contains('mobile-longpress-editing')) {
@@ -1821,6 +1986,10 @@ function resizeAllTextareas(root = document) {
         }
       }, 120);
     }, true);
+
+    document.addEventListener('scroll', closePhoneChoiceBox, true);
+    window.addEventListener('resize', closePhoneChoiceBox);
+    window.addEventListener('orientationchange', closePhoneChoiceBox);
 
     const observer = new MutationObserver(() => initializeMobileLocks());
     window.addEventListener('DOMContentLoaded', () => {
