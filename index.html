@@ -9,7 +9,7 @@
     const TICKET_KEY = 'trip-plan-access-ticket-v1';
     const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
     const FALLBACK_TTL_MS = 10000;
-    let allowed = true;
+    let allowed = false;
     let message = '';
 
     // 웹주소/파일 직접 진입은 항상 차단합니다.
@@ -754,49 +754,6 @@
       }
     }
 
-
-    /* 지정 전화번호 칸 전용: 글자 파랑/밑줄, 굵기는 일반 */
-    .plan .phone-label-cell {
-      color: #111 !important;
-      font-weight: 400 !important;
-    }
-    .plan .phone-action-field {
-      color: #1737c9 !important;
-      font-weight: 400 !important;
-      text-decoration: underline !important;
-      -webkit-text-fill-color: #1737c9 !important;
-      cursor: pointer;
-    }
-    .phone-choice-popover {
-      position: fixed;
-      z-index: 100000;
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 8px;
-      background: #fff;
-      border: 1px solid #999;
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
-      font-family: inherit;
-    }
-    .phone-choice-popover.is-open { display: flex; }
-    .phone-choice-popover button {
-      min-width: 82px;
-      height: 34px;
-      border: 1px solid #777;
-      border-radius: 8px;
-      background: #f3f3f3;
-      color: #111;
-      font: inherit;
-      font-weight: 700;
-    }
-    .phone-choice-popover .phone-call-btn {
-      border-color: #1737c9;
-      background: #1737c9;
-      color: #fff;
-    }
-
   </style>
 
 <style id="info-json-force-visible-style">
@@ -935,7 +892,7 @@
 <td class="fixed">차량정보</td>
 <td class="fixed">차량번호</td>
 <td class="fixed">이   름</td>
-<td class="fixed phone-label-cell">전화번호</td>
+<td class="fixed">전화번호</td>
 <td class="fixed" colspan="2">계좌번호</td>
 </tr>
 <tr class="h30">
@@ -943,7 +900,7 @@
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:8" value=""/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:9" value=""/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:10" value=""/></td>
-<td class="input-cell"><input class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-realtime-save-bound="true" data-sync-key="field:11" value=""/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:11" value=""/></td>
 <td class="input-cell" colspan="2"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:12" value=""/></td>
 </tr>
 <tr class="h26 duration-top-line">
@@ -987,7 +944,7 @@
 <tr class="h30">
 <td class="fixed" rowspan="2">식 당</td>
 <td class="fixed">식 당</td>
-<td class="fixed phone-label-cell">연락처</td>
+<td class="fixed">연락처</td>
 <td class="fixed">주 소</td>
 <td class="fixed">메 뉴</td>
 <td class="fixed">비 고</td>
@@ -996,7 +953,7 @@
 </tr>
 <tr class="h30 meal-row one-line-autogrow-row" style="height: auto;">
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:26" style="height: 40px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:27" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:27" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:28" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:29" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:30" style="height: 40px;"></textarea></td>
@@ -1031,8 +988,8 @@
 <td class="fixed">위치</td>
 <td class="fixed">상호</td>
 <td class="fixed">이름</td>
-<td class="fixed phone-label-cell">전화번호</td>
-<td class="fixed phone-label-cell">휴대폰</td>
+<td class="fixed">전화번호</td>
+<td class="fixed">휴대폰</td>
 <td class="fixed">계좌번호</td>
 <td class="fixed">단가</td>
 <td class="fixed">주문수량 :</td>
@@ -1042,8 +999,8 @@
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-location" id="gimbap-location" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-shop" id="gimbap-shop" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-name" id="gimbap-name" style="height: 28px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-phone" id="gimbap-phone" style="height: 28px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-mobile" id="gimbap-mobile" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-phone" id="gimbap-phone" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-mobile" id="gimbap-mobile" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-account" id="gimbap-account" style="height: 28px;"></textarea></td>
 <td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="id:gimbap-price" id="gimbap-price" value=""/></td>
 <td class="fixed bold gimbap-total-label-cell">금 액 :</td>
@@ -1732,7 +1689,6 @@ function resizeAllTextareas(root = document) {
 
     function isEditableTarget(el) {
       if (!el) return false;
-      if (el.closest && el.closest('.phone-action-field[data-phone-action="tel-choice"]')) return null;
       const field = el.closest && el.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
       if (field && field.id !== 'mountain-name') return field;
       const infoCell = el.closest && el.closest('.info-section-table th, .info-section-table td');
@@ -1879,7 +1835,7 @@ function resizeAllTextareas(root = document) {
 <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-    import { getDatabase, ref, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, update, onValue, get, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
    const firebaseConfig = {
   apiKey: "AIzaSyAmp9G9ZZ-CzK5LqR-b66U1wBRmUrp8W_c",
@@ -1905,8 +1861,10 @@ function resizeAllTextareas(root = document) {
     const statusEl = document.getElementById('firebase-status');
     const SYNC_PATH = 'tripSchedule/sharedPlan';
     const SYNC_FORMDATA_PATH = `${SYNC_PATH}/formData`;
+    const PHONE_BACKUP_PATH = `${SYNC_PATH}/phoneBackup`;
     const SYNC_PLAN_STYLES_PATH = `${SYNC_PATH}/planStyles`;
     const LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
+    const PHONE_LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.protectedPhoneValues';
     let db = null;
     let applyingRemote = false;
 
@@ -1936,6 +1894,118 @@ function resizeAllTextareas(root = document) {
         .filter((el) => !el.readOnly && !el.disabled && el.id !== 'mountain-name');
     }
 
+    // 전화번호/휴대폰 보호 대상입니다.
+    // Firebase 또는 정보모음 선택 과정에서 빈값이 들어와도 기존 번호를 지우지 않습니다.
+    const PROTECTED_PHONE_SYNC_KEYS = new Set([
+      'field:11',          // 관광버스 행 전화번호
+      'field:27',          // 식당 행 연락처
+      'id:gimbap-phone',   // 위치/상호 행 전화번호
+      'id:gimbap-mobile'   // 위치/상호 행 휴대폰
+    ]);
+
+    function isProtectedPhoneField(el) {
+      if (!el) return false;
+      return PROTECTED_PHONE_SYNC_KEYS.has(String(el.dataset.syncKey || ''));
+    }
+
+    function isBlankValue(value) {
+      return String(value ?? '').replace(/ /g, ' ').trim() === '';
+    }
+
+    function readProtectedPhoneCache() {
+      try {
+        const raw = localStorage.getItem(PHONE_LOCAL_CACHE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return (parsed && typeof parsed === 'object') ? parsed : {};
+      } catch (error) {
+        console.warn('전화번호 보호 캐시 읽기 실패:', error);
+        return {};
+      }
+    }
+
+    function writeProtectedPhoneCache(values) {
+      try {
+        localStorage.setItem(PHONE_LOCAL_CACHE_KEY, JSON.stringify(values || {}));
+      } catch (error) {
+        console.warn('전화번호 보호 캐시 저장 실패:', error);
+      }
+    }
+
+    function extractProtectedPhonePatch(source) {
+      const patch = {};
+      if (!source || typeof source !== 'object') return patch;
+      PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(source, key) && !isBlankValue(source[key])) {
+          patch[key] = source[key];
+        }
+      });
+      return patch;
+    }
+
+    async function readProtectedPhoneBackupFromFirebase() {
+      if (!db) return {};
+      try {
+        const snapshot = await get(ref(db, PHONE_BACKUP_PATH));
+        const value = snapshot.val();
+        return (value && typeof value === 'object') ? extractProtectedPhonePatch(value) : {};
+      } catch (error) {
+        console.warn('전화번호 백업값 읽기 실패:', error);
+        return {};
+      }
+    }
+
+    async function saveProtectedPhoneBackupToFirebase(source) {
+      if (!db) return false;
+      const patch = extractProtectedPhonePatch(source || collectFormData());
+      if (!Object.keys(patch).length) return false;
+      try {
+        await withTimeout(update(ref(db, PHONE_BACKUP_PATH), Object.assign({}, patch, { updatedAt: serverTimestamp() })), 8000);
+        return true;
+      } catch (error) {
+        console.warn('전화번호 백업 저장 실패:', error);
+        return false;
+      }
+    }
+
+    function snapshotProtectedPhoneValuesFromDom() {
+      const values = {};
+      getEditableFields().forEach((el) => {
+        if (!isProtectedPhoneField(el)) return;
+        const key = el.dataset.syncKey;
+        if (!key || isBlankValue(el.value)) return;
+        values[key] = el.value;
+      });
+      return values;
+    }
+
+    function rememberProtectedPhoneValues(source) {
+      const saved = readProtectedPhoneCache();
+      const next = Object.assign({}, saved);
+
+      if (source && typeof source === 'object') {
+        PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(source, key) && !isBlankValue(source[key])) {
+            next[key] = source[key];
+          }
+        });
+      }
+
+      Object.assign(next, snapshotProtectedPhoneValuesFromDom());
+      writeProtectedPhoneCache(next);
+      return next;
+    }
+
+    function mergeProtectedPhoneValues(data) {
+      const merged = Object.assign({}, (data && typeof data === 'object') ? data : {});
+      const saved = rememberProtectedPhoneValues(merged);
+      PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
+        if (isBlankValue(merged[key]) && !isBlankValue(saved[key])) {
+          merged[key] = saved[key];
+        }
+      });
+      return merged;
+    }
+
     function ensureSyncKeys() {
       getEditableFields().forEach((el, index) => {
         if (!el.dataset.syncKey) {
@@ -1946,26 +2016,50 @@ function resizeAllTextareas(root = document) {
 
     function collectFormData() {
       const data = {};
+      const protectedCache = readProtectedPhoneCache();
       getEditableFields().forEach((el) => {
-        data[el.dataset.syncKey] = el.value;
+        const key = el.dataset.syncKey;
+        if (!key) return;
+        // 보호 전화번호 칸은 빈값을 저장하지 않습니다.
+        // 앱 재접속 후 원격/초기값이 비어 있어도 마지막 정상 번호를 유지합니다.
+        if (isProtectedPhoneField(el)) {
+          if (isBlankValue(el.value)) {
+            if (!isBlankValue(protectedCache[key])) data[key] = protectedCache[key];
+            return;
+          }
+          protectedCache[key] = el.value;
+          data[key] = el.value;
+          return;
+        }
+        data[key] = el.value;
       });
+      writeProtectedPhoneCache(protectedCache);
       return data;
     }
 
     function applyFormData(data) {
       if (!data || typeof data !== 'object') return;
+      data = mergeProtectedPhoneValues(data);
       if (window.__tripScheduleLocalSelectionSavingUntil && Date.now() < window.__tripScheduleLocalSelectionSavingUntil) {
         return;
       }
       applyingRemote = true;
-      ensureSyncKeys();
-      getEditableFields().forEach((el) => {
-        const key = el.dataset.syncKey;
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          el.value = data[key];
-        }
-      });
-      applyingRemote = false;
+      try {
+        ensureSyncKeys();
+        getEditableFields().forEach((el) => {
+          const key = el.dataset.syncKey;
+          if (Object.prototype.hasOwnProperty.call(data, key)) {
+            const nextValue = data[key];
+            // 원격 데이터가 빈값이어도 전화번호/휴대폰 칸의 기존 값은 지우지 않습니다.
+            if (isProtectedPhoneField(el) && isBlankValue(nextValue) && !isBlankValue(el.value)) return;
+            // 보호 전화번호는 원격값이 빈값이면 아예 적용하지 않습니다.
+            if (isProtectedPhoneField(el) && isBlankValue(nextValue)) return;
+            el.value = nextValue;
+          }
+        });
+      } finally {
+        applyingRemote = false;
+      }
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
       if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
@@ -1974,7 +2068,8 @@ function resizeAllTextareas(root = document) {
 
     function cacheFormDataLocally(data) {
       try {
-        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data || {}));
+        const merged = mergeProtectedPhoneValues(data || {});
+        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(merged));
       } catch (error) {
         console.warn('로컬 캐시 저장 실패:', error);
       }
@@ -1986,8 +2081,8 @@ function resizeAllTextareas(root = document) {
         if (!raw) return false;
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== 'object') return false;
-        applyFormData(parsed);
-        setFirebaseStatus('앱 시작 시 저장된 로컬 내용을 우선 복원함', true);
+        applyFormData(mergeProtectedPhoneValues(parsed));
+        setFirebaseStatus('앱 시작 시 저장된 전화번호/로컬 내용을 우선 복원함', true);
         return true;
       } catch (error) {
         console.warn('로컬 캐시 복원 실패:', error);
@@ -2025,6 +2120,7 @@ function resizeAllTextareas(root = document) {
 
       try {
         await withTimeout(update(ref(db, SYNC_FORMDATA_PATH), formData), 8000);
+        await saveProtectedPhoneBackupToFirebase(formData);
         await withTimeout(update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() }), 8000);
 
         if (showSuccessMessage) {
@@ -2049,6 +2145,7 @@ function resizeAllTextareas(root = document) {
         cacheFormDataLocally(formData);
         if (!db || applyingRemote) return false;
         await withTimeout(update(ref(db, SYNC_FORMDATA_PATH), formData), 8000);
+        await saveProtectedPhoneBackupToFirebase(formData);
         await withTimeout(update(ref(db, SYNC_PATH), { updatedAt: serverTimestamp() }), 8000);
         setFirebaseStatus('실시간 동기화 연결됨 · 선택 정보 저장 완료', true);
         return true;
@@ -2096,6 +2193,7 @@ function resizeAllTextareas(root = document) {
     function bindRealtimeSync() {
       ensureSyncKeys();
       restoreCachedFormData();
+      saveProtectedPhoneBackupToFirebase(readProtectedPhoneCache());
 
       const saveButton = document.getElementById('save-button');
       if (saveButton) {
@@ -2127,13 +2225,36 @@ function resizeAllTextareas(root = document) {
         });
       });
 
-      onValue(ref(db, SYNC_FORMDATA_PATH), (snapshot) => {
+      onValue(ref(db, SYNC_FORMDATA_PATH), async (snapshot) => {
         const value = snapshot.val();
+        const firebasePhoneBackup = await readProtectedPhoneBackupFromFirebase();
         if (value && typeof value === 'object') {
-          applyFormData(value);
-          cacheFormDataLocally(value);
+          // formData의 전화번호가 비어 있어도 별도 Firebase phoneBackup 값으로 복구합니다.
+          const mergedValue = mergeProtectedPhoneValues(Object.assign({}, firebasePhoneBackup, value));
+          PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
+            if (isBlankValue(value[key]) && !isBlankValue(firebasePhoneBackup[key])) {
+              mergedValue[key] = firebasePhoneBackup[key];
+            }
+          });
+          applyFormData(mergedValue);
+          cacheFormDataLocally(mergedValue);
+          // Firebase formData에 전화번호 키가 비어 있거나 빠져 있으면 백업/로컬 보호값으로 다시 보강 저장합니다.
+          const phonePatch = {};
+          PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
+            if (isBlankValue(value[key]) && !isBlankValue(mergedValue[key])) phonePatch[key] = mergedValue[key];
+          });
+          if (Object.keys(phonePatch).length && db && !applyingRemote) {
+            update(ref(db, SYNC_FORMDATA_PATH), phonePatch).catch((error) => console.warn('전화번호 보호값 보강 저장 실패:', error));
+            saveProtectedPhoneBackupToFirebase(phonePatch);
+          }
           setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 완료', true);
         } else {
+          const localPhoneValues = mergeProtectedPhoneValues(firebasePhoneBackup);
+          if (Object.keys(localPhoneValues).length && db) {
+            applyFormData(localPhoneValues);
+            update(ref(db, SYNC_FORMDATA_PATH), localPhoneValues).catch((error) => console.warn('전화번호 로컬/백업값 복원 저장 실패:', error));
+            saveProtectedPhoneBackupToFirebase(localPhoneValues);
+          }
           setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 대기 중', true);
         }
       }, (error) => {
@@ -2681,11 +2802,26 @@ function resizeAllTextareas(root = document) {
         }
       }
 
+      // 전화번호/휴대폰 계열은 정보모음 선택 행이 비어있을 때 기존 값을 지우면 안 됩니다.
+      // 빈값을 Firebase에 즉시 저장하면서 다른 기기에서도 전화번호가 사라지는 문제를 차단합니다.
+      function setFormFieldValueIfNotBlank(field, value) {
+        const nextValue = normalizeText(value);
+        if (!nextValue) return;
+        setFormFieldValue(field, nextValue);
+      }
+
       function setPlanCellValue(rowIndex, cellIndex, selector, value) {
         const planTable = document.querySelector('table.plan');
         if (!planTable || !planTable.rows[rowIndex] || !planTable.rows[rowIndex].cells[cellIndex]) return;
         const target = planTable.rows[rowIndex].cells[cellIndex].querySelector(selector || 'input, textarea');
         setFormFieldValue(target, value);
+      }
+
+      function setPlanCellValueIfNotBlank(rowIndex, cellIndex, selector, value) {
+        const planTable = document.querySelector('table.plan');
+        if (!planTable || !planTable.rows[rowIndex] || !planTable.rows[rowIndex].cells[cellIndex]) return;
+        const target = planTable.rows[rowIndex].cells[cellIndex].querySelector(selector || 'input, textarea');
+        setFormFieldValueIfNotBlank(target, value);
       }
 
       function freezeCurrentFormValues(root = document) {
@@ -2749,8 +2885,8 @@ function resizeAllTextareas(root = document) {
         setFormFieldValue(document.getElementById('gimbap-location'), data['위치'] || '');
         setFormFieldValue(document.getElementById('gimbap-shop'), data['상호'] || '');
         setFormFieldValue(document.getElementById('gimbap-name'), data['이름'] || '');
-        setFormFieldValue(document.getElementById('gimbap-phone'), data['전화번호'] || '');
-        setFormFieldValue(document.getElementById('gimbap-mobile'), data['휴대폰'] || '');
+        setFormFieldValueIfNotBlank(document.getElementById('gimbap-phone'), data['전화번호'] || '');
+        setFormFieldValueIfNotBlank(document.getElementById('gimbap-mobile'), data['휴대폰'] || '');
         setFormFieldValue(document.getElementById('gimbap-account'), data['계좌번호'] || '');
         setFormFieldValue(document.getElementById('gimbap-price'), data['단가'] || '');
 
@@ -2765,7 +2901,7 @@ function resizeAllTextareas(root = document) {
         setPlanCellValue(5, 1, 'input', data['차량정보'] || data['차종'] || '');
         setPlanCellValue(5, 2, 'input', data['차량번호'] || data['회사'] || data['회 사'] || '');
         setPlanCellValue(5, 3, 'input', data['이름'] || '');
-        setPlanCellValue(5, 4, 'input', data['전화번호'] || '');
+        setPlanCellValueIfNotBlank(5, 4, 'input', data['전화번호'] || '');
         setPlanCellValue(5, 5, 'input', data['계좌번호'] || '');
       }
 
