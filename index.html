@@ -3398,6 +3398,21 @@ function resizeAllTextareas(root = document) {
         background:#fff;
         color:#555;
       }
+      .trip-phone-hold-target:not(.mobile-longpress-editing){
+        -webkit-user-select:none !important;
+        user-select:none !important;
+        -webkit-touch-callout:none !important;
+        caret-color:transparent !important;
+        cursor:pointer !important;
+      }
+      input.trip-phone-hold-target:not(.mobile-longpress-editing),
+      textarea.trip-phone-hold-target:not(.mobile-longpress-editing){
+        pointer-events:auto !important;
+      }
+      .trip-phone-hold-target.trip-phone-hold-ready{
+        outline:2px solid #1737c9 !important;
+        outline-offset:-2px !important;
+      }
       @media(max-width:768px){
         .trip-phone-choice-box{
           width:min(230px, calc(100vw - 18px));
@@ -3534,6 +3549,10 @@ function resizeAllTextareas(root = document) {
       target.classList.add("trip-phone-hold-target");
       target.dataset.tripPhoneHold = "1";
       target.setAttribute("title", "1초 이상 길게 누르면 편집/전화연결 선택");
+      target.setAttribute("draggable", "false");
+      target.setAttribute("autocomplete", "off");
+      target.setAttribute("autocorrect", "off");
+      target.setAttribute("autocapitalize", "off");
     });
   }
 
@@ -3753,10 +3772,45 @@ function resizeAllTextareas(root = document) {
     if (Math.abs(x - startX) > MOVE_CANCEL_PX || Math.abs(y - startY) > MOVE_CANCEL_PX) clearHold();
   }
 
+  function blockNativeSelectionForPhoneTarget(e){
+    const target = getPhoneHoldTarget(e.target);
+    if (!target) return false;
+    if (target.dataset && target.dataset.tripPhoneEditing === "1") return false;
+    if (e.type === "touchstart" && e.touches && e.touches.length > 1) return false;
+    try { e.preventDefault(); } catch (error) {}
+    try { e.stopPropagation(); } catch (error) {}
+    try {
+      if (document.activeElement && document.activeElement !== document.body && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+    } catch (error) {}
+    try {
+      const sel = window.getSelection && window.getSelection();
+      if (sel && sel.removeAllRanges) sel.removeAllRanges();
+    } catch (error) {}
+    return true;
+  }
+
+  document.addEventListener("selectstart", (e) => {
+    blockNativeSelectionForPhoneTarget(e);
+  }, { capture: true });
+
+  document.addEventListener("contextmenu", (e) => {
+    blockNativeSelectionForPhoneTarget(e);
+  }, { capture: true });
+
+  document.addEventListener("dragstart", (e) => {
+    blockNativeSelectionForPhoneTarget(e);
+  }, { capture: true });
+
   document.addEventListener("touchstart", (e) => {
     touchingCount = e.touches ? e.touches.length : 0;
-    if (touchingCount > 1) clearHold();
-  }, { passive: true, capture: true });
+    if (touchingCount > 1) {
+      clearHold();
+      return;
+    }
+    blockNativeSelectionForPhoneTarget(e);
+  }, { passive: false, capture: true });
 
   document.addEventListener("touchend", () => { touchingCount = 0; }, { passive: true, capture: true });
   document.addEventListener("touchcancel", () => { touchingCount = 0; clearHold(); }, { passive: true, capture: true });
@@ -3789,10 +3843,6 @@ function resizeAllTextareas(root = document) {
     } catch (error) {}
   }, true);
 
-  document.addEventListener("contextmenu", (e) => {
-    const target = getPhoneHoldTarget(e.target);
-    if (target) e.preventDefault();
-  }, { capture: true });
 
   document.addEventListener("click", (e) => {
     const overlay = document.querySelector(".trip-phone-choice-overlay");
