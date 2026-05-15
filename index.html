@@ -3463,24 +3463,9 @@ function resizeAllTextareas(root = document) {
   }
 
   function markInfoTablePhoneColumns(table){
-    if (!table || !table.classList.contains("info-section-table")) return;
-    const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
-    if (!headerRow) return;
-    const phoneCols = [];
-    Array.from(headerRow.cells || []).forEach((cell, index) => {
-      if (PHONE_HEADER_RE.test(plainText(cell.innerText || cell.textContent || ""))) {
-        phoneCols.push(index);
-      }
-    });
-    if (!phoneCols.length) return;
-    Array.from(table.tBodies || []).forEach((tbody) => {
-      Array.from(tbody.rows || []).forEach((row) => {
-        phoneCols.forEach((colIndex) => {
-          const cell = row.cells[colIndex];
-          if (cell) markPhoneTarget(cell);
-        });
-      });
-    });
+    // 정보 모음 박스 내부의 전화번호/전화 번호/휴대폰/계좌번호 열은
+    // 전화연결 대상이 아니라 일반 편집 대상이므로 여기서는 표시하지 않는다.
+    return;
   }
 
   function isExcludedNormalEditField(el){
@@ -3490,6 +3475,20 @@ function resizeAllTextareas(root = document) {
 
     const parentCell = el.closest && el.closest("td,th");
     const row = parentCell && parentCell.parentElement;
+
+    // 정보 모음 박스 내부는 표 제목이 전화번호/전화 번호/휴대폰/계좌번호처럼 보여도
+    // 전화연결용 칸이 아니라 일반 편집 칸으로 사용한다.
+    // 특히 계좌번호 칸의 농협 2170..., 우체국 1074... 등은 숫자가 많아도 전화번호로 처리하지 않는다.
+    const infoTable = parentCell && parentCell.closest("table.info-section-table");
+    if (parentCell && row && infoTable) {
+      const cells = Array.from(row.cells || []);
+      const index = cells.indexOf(parentCell);
+      const headerRow = infoTable.tHead && infoTable.tHead.rows && infoTable.tHead.rows[0];
+      const headerCell = headerRow && index >= 0 ? headerRow.cells[index] : null;
+      const headerText = plainText(headerCell ? (headerCell.innerText || headerCell.textContent || "") : (parentCell.innerText || parentCell.textContent || ""));
+      if (/(전화\s*번호|휴대폰|계좌\s*번호)/.test(headerText)) return true;
+    }
+
     const table = parentCell && parentCell.closest("table.plan");
     if (parentCell && row && table && row.classList.contains("meal-row")) {
       const cells = Array.from(row.cells || []);
@@ -3944,6 +3943,49 @@ function resizeAllTextareas(root = document) {
   }
   document.addEventListener("DOMContentLoaded", restoreNormalEdit);
   setTimeout(restoreNormalEdit, 1000);
+})();
+</script>
+
+
+<script id="info-box-normal-edit-restore-script">
+(function(){
+  function plainText(value){ return String(value || "").replace(/\s+/g, " ").trim(); }
+  function unlock(el){
+    if (!el) return;
+    el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
+    delete el.dataset.tripPhoneHold;
+    delete el.dataset.tripPhoneEditing;
+    el.removeAttribute("title");
+    if (el.matches && el.matches("input,textarea")) {
+      el.readOnly = false;
+      el.removeAttribute("inputmode");
+    }
+    if (el.matches && el.matches("[contenteditable='false'],[contenteditable='true']")) {
+      el.setAttribute("contenteditable", "true");
+    }
+  }
+  function restoreInfoBoxNormalEdit(){
+    document.querySelectorAll("table.info-section-table").forEach((table) => {
+      const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
+      if (!headerRow) return;
+      Array.from(headerRow.cells || []).forEach((headerCell, index) => {
+        const headerText = plainText(headerCell.innerText || headerCell.textContent || "");
+        if (!/(전화\s*번호|휴대폰|계좌\s*번호)/.test(headerText)) return;
+        unlock(headerCell);
+        Array.from(table.tBodies || []).forEach((tbody) => {
+          Array.from(tbody.rows || []).forEach((row) => {
+            const cell = row.cells[index];
+            if (!cell) return;
+            unlock(cell);
+            cell.querySelectorAll("input,textarea,[contenteditable='false'],[contenteditable='true']").forEach(unlock);
+          });
+        });
+      });
+    });
+  }
+  document.addEventListener("DOMContentLoaded", restoreInfoBoxNormalEdit);
+  window.addEventListener("load", restoreInfoBoxNormalEdit);
+  setInterval(restoreInfoBoxNormalEdit, 1200);
 })();
 </script>
 
