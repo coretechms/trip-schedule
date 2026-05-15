@@ -3305,6 +3305,9 @@ function resizeAllTextareas(root = document) {
     "field:11",   // 관광버스 전화번호
     "field:27"    // 식당 연락처
   ]);
+  const EXCLUDED_NORMAL_EDIT_SYNC_KEYS = new Set([
+    "field:28"    // 식당행 주소 입력칸: 전화번호 기능 제외, 일반 편집 유지
+  ]);
 
   let holdTimer = null;
   let holdTarget = null;
@@ -3321,6 +3324,12 @@ function resizeAllTextareas(root = document) {
     style.textContent = `
       .trip-phone-hold-target{
         touch-action:pan-x pan-y pinch-zoom;
+        font-weight:400 !important;
+      }
+      .trip-phone-hold-target *,
+      input.trip-phone-hold-target,
+      textarea.trip-phone-hold-target{
+        font-weight:400 !important;
       }
       input.trip-phone-hold-target[readonly],
       textarea.trip-phone-hold-target[readonly],
@@ -3368,7 +3377,7 @@ function resizeAllTextareas(root = document) {
       .trip-phone-choice-phone{
         font-size:13px;
         color:#1737c9;
-        font-weight:700;
+        font-weight:400;
         margin-bottom:10px;
         word-break:break-all;
       }
@@ -3474,8 +3483,41 @@ function resizeAllTextareas(root = document) {
     });
   }
 
-  function isKnownPhoneField(el){
+  function isExcludedNormalEditField(el){
     if (!el) return false;
+    const syncKey = String(el.dataset && el.dataset.syncKey || "");
+    if (EXCLUDED_NORMAL_EDIT_SYNC_KEYS.has(syncKey)) return true;
+
+    const parentCell = el.closest && el.closest("td,th");
+    const row = parentCell && parentCell.parentElement;
+    const table = parentCell && parentCell.closest("table.plan");
+    if (parentCell && row && table && row.classList.contains("meal-row")) {
+      const cells = Array.from(row.cells || []);
+      const index = cells.indexOf(parentCell);
+      // 식당행 입력 순서: 식당 / 연락처 / 주소 / 메뉴 / 비고 / 주류 / 예약인원
+      if (index === 2) return true;
+    }
+    return false;
+  }
+
+  function unlockNormalEditField(el){
+    if (!el) return;
+    el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
+    delete el.dataset.tripPhoneHold;
+    delete el.dataset.tripPhoneEditing;
+    if (el.matches && el.matches("input,textarea")) {
+      const original = el.dataset.tripPhoneOriginalReadonly;
+      if (original === "0") el.readOnly = false;
+      el.removeAttribute("inputmode");
+    } else if (el.matches && el.matches("[contenteditable='true'],[contenteditable='false']")) {
+      const original = el.dataset.tripPhoneOriginalContenteditable;
+      if (original) el.setAttribute("contenteditable", original);
+      else el.setAttribute("contenteditable", "true");
+    }
+  }
+
+  function isKnownPhoneField(el){
+    if (!el || isExcludedNormalEditField(el)) return false;
     const id = String(el.id || "");
     const syncKey = String(el.dataset && el.dataset.syncKey || "");
     if (DIRECT_PHONE_IDS.has(id) || DIRECT_SYNC_KEYS.has(syncKey)) return true;
@@ -3506,6 +3548,7 @@ function resizeAllTextareas(root = document) {
   }
 
   function isPhoneLikeField(el){
+    if (isExcludedNormalEditField(el)) return false;
     return !!normalizePhone(getElementText(el));
   }
 
@@ -3545,6 +3588,10 @@ function resizeAllTextareas(root = document) {
 
     targets.forEach((target) => {
       if (!target) return;
+      if (isExcludedNormalEditField(target)) {
+        unlockNormalEditField(target);
+        return;
+      }
       lockPhoneFieldUntilChoice(target);
       target.classList.add("trip-phone-hold-target");
       target.dataset.tripPhoneHold = "1";
@@ -3558,6 +3605,10 @@ function resizeAllTextareas(root = document) {
 
   function refreshPhoneTargets(){
     document.querySelectorAll(".trip-phone-hold-target").forEach((el) => {
+      if (isExcludedNormalEditField(el)) {
+        unlockNormalEditField(el);
+        return;
+      }
       if (!isKnownPhoneField(el) && !isPhoneLikeField(el)) {
         el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
         delete el.dataset.tripPhoneHold;
@@ -3565,6 +3616,10 @@ function resizeAllTextareas(root = document) {
     });
     document.querySelectorAll("table.info-section-table").forEach(markInfoTablePhoneColumns);
     document.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']").forEach((el) => {
+      if (isExcludedNormalEditField(el)) {
+        unlockNormalEditField(el);
+        return;
+      }
       if (isKnownPhoneField(el) || isPhoneLikeField(el)) markPhoneTarget(el);
     });
   }
