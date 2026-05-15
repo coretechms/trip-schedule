@@ -3927,4 +3927,24 @@ function resizeAllTextareas(root = document) {
 })();
 </script>
 
+
+<script id="restore-normal-edit-fields-script">
+(function(){
+  const restoreIds = ["gimbap-phone","gimbap-mobile","gimbap-account"];
+  function restoreNormalEdit(){
+    restoreIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("trip-phone-hold-target","trip-phone-hold-ready");
+      delete el.dataset.tripPhoneHold;
+      el.removeAttribute("title");
+      el.style.pointerEvents = "";
+      el.readOnly = false;
+    });
+  }
+  document.addEventListener("DOMContentLoaded", restoreNormalEdit);
+  setTimeout(restoreNormalEdit, 1000);
+})();
+</script>
+
 </body></html>
