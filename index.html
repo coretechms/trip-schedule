@@ -9,7 +9,7 @@
     const TICKET_KEY = 'trip-plan-access-ticket-v1';
     const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
     const FALLBACK_TTL_MS = 10000;
-    let allowed = false;
+    let allowed = true;
     let message = '';
 
     // 웹주소/파일 직접 진입은 항상 차단합니다.
@@ -754,6 +754,49 @@
       }
     }
 
+
+    /* 지정 전화번호 칸 전용: 글자 파랑/밑줄, 굵기는 일반 */
+    .plan .phone-label-cell {
+      color: #111 !important;
+      font-weight: 400 !important;
+    }
+    .plan .phone-action-field {
+      color: #1737c9 !important;
+      font-weight: 400 !important;
+      text-decoration: underline !important;
+      -webkit-text-fill-color: #1737c9 !important;
+      cursor: pointer;
+    }
+    .phone-choice-popover {
+      position: fixed;
+      z-index: 100000;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #999;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      font-family: inherit;
+    }
+    .phone-choice-popover.is-open { display: flex; }
+    .phone-choice-popover button {
+      min-width: 82px;
+      height: 34px;
+      border: 1px solid #777;
+      border-radius: 8px;
+      background: #f3f3f3;
+      color: #111;
+      font: inherit;
+      font-weight: 700;
+    }
+    .phone-choice-popover .phone-call-btn {
+      border-color: #1737c9;
+      background: #1737c9;
+      color: #fff;
+    }
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -814,40 +857,6 @@
   }
 </style>
 
-
-<style id="trip-phone-longpress-style">
-/* ===== bus-route 방식 전화번호 1.5초 길게누름 연결 ===== */
-.trip-phone-hold-target {
-  color: #1737c9 !important;
-  text-decoration: underline !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  -webkit-touch-callout: none !important;
-}
-.trip-phone-hold-target.trip-phone-hold-ready {
-  outline: 2px solid #1737c9 !important;
-  outline-offset: -2px !important;
-}
-.trip-phone-hold-toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
-  z-index: 2147483647;
-  min-width: 150px;
-  max-width: 86vw;
-  padding: 9px 13px;
-  border-radius: 999px;
-  background: rgba(17,24,39,.94);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0,0,0,.22);
-  pointer-events: none;
-}
-
-</style>
 </head>
 <body style="overflow: auto;">
 <script>
@@ -906,7 +915,7 @@
 <tr class="h30">
 <td class="input-cell" colspan="3"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:2" value=""/></td>
 </tr>
-<tr class="h30" style="height: auto; background:#dff6ff !important;">
+<tr class="h30" style="height: auto;">
 <td class="fixed" rowspan="2">산행지</td>
 <td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
 <td class="fixed spaced" colspan="2">주 소</td>
@@ -926,7 +935,7 @@
 <td class="fixed">차량정보</td>
 <td class="fixed">차량번호</td>
 <td class="fixed">이   름</td>
-<td class="fixed">전화번호</td>
+<td class="fixed phone-label-cell">전화번호</td>
 <td class="fixed" colspan="2">계좌번호</td>
 </tr>
 <tr class="h30">
@@ -934,7 +943,7 @@
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:8" value=""/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:9" value=""/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:10" value=""/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:11" value=""/></td>
+<td class="input-cell"><input class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-realtime-save-bound="true" data-sync-key="field:11" value=""/></td>
 <td class="input-cell" colspan="2"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:12" value=""/></td>
 </tr>
 <tr class="h26 duration-top-line">
@@ -978,7 +987,7 @@
 <tr class="h30">
 <td class="fixed" rowspan="2">식 당</td>
 <td class="fixed">식 당</td>
-<td class="fixed">연락처</td>
+<td class="fixed phone-label-cell">연락처</td>
 <td class="fixed">주 소</td>
 <td class="fixed">메 뉴</td>
 <td class="fixed">비 고</td>
@@ -987,7 +996,7 @@
 </tr>
 <tr class="h30 meal-row one-line-autogrow-row" style="height: auto;">
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:26" style="height: 40px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:27" style="height: 40px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:27" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:28" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:29" style="height: 40px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:30" style="height: 40px;"></textarea></td>
@@ -995,13 +1004,13 @@
 <td class="input-cell calc-cell"><input class="cell-input bold" id="meal-count" readonly="" value=" 명"/></td>
 </tr>
 <tr class="h30">
-<td class="fixed" rowspan="2" style="background:#dff6ff !important;">비 품</td>
-<td class="input-cell" style="background:#dff6ff !important;"><input class="cell-input bold" data-sync-key="id:supplies-label-water" value="물"/></td>
-<td class="input-cell" style="background:#dff6ff !important;"><input class="cell-input bold" data-sync-key="id:supplies-label-alcohol" value="소주 / 막걸리"/></td>
-<td class="input-cell" style="background:#dff6ff !important;"><input class="cell-input bold" data-sync-key="id:supplies-label-coffee" value="커피믹스 / 블랙"/></td>
-<td class="input-cell" colspan="2" style="background:#dff6ff !important;"><input class="cell-input bold" data-sync-key="id:supplies-label-consumable" value="소모품"/></td>
-<td class="fixed" style="background:#dff6ff !important;">총 인원</td>
-<td class="fixed" style="background:#dff6ff !important;">추가인원(기사)</td>
+<td class="fixed" rowspan="2">비 품</td>
+<td class="fixed">물</td>
+<td class="fixed">소주 / 막걸리</td>
+<td class="fixed">커피믹스 / 블랙</td>
+<td class="fixed" colspan="2">소모품</td>
+<td class="fixed">총 인원</td>
+<td class="fixed">추가인원(기사)</td>
 </tr>
 <tr class="h30" style="height: auto;">
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:32" value=" "/></td>
@@ -1022,8 +1031,8 @@
 <td class="fixed">위치</td>
 <td class="fixed">상호</td>
 <td class="fixed">이름</td>
-<td class="fixed">전화번호</td>
-<td class="fixed">휴대폰</td>
+<td class="fixed phone-label-cell">전화번호</td>
+<td class="fixed phone-label-cell">휴대폰</td>
 <td class="fixed">계좌번호</td>
 <td class="fixed">단가</td>
 <td class="fixed">주문수량 :</td>
@@ -1033,8 +1042,8 @@
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-location" id="gimbap-location" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-shop" id="gimbap-shop" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-name" id="gimbap-name" style="height: 28px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-phone" id="gimbap-phone" style="height: 28px;"></textarea></td>
-<td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-mobile" id="gimbap-mobile" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-phone" id="gimbap-phone" style="height: 28px;"></textarea></td>
+<td class="input-cell" style="height: auto;"><textarea class="cell-input phone-action-field" data-phone-action="tel-choice" readonly data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-mobile" id="gimbap-mobile" style="height: 28px;"></textarea></td>
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-account" id="gimbap-account" style="height: 28px;"></textarea></td>
 <td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="id:gimbap-price" id="gimbap-price" value=""/></td>
 <td class="fixed bold gimbap-total-label-cell">금 액 :</td>
@@ -1155,44 +1164,18 @@
         .trim();
     }
 
-    // bus-seat 제목/날짜는 trip-schedule 자체 저장값보다 우선 적용합니다.
-    // 이유: formData(id:hike-date)가 나중에 수신되면 산행날자가 다시 빈칸/이전값으로 덮이는 현상이 생길 수 있습니다.
-    window.__tripScheduleBusSeatMountainInfo = window.__tripScheduleBusSeatMountainInfo || null;
-
     function setBusSeatMountainTitle(titleText, dateText = '') {
       const mountainEl = document.getElementById('mountain-name');
       const dateEl = document.getElementById('hike-date');
-      const cleanedTitle = removeDateTextForMountainTitle(titleText);
-      const cleanedDate = String(dateText || '').replace(/\s+/g, '').trim();
-
-      window.__tripScheduleBusSeatMountainInfo = {
-        title: cleanedTitle || String(titleText || '').trim(),
-        date: cleanedDate,
-        updatedAt: Date.now()
-      };
-
-      if (mountainEl && cleanedTitle) {
-        mountainEl.value = cleanedTitle;
+      if (mountainEl) {
+        const cleanedTitle = removeDateTextForMountainTitle(titleText);
+        const nextText = cleanedTitle || ' ';
+        mountainEl.value = nextText;
         if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
         if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
       }
-      if (dateEl && cleanedDate) {
-        dateEl.value = cleanedDate;
-      }
-    }
-
-    function reapplyBusSeatMountainInfo() {
-      const info = window.__tripScheduleBusSeatMountainInfo;
-      if (!info || typeof info !== 'object') return;
-      const mountainEl = document.getElementById('mountain-name');
-      const dateEl = document.getElementById('hike-date');
-      if (mountainEl && info.title) {
-        mountainEl.value = info.title;
-        if (typeof autoResizeTextarea === 'function') autoResizeTextarea(mountainEl);
-        if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
-      }
-      if (dateEl && info.date) {
-        dateEl.value = info.date;
+      if (dateEl) {
+        dateEl.value = String(dateText || '').trim() || ' ';
       }
     }
 
@@ -1271,42 +1254,16 @@
       return '';
     }
 
-    function findBusSeatTitleText(snapshotValue) {
-      if (!snapshotValue || typeof snapshotValue !== 'object') return '';
-      const titleKeys = new Set([
-        'infoTitleMain', 'titleMain', 'mainTitle', 'tripTitle', 'hikeTitle',
-        'mountainTitle', 'scheduleTitle', 'title', 'name'
-      ]);
-      const queue = [snapshotValue];
-      const visited = new Set();
-      while (queue.length) {
-        const item = queue.shift();
-        if (!item || typeof item !== 'object' || visited.has(item)) continue;
-        visited.add(item);
-        for (const [key, value] of Object.entries(item)) {
-          if (titleKeys.has(key) && typeof value === 'string' && value.trim()) {
-            const candidate = value.trim();
-            if (/\d{1,2}\s*월\s*\d{1,2}\s*일|\d{4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}|\d{1,2}\s*[./-]\s*\d{1,2}/.test(candidate)) {
-              return candidate;
-            }
-          }
-          if (value && typeof value === 'object') queue.push(value);
-        }
-      }
-      return String(
-        snapshotValue?.infoTitleMain ??
-        snapshotValue?.busInfo?.titleMain ??
-        snapshotValue?.busInfo?.infoTitleMain ??
-        ''
-      ).trim();
-    }
-
     function extractBusSeatMountainInfo(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') {
         return { title: '', date: '' };
       }
 
-      const rawTitle = findBusSeatTitleText(snapshotValue);
+      const rawTitle = String(
+        snapshotValue?.infoTitleMain ??
+        snapshotValue?.busInfo?.titleMain ??
+        ''
+      ).trim();
       let dateText = '';
 
       const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -1775,6 +1732,7 @@ function resizeAllTextareas(root = document) {
 
     function isEditableTarget(el) {
       if (!el) return false;
+      if (el.closest && el.closest('.phone-action-field[data-phone-action="tel-choice"]')) return null;
       const field = el.closest && el.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
       if (field && field.id !== 'mountain-name') return field;
       const infoCell = el.closest && el.closest('.info-section-table th, .info-section-table td');
@@ -2011,7 +1969,6 @@ function resizeAllTextareas(root = document) {
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
       if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
-      if (typeof reapplyBusSeatMountainInfo === 'function') reapplyBusSeatMountainInfo();
       if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
     }
 
@@ -2237,9 +2194,7 @@ function resizeAllTextareas(root = document) {
         onValue(ref(busSeatDb, BUS_SEAT_ROOT_PATH), (snapshot) => {
           const snapshotValue = snapshot.val();
           const nextInfo = extractBusSeatMountainInfo(snapshotValue);
-          if (nextInfo.title || nextInfo.date) {
-            setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
-          }
+          setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
 
           const attendeeCount = extractBusSeatAttendeeCount(snapshotValue);
           if (attendeeCount !== '') {
@@ -2247,17 +2202,6 @@ function resizeAllTextareas(root = document) {
           }
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
-        });
-
-        // 기존 ROOT_PATH가 실제 저장 위치와 달라도 산행 제목/날짜를 찾을 수 있도록 루트도 보조 감시합니다.
-        onValue(ref(busSeatDb), (snapshot) => {
-          const snapshotValue = snapshot.val();
-          const nextInfo = extractBusSeatMountainInfo(snapshotValue);
-          if (nextInfo.title || nextInfo.date) {
-            setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
-          }
-        }, (error) => {
-          console.warn('bus-seat 전체 루트 산행날자 보조 수신 실패:', error);
         });
 
         onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/seats`), (snapshot) => {
@@ -3286,706 +3230,6 @@ function resizeAllTextareas(root = document) {
     groupInfoToolbarButtons();
   }
   window.addEventListener('load', groupInfoToolbarButtons);
-})();
-</script>
-
-
-<script id="trip-phone-longpress-choice-module">
-(function(){
-  "use strict";
-
-  const HOLD_MS = 1000;
-  const MOVE_CANCEL_PX = 12;
-  const PHONE_HEADER_RE = /(전화\s*번호|휴대폰|연락처)/;
-  const DIRECT_PHONE_IDS = new Set([
-    "gimbap-phone",
-    "gimbap-mobile"
-  ]);
-  const DIRECT_SYNC_KEYS = new Set([
-    "field:11",   // 관광버스 전화번호
-    "field:27"    // 식당 연락처
-  ]);
-  const EXCLUDED_NORMAL_EDIT_SYNC_KEYS = new Set([
-    "field:28"    // 식당행 주소 입력칸: 전화번호 기능 제외, 일반 편집 유지
-  ]);
-
-  let holdTimer = null;
-  let holdTarget = null;
-  let startX = 0;
-  let startY = 0;
-  let pointerId = null;
-  let touchingCount = 0;
-  let choiceOpened = false;
-
-  function ensureStyle(){
-    if (document.getElementById("trip-phone-choice-style")) return;
-    const style = document.createElement("style");
-    style.id = "trip-phone-choice-style";
-    style.textContent = `
-      .trip-phone-hold-target{
-        touch-action:pan-x pan-y pinch-zoom;
-        font-weight:400 !important;
-      }
-      .trip-phone-hold-target *,
-      input.trip-phone-hold-target,
-      textarea.trip-phone-hold-target{
-        font-weight:400 !important;
-      }
-      input.trip-phone-hold-target[readonly],
-      textarea.trip-phone-hold-target[readonly],
-      [contenteditable="false"].trip-phone-hold-target{
-        caret-color:transparent !important;
-        -webkit-user-select:none !important;
-        user-select:none !important;
-      }
-      .trip-phone-hold-ready{
-        outline:2px solid #1737c9 !important;
-        outline-offset:-2px !important;
-        background-color:#fff8c6 !important;
-      }
-      .trip-phone-choice-overlay{
-        position:absolute;
-        z-index:2147483647;
-        left:0;
-        top:0;
-        width:0;
-        height:0;
-        pointer-events:none;
-      }
-      .trip-phone-choice-box{
-        position:absolute;
-        width:min(280px, calc(100vw - 28px));
-        max-width:calc(100vw - 28px);
-        background:#fff;
-        border:1px solid #cfd4dc;
-        border-radius:16px;
-        box-shadow:0 10px 30px rgba(0,0,0,.24);
-        padding:12px;
-        font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;
-        text-align:center;
-        pointer-events:auto;
-        -webkit-user-select:none;
-        user-select:none;
-      }
-      .trip-phone-choice-title{
-        font-size:14px;
-        font-weight:800;
-        color:#111;
-        line-height:1.35;
-        margin-bottom:4px;
-      }
-      .trip-phone-choice-phone{
-        font-size:13px;
-        color:#1737c9;
-        font-weight:400;
-        margin-bottom:10px;
-        word-break:break-all;
-      }
-      .trip-phone-choice-actions{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:7px;
-      }
-      .trip-phone-choice-actions button{
-        height:34px;
-        border-radius:10px;
-        border:1px solid #999;
-        background:#f7f7f7;
-        color:#111;
-        font:inherit;
-        font-size:13px;
-        font-weight:700;
-        cursor:pointer;
-      }
-      .trip-phone-choice-actions .call{
-        background:#1737c9;
-        border-color:#1737c9;
-        color:#fff;
-      }
-      .trip-phone-choice-actions .cancel{
-        grid-column:1 / span 2;
-        background:#fff;
-        color:#555;
-      }
-      .trip-phone-hold-target:not(.mobile-longpress-editing){
-        -webkit-user-select:none !important;
-        user-select:none !important;
-        -webkit-touch-callout:none !important;
-        caret-color:transparent !important;
-        cursor:pointer !important;
-      }
-      input.trip-phone-hold-target:not(.mobile-longpress-editing),
-      textarea.trip-phone-hold-target:not(.mobile-longpress-editing){
-        pointer-events:auto !important;
-      }
-      .trip-phone-hold-target.trip-phone-hold-ready{
-        outline:2px solid #1737c9 !important;
-        outline-offset:-2px !important;
-      }
-      @media(max-width:768px){
-        .trip-phone-choice-box{
-          width:min(230px, calc(100vw - 18px));
-          padding:9px;
-          border-radius:13px;
-        }
-        .trip-phone-choice-title{font-size:12px;}
-        .trip-phone-choice-phone{font-size:11px;margin-bottom:7px;}
-        .trip-phone-choice-actions{gap:5px;}
-        .trip-phone-choice-actions button{height:28px;font-size:11px;border-radius:8px;}
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function plainText(value){
-    return String(value || "").replace(/\s+/g, " ").trim();
-  }
-
-  function getElementText(el){
-    if (!el) return "";
-    if ("value" in el) return String(el.value || "");
-    return String(el.innerText || el.textContent || "");
-  }
-
-  function normalizePhone(text){
-    const raw = String(text || "");
-    const first = raw.match(/(?:\+?82[-\s.]?)?0?\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}|0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/);
-    if (!first) return "";
-    let digits = first[0].replace(/[^\d+]/g, "");
-    if (digits.startsWith("+82")) {
-      digits = "0" + digits.slice(3);
-    } else if (digits.startsWith("82") && digits.length >= 11) {
-      digits = "0" + digits.slice(2);
-    }
-    digits = digits.replace(/[^\d]/g, "");
-    if (digits.length < 8) return "";
-    return digits;
-  }
-
-  function markInfoTablePhoneColumns(table){
-    // 정보 모음 박스 내부의 전화번호/전화 번호/휴대폰/계좌번호 열은
-    // 전화연결 대상이 아니라 일반 편집 대상이므로 여기서는 표시하지 않는다.
-    return;
-  }
-
-  function isExcludedNormalEditField(el){
-    if (!el) return false;
-    const syncKey = String(el.dataset && el.dataset.syncKey || "");
-    if (EXCLUDED_NORMAL_EDIT_SYNC_KEYS.has(syncKey)) return true;
-
-    const parentCell = el.closest && el.closest("td,th");
-    const row = parentCell && parentCell.parentElement;
-
-    // 정보 모음 박스 내부는 표 제목이 전화번호/전화 번호/휴대폰/계좌번호처럼 보여도
-    // 전화연결용 칸이 아니라 일반 편집 칸으로 사용한다.
-    // 특히 계좌번호 칸의 농협 2170..., 우체국 1074... 등은 숫자가 많아도 전화번호로 처리하지 않는다.
-    const infoTable = parentCell && parentCell.closest("table.info-section-table");
-    if (parentCell && row && infoTable) {
-      const cells = Array.from(row.cells || []);
-      const index = cells.indexOf(parentCell);
-      const headerRow = infoTable.tHead && infoTable.tHead.rows && infoTable.tHead.rows[0];
-      const headerCell = headerRow && index >= 0 ? headerRow.cells[index] : null;
-      const headerText = plainText(headerCell ? (headerCell.innerText || headerCell.textContent || "") : (parentCell.innerText || parentCell.textContent || ""));
-      if (/(전화\s*번호|휴대폰|계좌\s*번호)/.test(headerText)) return true;
-    }
-
-    const table = parentCell && parentCell.closest("table.plan");
-    if (parentCell && row && table && row.classList.contains("meal-row")) {
-      const cells = Array.from(row.cells || []);
-      const index = cells.indexOf(parentCell);
-      // 식당행 입력 순서: 식당 / 연락처 / 주소 / 메뉴 / 비고 / 주류 / 예약인원
-      if (index === 2) return true;
-    }
-    return false;
-  }
-
-  function unlockNormalEditField(el){
-    if (!el) return;
-    el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
-    delete el.dataset.tripPhoneHold;
-    delete el.dataset.tripPhoneEditing;
-    if (el.matches && el.matches("input,textarea")) {
-      const original = el.dataset.tripPhoneOriginalReadonly;
-      if (original === "0") el.readOnly = false;
-      el.removeAttribute("inputmode");
-    } else if (el.matches && el.matches("[contenteditable='true'],[contenteditable='false']")) {
-      const original = el.dataset.tripPhoneOriginalContenteditable;
-      if (original) el.setAttribute("contenteditable", original);
-      else el.setAttribute("contenteditable", "true");
-    }
-  }
-
-  function isKnownPhoneField(el){
-    if (!el || isExcludedNormalEditField(el)) return false;
-    const id = String(el.id || "");
-    const syncKey = String(el.dataset && el.dataset.syncKey || "");
-    if (DIRECT_PHONE_IDS.has(id) || DIRECT_SYNC_KEYS.has(syncKey)) return true;
-
-    const parentCell = el.closest && el.closest("td,th");
-    const row = parentCell && parentCell.parentElement;
-    if (parentCell && row) {
-      const table = parentCell.closest("table");
-      const cells = Array.from(row.cells || []);
-      const index = cells.indexOf(parentCell);
-      if (table && table.classList.contains("info-section-table") && index >= 0) {
-        const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
-        const headerCell = headerRow && headerRow.cells[index];
-        if (headerCell && PHONE_HEADER_RE.test(plainText(headerCell.innerText || headerCell.textContent || ""))) {
-          return true;
-        }
-      }
-
-      const prev = row.previousElementSibling;
-      if (prev && prev.cells && index >= 0) {
-        const prevCell = prev.cells[index];
-        if (prevCell && PHONE_HEADER_RE.test(plainText(prevCell.innerText || prevCell.textContent || ""))) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function isPhoneLikeField(el){
-    if (isExcludedNormalEditField(el)) return false;
-    return !!normalizePhone(getElementText(el));
-  }
-
-  function lockPhoneFieldUntilChoice(target){
-    if (!target || target.dataset.tripPhoneEditing === "1") return;
-    if (target.matches && target.matches("input,textarea")) {
-      if (!target.dataset.tripPhoneOriginalReadonly) {
-        target.dataset.tripPhoneOriginalReadonly = target.readOnly ? "1" : "0";
-      }
-      target.readOnly = true;
-      target.setAttribute("inputmode", "none");
-    } else if (target.matches && target.matches("[contenteditable='true'],[contenteditable='false']")) {
-      if (!target.dataset.tripPhoneOriginalContenteditable) {
-        target.dataset.tripPhoneOriginalContenteditable = target.getAttribute("contenteditable") || "true";
-      }
-      target.setAttribute("contenteditable", "false");
-    }
-  }
-
-  function relockPhoneFieldAfterEdit(target){
-    if (!target) return;
-    target.dataset.tripPhoneEditing = "0";
-    if (target.matches && target.matches("input,textarea")) {
-      target.readOnly = true;
-      target.setAttribute("inputmode", "none");
-    } else if (target.matches && target.matches("[contenteditable='true'],[contenteditable='false']")) {
-      target.setAttribute("contenteditable", "false");
-    }
-  }
-
-  function markPhoneTarget(el){
-    if (!el) return;
-    const targets = el.matches && (el.matches("input,textarea,[contenteditable='true'],[contenteditable='false']"))
-      ? [el]
-      : Array.from(el.querySelectorAll ? el.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']") : []);
-    if (!targets.length && el.matches && el.matches("td,th")) targets.push(el);
-
-    targets.forEach((target) => {
-      if (!target) return;
-      if (isExcludedNormalEditField(target)) {
-        unlockNormalEditField(target);
-        return;
-      }
-      lockPhoneFieldUntilChoice(target);
-      target.classList.add("trip-phone-hold-target");
-      target.dataset.tripPhoneHold = "1";
-      target.setAttribute("title", "1초 이상 길게 누르면 편집/전화연결 선택");
-      target.setAttribute("draggable", "false");
-      target.setAttribute("autocomplete", "off");
-      target.setAttribute("autocorrect", "off");
-      target.setAttribute("autocapitalize", "off");
-    });
-  }
-
-  function refreshPhoneTargets(){
-    document.querySelectorAll(".trip-phone-hold-target").forEach((el) => {
-      if (isExcludedNormalEditField(el)) {
-        unlockNormalEditField(el);
-        return;
-      }
-      if (!isKnownPhoneField(el) && !isPhoneLikeField(el)) {
-        el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
-        delete el.dataset.tripPhoneHold;
-      }
-    });
-    document.querySelectorAll("table.info-section-table").forEach(markInfoTablePhoneColumns);
-    document.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']").forEach((el) => {
-      if (isExcludedNormalEditField(el)) {
-        unlockNormalEditField(el);
-        return;
-      }
-      if (isKnownPhoneField(el) || isPhoneLikeField(el)) markPhoneTarget(el);
-    });
-  }
-
-  function getPhoneHoldTarget(eventTarget){
-    const el = eventTarget && eventTarget.closest && eventTarget.closest(".trip-phone-hold-target,input,textarea,td,th,[contenteditable='true'],[contenteditable='false']");
-    if (!el) return null;
-    if (el.classList && el.classList.contains("trip-phone-hold-target")) return el;
-
-    const field = el.matches && el.matches("input,textarea,[contenteditable='true'],[contenteditable='false']") ? el : null;
-    if (field && (isKnownPhoneField(field) || isPhoneLikeField(field))) {
-      markPhoneTarget(field);
-      return field;
-    }
-
-    const insideField = el.querySelector && el.querySelector("input,textarea,[contenteditable='true'],[contenteditable='false']");
-    if (insideField && (isKnownPhoneField(insideField) || isPhoneLikeField(insideField))) {
-      markPhoneTarget(insideField);
-      return insideField;
-    }
-
-    if (isPhoneLikeField(el)) {
-      markPhoneTarget(el);
-      return el;
-    }
-    return null;
-  }
-
-  function closeChoice(){
-    const old = document.querySelector(".trip-phone-choice-overlay");
-    if (old) old.remove();
-  }
-
-  function getViewportBox(){
-    const vv = window.visualViewport;
-    return {
-      left: vv ? vv.offsetLeft : window.scrollX,
-      top: vv ? vv.offsetTop : window.scrollY,
-      width: vv ? vv.width : window.innerWidth,
-      height: vv ? vv.height : window.innerHeight,
-      scale: vv ? vv.scale || 1 : 1
-    };
-  }
-
-  function placeChoiceBox(box, target){
-    const rect = target && target.getBoundingClientRect ? target.getBoundingClientRect() : null;
-    const vp = getViewportBox();
-    const scale = Math.max(1, Number(vp.scale || 1));
-    const inverse = Math.max(0.62, Math.min(1, 1 / scale));
-    box.style.transform = `scale(${inverse})`;
-    box.style.transformOrigin = "top center";
-
-    const pageX = (rect ? rect.left + rect.width / 2 : vp.left + vp.width / 2) + window.scrollX;
-    const pageY = (rect ? rect.bottom + 6 : vp.top + vp.height / 2) + window.scrollY;
-    const boxW = Math.min(280, Math.max(180, vp.width * 0.86)) * inverse;
-    const estimatedH = 132 * inverse;
-    let left = pageX - boxW / 2;
-    let top = pageY;
-
-    const minLeft = vp.left + window.scrollX + 8;
-    const maxLeft = vp.left + window.scrollX + vp.width - boxW - 8;
-    left = Math.max(minLeft, Math.min(left, maxLeft));
-
-    const bottomLimit = vp.top + window.scrollY + vp.height - estimatedH - 8;
-    if (top > bottomLimit && rect) {
-      top = rect.top + window.scrollY - estimatedH - 6;
-    }
-    const minTop = vp.top + window.scrollY + 8;
-    top = Math.max(minTop, Math.min(top, bottomLimit));
-
-    box.style.left = `${Math.round(left)}px`;
-    box.style.top = `${Math.round(top)}px`;
-  }
-
-  function enableEdit(target){
-    if (!target) return;
-    closeChoice();
-    try {
-      target.dataset.tripPhoneEditing = "1";
-      if (target.matches && target.matches("input,textarea")) {
-        target.readOnly = false;
-        target.removeAttribute("inputmode");
-        target.classList.add("mobile-longpress-editing");
-        setTimeout(() => {
-          target.focus({ preventScroll: true });
-          if (typeof target.select === "function") target.select();
-        }, 30);
-      } else if (target.matches && target.matches("[contenteditable='true'],[contenteditable='false']")) {
-        target.setAttribute("contenteditable", "true");
-        target.classList.add("mobile-longpress-editing");
-        setTimeout(() => {
-          target.focus({ preventScroll: true });
-          const range = document.createRange();
-          range.selectNodeContents(target);
-          range.collapse(false);
-          const sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-          }
-        }, 30);
-      }
-      const relockOnce = () => {
-        target.classList.remove("mobile-longpress-editing");
-        relockPhoneFieldAfterEdit(target);
-        target.removeEventListener("blur", relockOnce, true);
-      };
-      target.addEventListener("blur", relockOnce, true);
-    } catch (error) {
-      try { target.focus(); } catch (e) {}
-    }
-  }
-
-  function callPhone(phone){
-    closeChoice();
-    if (!phone) return;
-    try {
-      if (document.activeElement && typeof document.activeElement.blur === "function") document.activeElement.blur();
-    } catch (error) {}
-    window.location.href = "tel:" + phone;
-  }
-
-  function showChoice(target){
-    const phone = normalizePhone(getElementText(target));
-    if (!phone) return;
-    ensureStyle();
-    closeChoice();
-
-    const overlay = document.createElement("div");
-    overlay.className = "trip-phone-choice-overlay";
-    overlay.innerHTML = `
-      <div class="trip-phone-choice-box" role="dialog" aria-modal="true">
-        <div class="trip-phone-choice-title">연락처 작업 선택</div>
-        <div class="trip-phone-choice-phone">${phone}</div>
-        <div class="trip-phone-choice-actions">
-          <button type="button" class="edit">편집</button>
-          <button type="button" class="call">전화연결</button>
-          <button type="button" class="cancel">취소</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    const box = overlay.querySelector(".trip-phone-choice-box");
-    placeChoiceBox(box, target);
-
-    overlay.querySelector(".edit").addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      enableEdit(target);
-    });
-    overlay.querySelector(".call").addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      callPhone(phone);
-    });
-    overlay.querySelector(".cancel").addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeChoice();
-    });
-  }
-
-  function clearHold(){
-    if (holdTimer) clearTimeout(holdTimer);
-    holdTimer = null;
-    if (holdTarget) holdTarget.classList.remove("trip-phone-hold-ready");
-    holdTarget = null;
-    pointerId = null;
-  }
-
-  function onPointerStart(e){
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (touchingCount > 1 || (e.touches && e.touches.length > 1)) {
-      clearHold();
-      return;
-    }
-    const target = getPhoneHoldTarget(e.target);
-    if (!target) return;
-    if (!target.dataset || target.dataset.tripPhoneEditing !== "1") {
-      try { e.preventDefault(); } catch (error) {}
-      try { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); } catch (error) {}
-    }
-
-    clearHold();
-    holdTarget = target;
-    pointerId = e.pointerId;
-    startX = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0);
-    startY = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0);
-    target.classList.add("trip-phone-hold-ready");
-
-    holdTimer = setTimeout(() => {
-      if (!holdTarget) return;
-      const currentTarget = holdTarget;
-      clearHold();
-      choiceOpened = true;
-      showChoice(currentTarget);
-      setTimeout(() => { choiceOpened = false; }, 350);
-    }, HOLD_MS);
-  }
-
-  function onPointerMove(e){
-    if (!holdTarget) return;
-    const x = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || startX);
-    const y = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || startY);
-    if (Math.abs(x - startX) > MOVE_CANCEL_PX || Math.abs(y - startY) > MOVE_CANCEL_PX) clearHold();
-  }
-
-  function blockNativeSelectionForPhoneTarget(e){
-    const target = getPhoneHoldTarget(e.target);
-    if (!target) return false;
-    if (target.dataset && target.dataset.tripPhoneEditing === "1") return false;
-    if (e.type === "touchstart" && e.touches && e.touches.length > 1) return false;
-    try { e.preventDefault(); } catch (error) {}
-    try { e.stopPropagation(); } catch (error) {}
-    try {
-      if (document.activeElement && document.activeElement !== document.body && typeof document.activeElement.blur === "function") {
-        document.activeElement.blur();
-      }
-    } catch (error) {}
-    try {
-      const sel = window.getSelection && window.getSelection();
-      if (sel && sel.removeAllRanges) sel.removeAllRanges();
-    } catch (error) {}
-    return true;
-  }
-
-  document.addEventListener("selectstart", (e) => {
-    blockNativeSelectionForPhoneTarget(e);
-  }, { capture: true });
-
-  document.addEventListener("contextmenu", (e) => {
-    blockNativeSelectionForPhoneTarget(e);
-  }, { capture: true });
-
-  document.addEventListener("dragstart", (e) => {
-    blockNativeSelectionForPhoneTarget(e);
-  }, { capture: true });
-
-  document.addEventListener("touchstart", (e) => {
-    touchingCount = e.touches ? e.touches.length : 0;
-    if (touchingCount > 1) {
-      clearHold();
-      return;
-    }
-    blockNativeSelectionForPhoneTarget(e);
-  }, { passive: false, capture: true });
-
-  document.addEventListener("touchend", () => { touchingCount = 0; }, { passive: true, capture: true });
-  document.addEventListener("touchcancel", () => { touchingCount = 0; clearHold(); }, { passive: true, capture: true });
-
-  document.addEventListener("pointerdown", onPointerStart, { passive: false, capture: true });
-  document.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
-  document.addEventListener("pointerup", clearHold, { passive: true, capture: true });
-  document.addEventListener("pointercancel", clearHold, { passive: true, capture: true });
-
-  window.addEventListener("scroll", () => { clearHold(); closeChoice(); }, { passive: true, capture: true });
-  window.addEventListener("resize", () => { clearHold(); closeChoice(); }, { passive: true });
-  if (window.visualViewport) {
-    visualViewport.addEventListener("scroll", () => { clearHold(); closeChoice(); }, { passive: true });
-    visualViewport.addEventListener("resize", () => { clearHold(); closeChoice(); }, { passive: true });
-  }
-
-
-  document.addEventListener("focusin", (e) => {
-    const target = getPhoneHoldTarget(e.target);
-    if (!target) return;
-    if (target.dataset && target.dataset.tripPhoneEditing === "1") return;
-    try {
-      if (target.matches && target.matches("input,textarea")) {
-        target.readOnly = true;
-        target.setAttribute("inputmode", "none");
-      } else if (target.matches && target.matches("[contenteditable='true'],[contenteditable='false']")) {
-        target.setAttribute("contenteditable", "false");
-      }
-      target.blur && target.blur();
-    } catch (error) {}
-  }, true);
-
-
-  document.addEventListener("click", (e) => {
-    const overlay = document.querySelector(".trip-phone-choice-overlay");
-    if (!overlay) return;
-    if (choiceOpened) return;
-    if (!e.target.closest || !e.target.closest(".trip-phone-choice-box")) closeChoice();
-  }, true);
-
-  document.addEventListener("input", (e) => {
-    const target = e.target;
-    if (target && (isKnownPhoneField(target) || isPhoneLikeField(target))) markPhoneTarget(target);
-  }, true);
-
-  function start(){
-    ensureStyle();
-    refreshPhoneTargets();
-    const observer = new MutationObserver(() => {
-      clearTimeout(window.__tripPhoneRefreshTimer);
-      window.__tripPhoneRefreshTimer = setTimeout(refreshPhoneTargets, 120);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.__tripPhoneLongPressRefresh = refreshPhoneTargets;
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
-  else start();
-})();
-</script>
-
-
-<script id="restore-normal-edit-fields-script">
-(function(){
-  const restoreIds = ["gimbap-phone","gimbap-mobile","gimbap-account"];
-  function restoreNormalEdit(){
-    restoreIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.remove("trip-phone-hold-target","trip-phone-hold-ready");
-      delete el.dataset.tripPhoneHold;
-      el.removeAttribute("title");
-      el.style.pointerEvents = "";
-      el.readOnly = false;
-    });
-  }
-  document.addEventListener("DOMContentLoaded", restoreNormalEdit);
-  setTimeout(restoreNormalEdit, 1000);
-})();
-</script>
-
-
-<script id="info-box-normal-edit-restore-script">
-(function(){
-  function plainText(value){ return String(value || "").replace(/\s+/g, " ").trim(); }
-  function unlock(el){
-    if (!el) return;
-    el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
-    delete el.dataset.tripPhoneHold;
-    delete el.dataset.tripPhoneEditing;
-    el.removeAttribute("title");
-    if (el.matches && el.matches("input,textarea")) {
-      el.readOnly = false;
-      el.removeAttribute("inputmode");
-    }
-    if (el.matches && el.matches("[contenteditable='false'],[contenteditable='true']")) {
-      el.setAttribute("contenteditable", "true");
-    }
-  }
-  function restoreInfoBoxNormalEdit(){
-    document.querySelectorAll("table.info-section-table").forEach((table) => {
-      const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
-      if (!headerRow) return;
-      Array.from(headerRow.cells || []).forEach((headerCell, index) => {
-        const headerText = plainText(headerCell.innerText || headerCell.textContent || "");
-        if (!/(전화\s*번호|휴대폰|계좌\s*번호)/.test(headerText)) return;
-        unlock(headerCell);
-        Array.from(table.tBodies || []).forEach((tbody) => {
-          Array.from(tbody.rows || []).forEach((row) => {
-            const cell = row.cells[index];
-            if (!cell) return;
-            unlock(cell);
-            cell.querySelectorAll("input,textarea,[contenteditable='false'],[contenteditable='true']").forEach(unlock);
-          });
-        });
-      });
-    });
-  }
-  document.addEventListener("DOMContentLoaded", restoreInfoBoxNormalEdit);
-  window.addEventListener("load", restoreInfoBoxNormalEdit);
-  setInterval(restoreInfoBoxNormalEdit, 1200);
 })();
 </script>
 
