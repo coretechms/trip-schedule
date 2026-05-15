@@ -3290,11 +3290,11 @@ function resizeAllTextareas(root = document) {
 </script>
 
 
-<script id="trip-phone-longpress-call-module">
+<script id="trip-phone-longpress-choice-module">
 (function(){
   "use strict";
 
-  const HOLD_MS = 1500;
+  const HOLD_MS = 1000;
   const MOVE_CANCEL_PX = 12;
   const PHONE_HEADER_RE = /(전화\s*번호|휴대폰|연락처)/;
   const DIRECT_PHONE_IDS = new Set([
@@ -3312,7 +3312,99 @@ function resizeAllTextareas(root = document) {
   let startY = 0;
   let pointerId = null;
   let touchingCount = 0;
-  let callStarted = false;
+  let choiceOpened = false;
+
+  function ensureStyle(){
+    if (document.getElementById("trip-phone-choice-style")) return;
+    const style = document.createElement("style");
+    style.id = "trip-phone-choice-style";
+    style.textContent = `
+      .trip-phone-hold-target{
+        touch-action:pan-x pan-y pinch-zoom;
+      }
+      .trip-phone-hold-ready{
+        outline:2px solid #1737c9 !important;
+        outline-offset:-2px !important;
+        background-color:#fff8c6 !important;
+      }
+      .trip-phone-choice-overlay{
+        position:absolute;
+        z-index:2147483647;
+        left:0;
+        top:0;
+        width:0;
+        height:0;
+        pointer-events:none;
+      }
+      .trip-phone-choice-box{
+        position:absolute;
+        width:min(280px, calc(100vw - 28px));
+        max-width:calc(100vw - 28px);
+        background:#fff;
+        border:1px solid #cfd4dc;
+        border-radius:16px;
+        box-shadow:0 10px 30px rgba(0,0,0,.24);
+        padding:12px;
+        font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;
+        text-align:center;
+        pointer-events:auto;
+        -webkit-user-select:none;
+        user-select:none;
+      }
+      .trip-phone-choice-title{
+        font-size:14px;
+        font-weight:800;
+        color:#111;
+        line-height:1.35;
+        margin-bottom:4px;
+      }
+      .trip-phone-choice-phone{
+        font-size:13px;
+        color:#1737c9;
+        font-weight:700;
+        margin-bottom:10px;
+        word-break:break-all;
+      }
+      .trip-phone-choice-actions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:7px;
+      }
+      .trip-phone-choice-actions button{
+        height:34px;
+        border-radius:10px;
+        border:1px solid #999;
+        background:#f7f7f7;
+        color:#111;
+        font:inherit;
+        font-size:13px;
+        font-weight:700;
+        cursor:pointer;
+      }
+      .trip-phone-choice-actions .call{
+        background:#1737c9;
+        border-color:#1737c9;
+        color:#fff;
+      }
+      .trip-phone-choice-actions .cancel{
+        grid-column:1 / span 2;
+        background:#fff;
+        color:#555;
+      }
+      @media(max-width:768px){
+        .trip-phone-choice-box{
+          width:min(230px, calc(100vw - 18px));
+          padding:9px;
+          border-radius:13px;
+        }
+        .trip-phone-choice-title{font-size:12px;}
+        .trip-phone-choice-phone{font-size:11px;margin-bottom:7px;}
+        .trip-phone-choice-actions{gap:5px;}
+        .trip-phone-choice-actions button{height:28px;font-size:11px;border-radius:8px;}
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function plainText(value){
     return String(value || "").replace(/\s+/g, " ").trim();
@@ -3337,18 +3429,6 @@ function resizeAllTextareas(root = document) {
     digits = digits.replace(/[^\d]/g, "");
     if (digits.length < 8) return "";
     return digits;
-  }
-
-  function findHeaderColumnIndex(table, headerTextRe){
-    const rows = Array.from(table.rows || []);
-    for (const row of rows.slice(0, 3)) {
-      const cells = Array.from(row.cells || []);
-      for (let i = 0; i < cells.length; i += 1) {
-        const txt = plainText(cells[i].innerText || cells[i].textContent || "");
-        if (headerTextRe.test(txt)) return i;
-      }
-    }
-    return -1;
   }
 
   function markInfoTablePhoneColumns(table){
@@ -3392,7 +3472,6 @@ function resizeAllTextareas(root = document) {
         }
       }
 
-      // 산행계획 본표/김밥표처럼 바로 윗줄 제목칸에 전화번호/휴대폰/연락처가 있는 구조
       const prev = row.previousElementSibling;
       if (prev && prev.cells && index >= 0) {
         const prevCell = prev.cells[index];
@@ -3401,13 +3480,11 @@ function resizeAllTextareas(root = document) {
         }
       }
     }
-
     return false;
   }
 
   function isPhoneLikeField(el){
-    const phone = normalizePhone(getElementText(el));
-    return !!phone;
+    return !!normalizePhone(getElementText(el));
   }
 
   function markPhoneTarget(el){
@@ -3421,7 +3498,7 @@ function resizeAllTextareas(root = document) {
       if (!target) return;
       target.classList.add("trip-phone-hold-target");
       target.dataset.tripPhoneHold = "1";
-      target.setAttribute("title", "1.5초 이상 길게 누르면 전화 연결");
+      target.setAttribute("title", "1초 이상 길게 누르면 편집/전화연결 선택");
     });
   }
 
@@ -3432,20 +3509,15 @@ function resizeAllTextareas(root = document) {
         delete el.dataset.tripPhoneHold;
       }
     });
-
     document.querySelectorAll("table.info-section-table").forEach(markInfoTablePhoneColumns);
-
     document.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']").forEach((el) => {
-      if (isKnownPhoneField(el) || isPhoneLikeField(el)) {
-        markPhoneTarget(el);
-      }
+      if (isKnownPhoneField(el) || isPhoneLikeField(el)) markPhoneTarget(el);
     });
   }
 
   function getPhoneHoldTarget(eventTarget){
     const el = eventTarget && eventTarget.closest && eventTarget.closest(".trip-phone-hold-target,input,textarea,td,th,[contenteditable='true'],[contenteditable='false']");
     if (!el) return null;
-
     if (el.classList && el.classList.contains("trip-phone-hold-target")) return el;
 
     const field = el.matches && el.matches("input,textarea,[contenteditable='true'],[contenteditable='false']") ? el : null;
@@ -3467,14 +3539,125 @@ function resizeAllTextareas(root = document) {
     return null;
   }
 
-  function showToast(message){
-    const old = document.querySelector(".trip-phone-hold-toast");
+  function closeChoice(){
+    const old = document.querySelector(".trip-phone-choice-overlay");
     if (old) old.remove();
-    const toast = document.createElement("div");
-    toast.className = "trip-phone-hold-toast";
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 1400);
+  }
+
+  function getViewportBox(){
+    const vv = window.visualViewport;
+    return {
+      left: vv ? vv.offsetLeft : window.scrollX,
+      top: vv ? vv.offsetTop : window.scrollY,
+      width: vv ? vv.width : window.innerWidth,
+      height: vv ? vv.height : window.innerHeight,
+      scale: vv ? vv.scale || 1 : 1
+    };
+  }
+
+  function placeChoiceBox(box, target){
+    const rect = target && target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+    const vp = getViewportBox();
+    const scale = Math.max(1, Number(vp.scale || 1));
+    const inverse = Math.max(0.62, Math.min(1, 1 / scale));
+    box.style.transform = `scale(${inverse})`;
+    box.style.transformOrigin = "top center";
+
+    const pageX = (rect ? rect.left + rect.width / 2 : vp.left + vp.width / 2) + window.scrollX;
+    const pageY = (rect ? rect.bottom + 6 : vp.top + vp.height / 2) + window.scrollY;
+    const boxW = Math.min(280, Math.max(180, vp.width * 0.86)) * inverse;
+    const estimatedH = 132 * inverse;
+    let left = pageX - boxW / 2;
+    let top = pageY;
+
+    const minLeft = vp.left + window.scrollX + 8;
+    const maxLeft = vp.left + window.scrollX + vp.width - boxW - 8;
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+
+    const bottomLimit = vp.top + window.scrollY + vp.height - estimatedH - 8;
+    if (top > bottomLimit && rect) {
+      top = rect.top + window.scrollY - estimatedH - 6;
+    }
+    const minTop = vp.top + window.scrollY + 8;
+    top = Math.max(minTop, Math.min(top, bottomLimit));
+
+    box.style.left = `${Math.round(left)}px`;
+    box.style.top = `${Math.round(top)}px`;
+  }
+
+  function enableEdit(target){
+    if (!target) return;
+    closeChoice();
+    try {
+      if (target.matches && target.matches("[contenteditable='true'],[contenteditable='false']")) {
+        target.setAttribute("contenteditable", "true");
+        target.classList.add("mobile-longpress-editing");
+        target.focus({ preventScroll: true });
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        range.collapse(false);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } else if (typeof target.focus === "function") {
+        target.classList.add("mobile-longpress-editing");
+        target.focus({ preventScroll: true });
+        if (typeof target.select === "function") target.select();
+      }
+    } catch (error) {
+      try { target.focus(); } catch (e) {}
+    }
+  }
+
+  function callPhone(phone){
+    closeChoice();
+    if (!phone) return;
+    try {
+      if (document.activeElement && typeof document.activeElement.blur === "function") document.activeElement.blur();
+    } catch (error) {}
+    window.location.href = "tel:" + phone;
+  }
+
+  function showChoice(target){
+    const phone = normalizePhone(getElementText(target));
+    if (!phone) return;
+    ensureStyle();
+    closeChoice();
+
+    const overlay = document.createElement("div");
+    overlay.className = "trip-phone-choice-overlay";
+    overlay.innerHTML = `
+      <div class="trip-phone-choice-box" role="dialog" aria-modal="true">
+        <div class="trip-phone-choice-title">연락처 작업 선택</div>
+        <div class="trip-phone-choice-phone">${phone}</div>
+        <div class="trip-phone-choice-actions">
+          <button type="button" class="edit">편집</button>
+          <button type="button" class="call">전화연결</button>
+          <button type="button" class="cancel">취소</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const box = overlay.querySelector(".trip-phone-choice-box");
+    placeChoiceBox(box, target);
+
+    overlay.querySelector(".edit").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      enableEdit(target);
+    });
+    overlay.querySelector(".call").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      callPhone(phone);
+    });
+    overlay.querySelector(".cancel").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeChoice();
+    });
   }
 
   function clearHold(){
@@ -3483,22 +3666,6 @@ function resizeAllTextareas(root = document) {
     if (holdTarget) holdTarget.classList.remove("trip-phone-hold-ready");
     holdTarget = null;
     pointerId = null;
-    callStarted = false;
-  }
-
-  function callPhoneFromTarget(target){
-    const phone = normalizePhone(getElementText(target));
-    if (!phone) {
-      showToast("전화번호가 없습니다");
-      return;
-    }
-    try {
-      if (document.activeElement && typeof document.activeElement.blur === "function") {
-        document.activeElement.blur();
-      }
-    } catch (error) {}
-    showToast("전화 연결");
-    window.location.href = "tel:" + phone;
   }
 
   function onPointerStart(e){
@@ -3507,7 +3674,6 @@ function resizeAllTextareas(root = document) {
       clearHold();
       return;
     }
-
     const target = getPhoneHoldTarget(e.target);
     if (!target) return;
 
@@ -3516,15 +3682,15 @@ function resizeAllTextareas(root = document) {
     pointerId = e.pointerId;
     startX = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0);
     startY = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0);
-    callStarted = false;
     target.classList.add("trip-phone-hold-ready");
 
     holdTimer = setTimeout(() => {
-      if (!holdTarget || callStarted) return;
-      callStarted = true;
+      if (!holdTarget) return;
       const currentTarget = holdTarget;
       clearHold();
-      callPhoneFromTarget(currentTarget);
+      choiceOpened = true;
+      showChoice(currentTarget);
+      setTimeout(() => { choiceOpened = false; }, 350);
     }, HOLD_MS);
   }
 
@@ -3532,9 +3698,7 @@ function resizeAllTextareas(root = document) {
     if (!holdTarget) return;
     const x = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || startX);
     const y = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || startY);
-    if (Math.abs(x - startX) > MOVE_CANCEL_PX || Math.abs(y - startY) > MOVE_CANCEL_PX) {
-      clearHold();
-    }
+    if (Math.abs(x - startX) > MOVE_CANCEL_PX || Math.abs(y - startY) > MOVE_CANCEL_PX) clearHold();
   }
 
   document.addEventListener("touchstart", (e) => {
@@ -3542,35 +3706,40 @@ function resizeAllTextareas(root = document) {
     if (touchingCount > 1) clearHold();
   }, { passive: true, capture: true });
 
-  document.addEventListener("touchend", () => {
-    touchingCount = 0;
-  }, { passive: true, capture: true });
-
-  document.addEventListener("touchcancel", () => {
-    touchingCount = 0;
-    clearHold();
-  }, { passive: true, capture: true });
+  document.addEventListener("touchend", () => { touchingCount = 0; }, { passive: true, capture: true });
+  document.addEventListener("touchcancel", () => { touchingCount = 0; clearHold(); }, { passive: true, capture: true });
 
   document.addEventListener("pointerdown", onPointerStart, { passive: true, capture: true });
   document.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
   document.addEventListener("pointerup", clearHold, { passive: true, capture: true });
   document.addEventListener("pointercancel", clearHold, { passive: true, capture: true });
-  window.addEventListener("scroll", clearHold, { passive: true, capture: true });
-  window.addEventListener("resize", clearHold, { passive: true });
+
+  window.addEventListener("scroll", () => { clearHold(); closeChoice(); }, { passive: true, capture: true });
+  window.addEventListener("resize", () => { clearHold(); closeChoice(); }, { passive: true });
+  if (window.visualViewport) {
+    visualViewport.addEventListener("scroll", () => { clearHold(); closeChoice(); }, { passive: true });
+    visualViewport.addEventListener("resize", () => { clearHold(); closeChoice(); }, { passive: true });
+  }
 
   document.addEventListener("contextmenu", (e) => {
     const target = getPhoneHoldTarget(e.target);
     if (target) e.preventDefault();
   }, { capture: true });
 
+  document.addEventListener("click", (e) => {
+    const overlay = document.querySelector(".trip-phone-choice-overlay");
+    if (!overlay) return;
+    if (choiceOpened) return;
+    if (!e.target.closest || !e.target.closest(".trip-phone-choice-box")) closeChoice();
+  }, true);
+
   document.addEventListener("input", (e) => {
     const target = e.target;
-    if (target && (isKnownPhoneField(target) || isPhoneLikeField(target))) {
-      markPhoneTarget(target);
-    }
+    if (target && (isKnownPhoneField(target) || isPhoneLikeField(target))) markPhoneTarget(target);
   }, true);
 
   function start(){
+    ensureStyle();
     refreshPhoneTargets();
     const observer = new MutationObserver(() => {
       clearTimeout(window.__tripPhoneRefreshTimer);
@@ -3580,11 +3749,8 @@ function resizeAllTextareas(root = document) {
     window.__tripPhoneLongPressRefresh = refreshPhoneTargets;
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
-  } else {
-    start();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+  else start();
 })();
 </script>
 
