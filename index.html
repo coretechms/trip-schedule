@@ -814,6 +814,40 @@
   }
 </style>
 
+
+<style id="trip-phone-longpress-style">
+/* ===== bus-route 방식 전화번호 1.5초 길게누름 연결 ===== */
+.trip-phone-hold-target {
+  color: #1737c9 !important;
+  text-decoration: underline !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  -webkit-touch-callout: none !important;
+}
+.trip-phone-hold-target.trip-phone-hold-ready {
+  outline: 2px solid #1737c9 !important;
+  outline-offset: -2px !important;
+}
+.trip-phone-hold-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  min-width: 150px;
+  max-width: 86vw;
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: rgba(17,24,39,.94);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22);
+  pointer-events: none;
+}
+
+</style>
 </head>
 <body style="overflow: auto;">
 <script>
@@ -3252,6 +3286,305 @@ function resizeAllTextareas(root = document) {
     groupInfoToolbarButtons();
   }
   window.addEventListener('load', groupInfoToolbarButtons);
+})();
+</script>
+
+
+<script id="trip-phone-longpress-call-module">
+(function(){
+  "use strict";
+
+  const HOLD_MS = 1500;
+  const MOVE_CANCEL_PX = 12;
+  const PHONE_HEADER_RE = /(전화\s*번호|휴대폰|연락처)/;
+  const DIRECT_PHONE_IDS = new Set([
+    "gimbap-phone",
+    "gimbap-mobile"
+  ]);
+  const DIRECT_SYNC_KEYS = new Set([
+    "field:11",   // 관광버스 전화번호
+    "field:27"    // 식당 연락처
+  ]);
+
+  let holdTimer = null;
+  let holdTarget = null;
+  let startX = 0;
+  let startY = 0;
+  let pointerId = null;
+  let touchingCount = 0;
+  let callStarted = false;
+
+  function plainText(value){
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function getElementText(el){
+    if (!el) return "";
+    if ("value" in el) return String(el.value || "");
+    return String(el.innerText || el.textContent || "");
+  }
+
+  function normalizePhone(text){
+    const raw = String(text || "");
+    const first = raw.match(/(?:\+?82[-\s.]?)?0?\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}|0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/);
+    if (!first) return "";
+    let digits = first[0].replace(/[^\d+]/g, "");
+    if (digits.startsWith("+82")) {
+      digits = "0" + digits.slice(3);
+    } else if (digits.startsWith("82") && digits.length >= 11) {
+      digits = "0" + digits.slice(2);
+    }
+    digits = digits.replace(/[^\d]/g, "");
+    if (digits.length < 8) return "";
+    return digits;
+  }
+
+  function findHeaderColumnIndex(table, headerTextRe){
+    const rows = Array.from(table.rows || []);
+    for (const row of rows.slice(0, 3)) {
+      const cells = Array.from(row.cells || []);
+      for (let i = 0; i < cells.length; i += 1) {
+        const txt = plainText(cells[i].innerText || cells[i].textContent || "");
+        if (headerTextRe.test(txt)) return i;
+      }
+    }
+    return -1;
+  }
+
+  function markInfoTablePhoneColumns(table){
+    if (!table || !table.classList.contains("info-section-table")) return;
+    const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
+    if (!headerRow) return;
+    const phoneCols = [];
+    Array.from(headerRow.cells || []).forEach((cell, index) => {
+      if (PHONE_HEADER_RE.test(plainText(cell.innerText || cell.textContent || ""))) {
+        phoneCols.push(index);
+      }
+    });
+    if (!phoneCols.length) return;
+    Array.from(table.tBodies || []).forEach((tbody) => {
+      Array.from(tbody.rows || []).forEach((row) => {
+        phoneCols.forEach((colIndex) => {
+          const cell = row.cells[colIndex];
+          if (cell) markPhoneTarget(cell);
+        });
+      });
+    });
+  }
+
+  function isKnownPhoneField(el){
+    if (!el) return false;
+    const id = String(el.id || "");
+    const syncKey = String(el.dataset && el.dataset.syncKey || "");
+    if (DIRECT_PHONE_IDS.has(id) || DIRECT_SYNC_KEYS.has(syncKey)) return true;
+
+    const parentCell = el.closest && el.closest("td,th");
+    const row = parentCell && parentCell.parentElement;
+    if (parentCell && row) {
+      const table = parentCell.closest("table");
+      const cells = Array.from(row.cells || []);
+      const index = cells.indexOf(parentCell);
+      if (table && table.classList.contains("info-section-table") && index >= 0) {
+        const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
+        const headerCell = headerRow && headerRow.cells[index];
+        if (headerCell && PHONE_HEADER_RE.test(plainText(headerCell.innerText || headerCell.textContent || ""))) {
+          return true;
+        }
+      }
+
+      // 산행계획 본표/김밥표처럼 바로 윗줄 제목칸에 전화번호/휴대폰/연락처가 있는 구조
+      const prev = row.previousElementSibling;
+      if (prev && prev.cells && index >= 0) {
+        const prevCell = prev.cells[index];
+        if (prevCell && PHONE_HEADER_RE.test(plainText(prevCell.innerText || prevCell.textContent || ""))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function isPhoneLikeField(el){
+    const phone = normalizePhone(getElementText(el));
+    return !!phone;
+  }
+
+  function markPhoneTarget(el){
+    if (!el) return;
+    const targets = el.matches && (el.matches("input,textarea,[contenteditable='true'],[contenteditable='false']"))
+      ? [el]
+      : Array.from(el.querySelectorAll ? el.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']") : []);
+    if (!targets.length && el.matches && el.matches("td,th")) targets.push(el);
+
+    targets.forEach((target) => {
+      if (!target) return;
+      target.classList.add("trip-phone-hold-target");
+      target.dataset.tripPhoneHold = "1";
+      target.setAttribute("title", "1.5초 이상 길게 누르면 전화 연결");
+    });
+  }
+
+  function refreshPhoneTargets(){
+    document.querySelectorAll(".trip-phone-hold-target").forEach((el) => {
+      if (!isKnownPhoneField(el) && !isPhoneLikeField(el)) {
+        el.classList.remove("trip-phone-hold-target", "trip-phone-hold-ready");
+        delete el.dataset.tripPhoneHold;
+      }
+    });
+
+    document.querySelectorAll("table.info-section-table").forEach(markInfoTablePhoneColumns);
+
+    document.querySelectorAll("input,textarea,[contenteditable='true'],[contenteditable='false']").forEach((el) => {
+      if (isKnownPhoneField(el) || isPhoneLikeField(el)) {
+        markPhoneTarget(el);
+      }
+    });
+  }
+
+  function getPhoneHoldTarget(eventTarget){
+    const el = eventTarget && eventTarget.closest && eventTarget.closest(".trip-phone-hold-target,input,textarea,td,th,[contenteditable='true'],[contenteditable='false']");
+    if (!el) return null;
+
+    if (el.classList && el.classList.contains("trip-phone-hold-target")) return el;
+
+    const field = el.matches && el.matches("input,textarea,[contenteditable='true'],[contenteditable='false']") ? el : null;
+    if (field && (isKnownPhoneField(field) || isPhoneLikeField(field))) {
+      markPhoneTarget(field);
+      return field;
+    }
+
+    const insideField = el.querySelector && el.querySelector("input,textarea,[contenteditable='true'],[contenteditable='false']");
+    if (insideField && (isKnownPhoneField(insideField) || isPhoneLikeField(insideField))) {
+      markPhoneTarget(insideField);
+      return insideField;
+    }
+
+    if (isPhoneLikeField(el)) {
+      markPhoneTarget(el);
+      return el;
+    }
+    return null;
+  }
+
+  function showToast(message){
+    const old = document.querySelector(".trip-phone-hold-toast");
+    if (old) old.remove();
+    const toast = document.createElement("div");
+    toast.className = "trip-phone-hold-toast";
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1400);
+  }
+
+  function clearHold(){
+    if (holdTimer) clearTimeout(holdTimer);
+    holdTimer = null;
+    if (holdTarget) holdTarget.classList.remove("trip-phone-hold-ready");
+    holdTarget = null;
+    pointerId = null;
+    callStarted = false;
+  }
+
+  function callPhoneFromTarget(target){
+    const phone = normalizePhone(getElementText(target));
+    if (!phone) {
+      showToast("전화번호가 없습니다");
+      return;
+    }
+    try {
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+    } catch (error) {}
+    showToast("전화 연결");
+    window.location.href = "tel:" + phone;
+  }
+
+  function onPointerStart(e){
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (touchingCount > 1 || (e.touches && e.touches.length > 1)) {
+      clearHold();
+      return;
+    }
+
+    const target = getPhoneHoldTarget(e.target);
+    if (!target) return;
+
+    clearHold();
+    holdTarget = target;
+    pointerId = e.pointerId;
+    startX = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0);
+    startY = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0);
+    callStarted = false;
+    target.classList.add("trip-phone-hold-ready");
+
+    holdTimer = setTimeout(() => {
+      if (!holdTarget || callStarted) return;
+      callStarted = true;
+      const currentTarget = holdTarget;
+      clearHold();
+      callPhoneFromTarget(currentTarget);
+    }, HOLD_MS);
+  }
+
+  function onPointerMove(e){
+    if (!holdTarget) return;
+    const x = Number(e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || startX);
+    const y = Number(e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || startY);
+    if (Math.abs(x - startX) > MOVE_CANCEL_PX || Math.abs(y - startY) > MOVE_CANCEL_PX) {
+      clearHold();
+    }
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    touchingCount = e.touches ? e.touches.length : 0;
+    if (touchingCount > 1) clearHold();
+  }, { passive: true, capture: true });
+
+  document.addEventListener("touchend", () => {
+    touchingCount = 0;
+  }, { passive: true, capture: true });
+
+  document.addEventListener("touchcancel", () => {
+    touchingCount = 0;
+    clearHold();
+  }, { passive: true, capture: true });
+
+  document.addEventListener("pointerdown", onPointerStart, { passive: true, capture: true });
+  document.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
+  document.addEventListener("pointerup", clearHold, { passive: true, capture: true });
+  document.addEventListener("pointercancel", clearHold, { passive: true, capture: true });
+  window.addEventListener("scroll", clearHold, { passive: true, capture: true });
+  window.addEventListener("resize", clearHold, { passive: true });
+
+  document.addEventListener("contextmenu", (e) => {
+    const target = getPhoneHoldTarget(e.target);
+    if (target) e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener("input", (e) => {
+    const target = e.target;
+    if (target && (isKnownPhoneField(target) || isPhoneLikeField(target))) {
+      markPhoneTarget(target);
+    }
+  }, true);
+
+  function start(){
+    refreshPhoneTargets();
+    const observer = new MutationObserver(() => {
+      clearTimeout(window.__tripPhoneRefreshTimer);
+      window.__tripPhoneRefreshTimer = setTimeout(refreshPhoneTargets, 120);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.__tripPhoneLongPressRefresh = refreshPhoneTargets;
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
 })();
 </script>
 
