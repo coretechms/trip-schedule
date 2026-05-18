@@ -1882,6 +1882,10 @@ function resizeAllTextareas(root = document) {
         field.replaceWith(div);
       });
 
+      // 일반 [캡쳐]는 정기산행 계획 영역만 저장하고, 아래 정보 모음은 제외합니다.
+      const infoFormWrap = clone.querySelector('#info-form-wrap');
+      if (infoFormWrap) infoFormWrap.remove();
+
       clone.querySelectorAll('tr').forEach((row) => {
         row.style.height = 'auto';
       });
@@ -1936,6 +1940,7 @@ function resizeAllTextareas(root = document) {
     }
 
     async function capturePlan() {
+      if (!window.confirm('캡쳐를 진행할까요?')) return;
       const target = document.getElementById('capture-area');
       const button = document.getElementById('capture-button');
       await captureElementAsImage(
@@ -2020,6 +2025,7 @@ function resizeAllTextareas(root = document) {
     }
 
     async function captureMemberImage() {
+      if (!window.confirm('회원용 캡쳐를 진행할까요?')) return;
       const button = document.getElementById('member-capture-button');
       const target = buildMemberCaptureClone();
       if (!target) return;
