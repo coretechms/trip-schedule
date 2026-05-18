@@ -3,7 +3,7 @@
 <html lang="ko" style="overflow: auto;"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=0.8, minimum-scale=0.35, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" name="viewport"/>
-<style id="trip-plan-gate-style">body{display:none !important;}</style>
+<style id="trip-plan-gate-style">body{visibility:hidden;}</style>
 <script>
   (function () {
     const TICKET_KEY = 'trip-plan-access-ticket-v1';
@@ -37,7 +37,11 @@
         ticket.admin === true ||
         ticket.isAdmin === true ||
         ticket.authenticated === true ||
-        ticket.fullAccess === true
+        ticket.fullAccess === true ||
+        ticket.tripPlanFull === true ||
+        ticket.tripScheduleFull === true ||
+        ticket.passwordPassed === true ||
+        ticket.passwordVerified === true
       );
     }
 
@@ -85,12 +89,10 @@
       gateOffKey: GATE_OFF_KEY
     };
 
-    if (accessMode === 'full') {
-      document.addEventListener('DOMContentLoaded', function () {
-        const styleEl = document.getElementById('trip-plan-gate-style');
-        if (styleEl) styleEl.remove();
-      }, { once: true });
-    }
+    // 화면 숨김이 남아 진입이 안 되는 문제를 막기 위해 현재 모드를 HTML에 즉시 기록합니다.
+    try {
+      document.documentElement.classList.add(accessMode === 'full' ? 'trip-full-pre' : 'trip-limited-pre');
+    } catch (error) {}
   })();
 </script>
 <title>정기산행 계획</title>
@@ -950,9 +952,13 @@
     const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
     const styleEl = document.getElementById('trip-plan-gate-style');
     if (styleEl) styleEl.remove();
+    document.body.style.visibility = 'visible';
+    document.body.style.display = '';
 
     if (gate.accessMode === 'full') {
       window.__TRIP_PLAN_LIMITED_VIEW__ = false;
+      document.body.classList.remove('trip-limited-view');
+      document.body.classList.add('trip-full-view');
       return;
     }
 
@@ -960,7 +966,6 @@
     // 직접 진입한 경우에는 지정 행만 보여주는 제한보기로 전환합니다.
     window.__TRIP_PLAN_LIMITED_VIEW__ = true;
     try { localStorage.removeItem(gate.gateOffKey || 'trip-plan-direct-gate-disabled-v1'); } catch (error) {}
-    document.body.style.display = '';
     document.body.classList.add('trip-limited-view');
   })();
 </script>
