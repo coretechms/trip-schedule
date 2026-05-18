@@ -3,57 +3,6 @@
 <html lang="ko" style="overflow: auto;"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=0.8, minimum-scale=0.35, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" name="viewport"/>
-<style id="trip-plan-gate-style">body{display:none !important;}</style>
-<script>
-  (function () {
-    const TICKET_KEY = 'trip-plan-access-ticket-v1';
-    const GATE_OFF_KEY = 'trip-plan-direct-gate-disabled-v1';
-    const FALLBACK_TTL_MS = 10000;
-    let allowed = false;
-    let message = '';
-
-    // 웹주소/파일 직접 진입은 항상 차단합니다.
-    // 이전 수정모드에서 저장된 차단 해제값이 있어도 무시하고 삭제합니다.
-    try { localStorage.removeItem(GATE_OFF_KEY); } catch (error) {}
-
-    try {
-      const referrer = String(document.referrer || '');
-      const fromBusSeat = /https?:\/\/coretechms\.github\.io\/bus-seat\/?/i.test(referrer);
-      const raw = sessionStorage.getItem(TICKET_KEY);
-
-      if (!fromBusSeat) {
-        message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
-      } else if (!raw) {
-        message = '산행계획 입장권이 없습니다. bus-seat에서 다시 진입하세요.';
-      } else {
-        const ticket = JSON.parse(raw);
-        const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
-        const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
-        const source = String(ticket && ticket.source ? ticket.source : '');
-        const now = Date.now();
-        if (source !== 'bus-seat') {
-          message = '유효하지 않은 산행계획 입장권입니다.';
-        } else if (!issuedAt || now > expiresAt) {
-          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
-        } else {
-          allowed = true;
-        }
-      }
-    } catch (error) {
-      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
-    }
-
-    try { sessionStorage.removeItem(TICKET_KEY); } catch (error) {}
-
-    window.__TRIP_PLAN_GATE__ = { allowed, message, gateDisabled: false, gateOffKey: GATE_OFF_KEY };
-    if (allowed) {
-      document.addEventListener('DOMContentLoaded', function () {
-        const styleEl = document.getElementById('trip-plan-gate-style');
-        if (styleEl) styleEl.remove();
-      }, { once: true });
-    }
-  })();
-</script>
 <title>정기산행 계획</title>
 <style>
     * { box-sizing: border-box; }
@@ -795,6 +744,235 @@
     }
 
 
+
+    /* trip-schedule 독립 로그인 / 읽기모드 */
+    .trip-auth-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      /* 로그인 화면 뒤의 파일 정보가 보이지 않도록 완전 불투명 바탕 적용 */
+      background:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,0.92) 0, rgba(255,255,255,0.55) 18%, transparent 38%),
+        radial-gradient(circle at 80% 12%, rgba(227,241,255,0.95) 0, rgba(227,241,255,0.48) 22%, transparent 44%),
+        linear-gradient(135deg, #eaf6ff 0%, #f7fbff 42%, #fff8d8 100%);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+    .trip-auth-backdrop.is-hidden { display: none !important; }
+    .trip-auth-box {
+      width: min(390px, 96vw);
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 14px 42px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    .trip-auth-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #1737c9;
+      margin-bottom: 8px;
+    }
+    .trip-auth-desc {
+      font-size: 14px;
+      line-height: 1.45;
+      color: #333;
+      margin: 10px 0 12px;
+      font-weight: 700;
+    }
+    .trip-auth-member-main {
+      min-width: 158px;
+      height: 40px;
+      border-radius: 9px;
+      border: 1px solid #0b7a28;
+      background: #0b7a28;
+      color: #fff;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      margin: 2px auto 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .trip-auth-login-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin-top: 4px;
+    }
+    .trip-auth-input {
+      flex: 0 0 150px;
+      width: 150px;
+      max-width: 46vw;
+      min-width: 0;
+      height: 40px;
+      border: 1px solid #999;
+      border-radius: 9px;
+      padding: 6px 10px;
+      font: inherit;
+      text-align: center;
+      outline: none;
+      margin-bottom: 0;
+    }
+    .trip-auth-input:focus {
+      border-color: #1737c9;
+      box-shadow: 0 0 0 2px rgba(23,55,201,0.12);
+    }
+    .trip-auth-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .trip-auth-actions button {
+      min-width: 112px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #999;
+      background: #f3f3f3;
+      color: #111;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .trip-auth-actions .trip-auth-admin-btn {
+      border-color: #1737c9;
+      background: #1737c9;
+      color: #fff;
+    }
+    .trip-auth-actions .trip-auth-read-btn {
+      border-color: #0b7a28;
+      background: #0b7a28;
+      color: #fff;
+    }
+    .trip-auth-login-row .trip-auth-admin-btn {
+      flex: 0 0 auto;
+      min-width: 88px;
+      height: 40px;
+      border-radius: 9px;
+      border: 1px solid #1737c9;
+      background: #1737c9;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .trip-auth-exit-btn {
+      min-width: 112px;
+      height: 36px;
+      margin-top: 12px;
+      border-radius: 8px;
+      border: 1px solid #777;
+      background: #f3f3f3;
+      color: #111;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    @media (max-width: 430px) {
+      .trip-auth-login-row { gap: 6px; }
+      .trip-auth-login-row .trip-auth-admin-btn { min-width: 82px; padding: 0 8px; }
+      .trip-auth-box { padding: 16px 14px; }
+    }
+
+    .trip-admin-secure-btn {
+      height: 31px !important;
+      min-width: 128px !important;
+      padding: 3px 10px !important;
+      border: 1px solid #1737c9 !important;
+      background: #1737c9 !important;
+      color: #fff !important;
+      border-radius: 4px !important;
+      font-family: inherit !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      cursor: pointer !important;
+    }
+
+    .trip-auth-message {
+      min-height: 18px;
+      margin-top: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #c51616;
+    }
+    .trip-mode-badge {
+      display: none;
+      margin: 0 0 6px 2px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0b7a28;
+    }
+    body.trip-read-mode .trip-mode-badge,
+    body.trip-admin-mode .trip-mode-badge { display: block; }
+    body.trip-read-mode .action-buttons,
+    body.trip-read-mode #info-form-wrap,
+    body.trip-read-mode .firebase-panel { display: none !important; }
+    body.trip-read-mode table.plan > tbody > tr { display: none; }
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row { display: table-row; }
+    body.trip-read-mode input,
+    body.trip-read-mode textarea,
+    body.trip-read-mode [contenteditable="true"] {
+      pointer-events: none !important;
+      user-select: none !important;
+      caret-color: transparent !important;
+    }
+    body.trip-read-mode .trip-mask-cell,
+    body.trip-read-mode .trip-mask-cell * {
+      color: transparent !important;
+      -webkit-text-fill-color: transparent !important;
+      text-shadow: none !important;
+      caret-color: transparent !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+    body.trip-read-mode .trip-mask-cell input,
+    body.trip-read-mode .trip-mask-cell textarea {
+      background: #ececec !important;
+    }
+
+    .trip-read-exit-btn {
+      display: none;
+      position: fixed;
+      right: 14px;
+      top: 12px;
+      z-index: 150000;
+      min-width: 92px;
+      height: 36px;
+      border-radius: 9px;
+      border: 1px solid #777;
+      background: #ffffff;
+      color: #111;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+      cursor: pointer;
+    }
+    body.trip-read-mode .trip-read-exit-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 768px) {
+      .trip-read-exit-btn {
+        right: 8px;
+        top: 8px;
+        min-width: 86px;
+        height: 34px;
+        font-size: 12px;
+      }
+    }
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -857,24 +1035,21 @@
 
 </head>
 <body style="overflow: auto;">
-<script>
-  (function () {
-    const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
-    if (gate.allowed) return;
-    const styleEl = document.getElementById('trip-plan-gate-style');
-    if (styleEl) styleEl.remove();
 
-    // 직접 진입 차단 상태에서는 화면을 표시하지 않고 bus-seat로 되돌립니다.
-    document.body.innerHTML = '';
-    document.body.style.display = 'none';
-    try { localStorage.removeItem(gate.gateOffKey || 'trip-plan-direct-gate-disabled-v1'); } catch (error) {}
-    setTimeout(function () {
-      window.location.replace('https://coretechms.github.io/bus-seat/');
-    }, 100);
-    throw new Error('trip-plan-direct-access-blocked');
-  })();
-</script>
-
+<div class="trip-auth-backdrop" id="tripAuthBackdrop">
+  <div class="trip-auth-box" role="dialog" aria-modal="true" aria-labelledby="tripAuthTitle">
+    <div class="trip-auth-title" id="tripAuthTitle">정기산행 계획</div>
+    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">[ 회원모드 ]</button>
+    <div class="trip-auth-desc">회원모드 를 클릭하세요</div>
+    <div class="trip-auth-login-row">
+      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호입력" aria-label="비밀번호입력">
+      <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">[ 로그인 ]</button>
+    </div>
+    <div class="trip-auth-message" id="tripAuthMessage"></div>
+    <button class="trip-auth-exit-btn" id="tripAuthExitBtn" type="button">[ 나가기 ]</button>
+  </div>
+</div>
+<button class="trip-read-exit-btn" id="tripReadExitBtn" type="button">[ 나가기 ]</button>
 
 <!-- free-pan-zoom-enabled -->
 <div class="mobile-fit-wrap" id="mobile-fit-wrap">
@@ -887,6 +1062,7 @@
 <button class="capture-btn" id="capture-button" type="button">[캡쳐]</button>
 </div>
 </div>
+<div class="trip-mode-badge" id="tripModeBadge"></div>
 <div class="firebase-panel" id="firebase-panel">
 <div class="firebase-title">실시간 동기화 상태</div>
 <div>이 문서는 Firebase Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
@@ -3455,6 +3631,7 @@ function resizeAllTextareas(root = document) {
     adminToggle.className = 'info-toolbar-toggle-btn';
     adminToggle.textContent = '관리자';
     adminToggle.setAttribute('aria-expanded', 'false');
+    adminToggle.dataset.adminUnlocked = 'false';
 
     var editToggle = document.createElement('button');
     editToggle.type = 'button';
@@ -3479,11 +3656,61 @@ function resizeAllTextareas(root = document) {
       }
     });
 
+    var changeLoginBtn = document.createElement('button');
+    changeLoginBtn.type = 'button';
+    changeLoginBtn.className = 'trip-admin-secure-btn';
+    changeLoginBtn.textContent = '로그인 비번변경';
+    changeLoginBtn.dataset.infoAction = 'change-login-password';
+
+    var changeAdminBtn = document.createElement('button');
+    changeAdminBtn.type = 'button';
+    changeAdminBtn.className = 'trip-admin-secure-btn';
+    changeAdminBtn.textContent = '관리자비번 변경';
+    changeAdminBtn.dataset.infoAction = 'change-admin-password';
+
+    adminPanel.appendChild(changeLoginBtn);
+    adminPanel.appendChild(changeAdminBtn);
+
     toolbar.appendChild(adminToggle);
     toolbar.appendChild(editToggle);
     toolbar.appendChild(adminPanel);
     toolbar.appendChild(editPanel);
     hiddenInputs.forEach(function(input){ toolbar.appendChild(input); });
+
+    function getStoredPassword(key, fallback){
+      try { return localStorage.getItem(key) || fallback; }
+      catch(e) { return fallback; }
+    }
+    function setStoredPassword(key, value){
+      try { localStorage.setItem(key, value); return true; }
+      catch(e) { return false; }
+    }
+    function unlockAdminPanel(){
+      if(adminToggle.dataset.adminUnlocked === 'true') return true;
+      var current = getStoredPassword('trip-schedule-manager-password-v1', '0000');
+      var entered = window.prompt('관리자 비밀번호를 입력하세요.');
+      if(entered === null) return false;
+      if(String(entered).trim() !== current) {
+        window.alert('관리자 비밀번호가 맞지 않습니다.');
+        return false;
+      }
+      adminToggle.dataset.adminUnlocked = 'true';
+      return true;
+    }
+    function changePassword(kind){
+      if(!unlockAdminPanel()) return;
+      var key = kind === 'login' ? 'trip-schedule-login-password-v1' : 'trip-schedule-manager-password-v1';
+      var label = kind === 'login' ? '로그인 비밀번호' : '관리자 비밀번호';
+      var next = window.prompt('새 ' + label + '를 입력하세요.');
+      if(next === null) return;
+      next = String(next).trim();
+      if(!next) { window.alert(label + '는 빈 값으로 변경할 수 없습니다.'); return; }
+      var again = window.prompt('새 ' + label + '를 한 번 더 입력하세요.');
+      if(again === null) return;
+      if(next !== String(again).trim()) { window.alert('입력한 비밀번호가 서로 다릅니다.'); return; }
+      if(setStoredPassword(key, next)) window.alert(label + '가 변경되었습니다.');
+      else window.alert(label + ' 저장에 실패했습니다.');
+    }
 
     function setOpen(target){
       var isAdmin = target === 'admin';
@@ -3502,8 +3729,15 @@ function resizeAllTextareas(root = document) {
       nextToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     }
 
-    adminToggle.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); setOpen('admin'); });
+    adminToggle.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(!unlockAdminPanel()) return;
+      setOpen('admin');
+    });
     editToggle.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); setOpen('edit'); });
+    changeLoginBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); changePassword('login'); });
+    changeAdminBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); changePassword('admin'); });
   }
 
   if(document.readyState === 'loading') {
@@ -3512,6 +3746,123 @@ function resizeAllTextareas(root = document) {
     groupInfoToolbarButtons();
   }
   window.addEventListener('load', groupInfoToolbarButtons);
+})();
+</script>
+
+
+
+<script id="trip-standalone-auth-script">
+(function(){
+  'use strict';
+  var LOGIN_PASSWORD_KEY = 'trip-schedule-login-password-v1';
+  var ADMIN_PASSWORD_KEY = 'trip-schedule-manager-password-v1';
+  var DEFAULT_LOGIN_PASSWORD = '1234';
+  var DEFAULT_ADMIN_PASSWORD = '0000';
+
+  function getLoginPassword(){
+    try { return localStorage.getItem(LOGIN_PASSWORD_KEY) || DEFAULT_LOGIN_PASSWORD; }
+    catch(e) { return DEFAULT_LOGIN_PASSWORD; }
+  }
+
+  function getAdminPassword(){
+    try { return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD; }
+    catch(e) { return DEFAULT_ADMIN_PASSWORD; }
+  }
+
+  function markPublicRows(){
+    var tbody = document.querySelector('table.plan > tbody');
+    if(!tbody) return;
+    var rows = Array.from(tbody.children).filter(function(el){ return el && el.tagName === 'TR'; });
+    rows.forEach(function(row){ row.classList.remove('trip-public-row'); });
+    [4,5,6,7,8,9,10,11].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('trip-public-row'); });
+    // 회원모드: 관광버스 행에서 기본 운임비와 계좌번호는 제목/입력칸 모두 가림
+    if(rows[4] && rows[4].cells[1]) rows[4].cells[1].classList.add('trip-mask-cell'); // 기본 운임비 제목
+    if(rows[5] && rows[5].cells[0]) rows[5].cells[0].classList.add('trip-mask-cell'); // 기본 운임비 입력칸
+    if(rows[4] && rows[4].cells[6]) rows[4].cells[6].classList.add('trip-mask-cell'); // 계좌번호 제목
+    if(rows[5] && rows[5].cells[5]) rows[5].cells[5].classList.add('trip-mask-cell'); // 계좌번호 입력칸
+  }
+
+  function lockReadModeEditing(){
+    document.querySelectorAll('input, textarea').forEach(function(el){
+      el.setAttribute('readonly','readonly');
+      el.setAttribute('tabindex','-1');
+    });
+    document.querySelectorAll('[contenteditable="true"]').forEach(function(el){
+      el.setAttribute('contenteditable','false');
+    });
+  }
+
+  function setMode(mode){
+    markPublicRows();
+    document.body.classList.remove('trip-read-mode','trip-admin-mode');
+    document.body.classList.add(mode === 'admin' ? 'trip-admin-mode' : 'trip-read-mode');
+    var badge = document.getElementById('tripModeBadge');
+    if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '읽기모드 · 지정 행만 표시';
+    var backdrop = document.getElementById('tripAuthBackdrop');
+    if(backdrop) backdrop.classList.add('is-hidden');
+    if(mode === 'read') lockReadModeEditing();
+    try { sessionStorage.setItem('trip-schedule-last-mode-v1', mode); } catch(e) {}
+  }
+
+  function tryAdminLogin(){
+    var input = document.getElementById('tripAdminPasswordInput');
+    var msg = document.getElementById('tripAuthMessage');
+    var entered = input ? String(input.value || '').trim() : '';
+    if(entered && entered === getLoginPassword()) {
+      setMode('admin');
+      return;
+    }
+    if(msg) msg.textContent = '비밀번호가 맞지 않습니다. 다시 입력하세요.';
+    if(input) { input.focus(); input.select(); }
+  }
+
+  function bindAuth(){
+    markPublicRows();
+    var adminBtn = document.getElementById('tripAdminLoginBtn');
+    var readBtn = document.getElementById('tripReadModeBtn');
+    var input = document.getElementById('tripAdminPasswordInput');
+    var exitBtn = document.getElementById('tripAuthExitBtn');
+    var readExitBtn = document.getElementById('tripReadExitBtn');
+    function goBusSeat(){ window.location.href = 'https://coretechms.github.io/bus-seat/'; }
+    function exitApp(){
+      try { sessionStorage.removeItem('trip-schedule-last-mode-v1'); } catch(e) {}
+      try { window.close(); } catch(e) {}
+      setTimeout(function(){
+        if(history.length > 1) {
+          history.back();
+        } else {
+          window.location.href = 'about:blank';
+        }
+      }, 80);
+    }
+    if(adminBtn) adminBtn.addEventListener('click', tryAdminLogin);
+    if(readBtn) readBtn.addEventListener('click', function(){ setMode('read'); });
+    if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
+    if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
+    if(input) {
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Enter') { e.preventDefault(); tryAdminLogin(); }
+      });
+      setTimeout(function(){ input.focus(); }, 100);
+    }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindAuth);
+  else bindAuth();
+
+  window.tripScheduleSetLoginPassword = function(nextPassword){
+    var value = String(nextPassword || '').trim();
+    if(!value) return false;
+    try { localStorage.setItem(LOGIN_PASSWORD_KEY, value); return true; }
+    catch(e) { return false; }
+  };
+
+  window.tripScheduleSetAdminPassword = function(nextPassword){
+    var value = String(nextPassword || '').trim();
+    if(!value) return false;
+    try { localStorage.setItem(ADMIN_PASSWORD_KEY, value); return true; }
+    catch(e) { return false; }
+  };
 })();
 </script>
 
