@@ -973,6 +973,95 @@
       }
     }
 
+    /* 회원모드 산행공지 메모장: 정기산행 계획 표와 완전 분리 */
+    .trip-member-notice-pad {
+      display: none;
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      width: auto;
+      max-width: calc(100vw - 20px);
+      max-height: 46vh;
+      border: 1px solid #d7c76b;
+      background: #fff7c7;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      box-sizing: border-box;
+      z-index: 140000;
+      transform: none !important;
+    }
+    body.trip-read-mode {
+      padding-bottom: 48vh;
+    }
+    body.trip-read-mode .trip-member-notice-pad {
+      display: flex;
+      flex-direction: column;
+    }
+    .trip-member-notice-title {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 36px;
+      padding: 8px 12px;
+      background: #fff200;
+      color: #111;
+      font-size: 14px;
+      font-weight: 800;
+      border-bottom: 1px solid #d7c76b;
+    }
+    .trip-member-notice-state {
+      font-size: 11px;
+      font-weight: 700;
+      color: #555;
+      white-space: nowrap;
+    }
+    .trip-member-notice-body {
+      flex: 1 1 auto;
+      min-height: 320px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 14px;
+      background: #fffbe8;
+      color: #111;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+    .trip-member-notice-body.is-empty {
+      color: #777;
+    }
+    @media (max-width: 768px) {
+      .trip-member-notice-pad {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        max-width: calc(100vw - 16px);
+        max-height: 48vh;
+        border-radius: 12px;
+      }
+      body.trip-read-mode {
+        padding-bottom: 50vh;
+      }
+      .trip-member-notice-title {
+        min-height: 34px;
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+      .trip-member-notice-body {
+        min-height: 340px;
+        padding: 10px;
+        font-size: 13px;
+      }
+    }
+
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -1271,6 +1360,13 @@
 </div>
 </div>
 </div>
+<div class="trip-member-notice-pad" id="tripMemberNoticePad" aria-label="산행공지 메모장">
+  <div class="trip-member-notice-title">
+    <span>산행공지 메모장</span>
+    <span class="trip-member-notice-state" id="tripMemberNoticeState">실시간 공지</span>
+  </div>
+  <div class="trip-member-notice-body is-empty" id="tripMemberNoticeBody">등록된 산행공지가 없습니다.</div>
+</div>
 <script>
     function parseDuration(text) {
       const raw = String(text || '').replace(/예정/g, '').trim();
@@ -1365,6 +1461,31 @@
         totalPeopleEl.value = Number.isFinite(number) ? formatNumber(number) : ' ';
       }
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+    }
+
+
+    function setTripMemberNoticeText(noticeValue) {
+      const bodyEl = document.getElementById('tripMemberNoticeBody');
+      const stateEl = document.getElementById('tripMemberNoticeState');
+      if (!bodyEl) return;
+
+      let text = '';
+      let locked = false;
+      if (noticeValue && typeof noticeValue === 'object') {
+        text = String(noticeValue.text || '').trim();
+        locked = !!noticeValue.locked;
+      } else {
+        text = String(noticeValue || '').trim();
+      }
+
+      if (text) {
+        bodyEl.textContent = text;
+        bodyEl.classList.remove('is-empty');
+      } else {
+        bodyEl.textContent = '등록된 산행공지가 없습니다.';
+        bodyEl.classList.add('is-empty');
+      }
+      if (stateEl) stateEl.textContent = locked ? '잠금 공지' : '실시간 공지';
     }
 
     function countNamedSeats(seatSource) {
@@ -2645,6 +2766,10 @@ function resizeAllTextareas(root = document) {
           if (attendeeCount !== '') {
             setBusSeatSummaryFilled(attendeeCount);
           }
+
+          if (snapshotValue && Object.prototype.hasOwnProperty.call(snapshotValue, 'hikingNotice')) {
+            setTripMemberNoticeText(snapshotValue.hikingNotice);
+          }
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
         });
@@ -2654,6 +2779,12 @@ function resizeAllTextareas(root = document) {
           setBusSeatSummaryFilled(seatCount > 0 ? seatCount : '');
         }, (error) => {
           console.error('bus-seat seats 참석인원 실시간 수신 실패:', error);
+        });
+
+        onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/hikingNotice`), (snapshot) => {
+          setTripMemberNoticeText(snapshot.val());
+        }, (error) => {
+          console.error('bus-seat 산행공지 실시간 수신 실패:', error);
         });
       } catch (error) {
         console.error('bus-seat Firebase 초기화 오류:', error);
@@ -3797,7 +3928,7 @@ function resizeAllTextareas(root = document) {
     document.body.classList.remove('trip-read-mode','trip-admin-mode');
     document.body.classList.add(mode === 'admin' ? 'trip-admin-mode' : 'trip-read-mode');
     var badge = document.getElementById('tripModeBadge');
-    if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '읽기모드 · 지정 행만 표시';
+    if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보/공지 보기';
     var backdrop = document.getElementById('tripAuthBackdrop');
     if(backdrop) backdrop.classList.add('is-hidden');
     if(mode === 'read') lockReadModeEditing();
