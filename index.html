@@ -2063,14 +2063,9 @@ function resizeAllTextareas(root = document) {
         .filter((el) => !el.readOnly && !el.disabled && el.id !== 'mountain-name');
     }
 
-    // 전화번호/휴대폰 보호 대상입니다.
-    // Firebase 또는 정보모음 선택 과정에서 빈값이 들어와도 기존 번호를 지우지 않습니다.
-    const PROTECTED_PHONE_SYNC_KEYS = new Set([
-      'field:11',          // 관광버스 행 전화번호
-      'field:27',          // 식당 행 연락처
-      'id:gimbap-phone',   // 위치/상호 행 전화번호
-      'id:gimbap-mobile'   // 위치/상호 행 휴대폰
-    ]);
+    // 전화번호/휴대폰 칸도 일반 입력값처럼 저장합니다.
+    // 이전 버전의 보호 로직은 빈값을 기존 번호로 복구해서 삭제가 되돌아오는 문제가 있었으므로 비활성화합니다.
+    const PROTECTED_PHONE_SYNC_KEYS = new Set();
 
     function isProtectedPhoneField(el) {
       if (!el) return false;
@@ -2189,8 +2184,7 @@ function resizeAllTextareas(root = document) {
       getEditableFields().forEach((el) => {
         const key = el.dataset.syncKey;
         if (!key) return;
-        // 보호 전화번호 칸은 빈값을 저장하지 않습니다.
-        // 앱 재접속 후 원격/초기값이 비어 있어도 마지막 정상 번호를 유지합니다.
+        // 전화번호 칸도 빈값을 그대로 저장합니다.
         if (isProtectedPhoneField(el)) {
           if (isBlankValue(el.value)) {
             if (!isBlankValue(protectedCache[key])) data[key] = protectedCache[key];
@@ -2219,10 +2213,7 @@ function resizeAllTextareas(root = document) {
           const key = el.dataset.syncKey;
           if (Object.prototype.hasOwnProperty.call(data, key)) {
             const nextValue = data[key];
-            // 원격 데이터가 빈값이어도 전화번호/휴대폰 칸의 기존 값은 지우지 않습니다.
-            if (isProtectedPhoneField(el) && isBlankValue(nextValue) && !isBlankValue(el.value)) return;
-            // 보호 전화번호는 원격값이 빈값이면 아예 적용하지 않습니다.
-            if (isProtectedPhoneField(el) && isBlankValue(nextValue)) return;
+            // 원격 데이터의 빈값도 그대로 적용합니다.
             el.value = nextValue;
           }
         });
@@ -2971,12 +2962,10 @@ function resizeAllTextareas(root = document) {
         }
       }
 
-      // 전화번호/휴대폰 계열은 정보모음 선택 행이 비어있을 때 기존 값을 지우면 안 됩니다.
-      // 빈값을 Firebase에 즉시 저장하면서 다른 기기에서도 전화번호가 사라지는 문제를 차단합니다.
+      // 전화번호/휴대폰 계열도 빈값 저장을 허용합니다.
+      // 사용자가 값을 지우거나 빈 정보 행을 선택하면 해당 칸도 실제로 비워져야 합니다.
       function setFormFieldValueIfNotBlank(field, value) {
-        const nextValue = normalizeText(value);
-        if (!nextValue) return;
-        setFormFieldValue(field, nextValue);
+        setFormFieldValue(field, value);
       }
 
       function setPlanCellValue(rowIndex, cellIndex, selector, value) {
