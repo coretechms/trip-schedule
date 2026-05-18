@@ -1138,6 +1138,7 @@
       <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
     </div>
     <div class="trip-auth-message" id="tripAuthMessage"></div>
+
   </div>
 </div>
 <button class="trip-read-exit-btn" id="tripReadExitBtn" type="button">나가기</button>
@@ -2331,10 +2332,69 @@ function resizeAllTextareas(root = document) {
     const SYNC_FORMDATA_PATH = `${SYNC_PATH}/formData`;
     const PHONE_BACKUP_PATH = `${SYNC_PATH}/phoneBackup`;
     const SYNC_PLAN_STYLES_PATH = `${SYNC_PATH}/planStyles`;
+    const SYNC_AUTH_PATH = `${SYNC_PATH}/auth`;
     const LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
     const PHONE_LOCAL_CACHE_KEY = 'tripSchedule.sharedPlan.protectedPhoneValues';
+    const TRIP_LOGIN_PASSWORD_KEY = 'trip-schedule-login-password-v1';
+    const TRIP_ADMIN_PASSWORD_KEY = 'trip-schedule-manager-password-v1';
     let db = null;
     let applyingRemote = false;
+    let applyingAuthRemote = false;
+
+    function setTripAuthLocalPassword(key, value) {
+      const next = String(value || '').trim();
+      if (!next) return false;
+      try { localStorage.setItem(key, next); return true; }
+      catch (error) { console.warn('비밀번호 localStorage 저장 실패:', error); return false; }
+    }
+
+    function applyTripAuthPayload(payload, sourceLabel = 'trip') {
+      if (!payload || typeof payload !== 'object') return;
+      applyingAuthRemote = true;
+      try {
+        if (typeof payload.loginPassword === 'string' && payload.loginPassword.trim()) {
+          setTripAuthLocalPassword(TRIP_LOGIN_PASSWORD_KEY, payload.loginPassword);
+        }
+        if (typeof payload.adminPassword === 'string' && payload.adminPassword.trim()) {
+          setTripAuthLocalPassword(TRIP_ADMIN_PASSWORD_KEY, payload.adminPassword);
+        }
+        window.__tripScheduleAuthLastSource = sourceLabel;
+        window.dispatchEvent(new CustomEvent('trip-auth-password-updated', { detail: { source: sourceLabel } }));
+      } finally {
+        setTimeout(() => { applyingAuthRemote = false; }, 0);
+      }
+    }
+
+    function bindTripAuthRealtimeSync() {
+      if (!db) return;
+      try {
+        onValue(ref(db, SYNC_AUTH_PATH), (snapshot) => {
+          applyTripAuthPayload(snapshot.val(), 'tripSchedule');
+        }, (error) => {
+          console.error('정기산행 로그인/관리자 비밀번호 실시간 수신 실패:', error);
+        });
+      } catch (error) {
+        console.error('정기산행 비밀번호 실시간 동기화 초기화 실패:', error);
+      }
+    }
+
+    window.tripScheduleSaveAuthPassword = async function(kind, nextPassword) {
+      const value = String(nextPassword || '').trim();
+      if (!value) return false;
+      const key = kind === 'admin' ? TRIP_ADMIN_PASSWORD_KEY : TRIP_LOGIN_PASSWORD_KEY;
+      setTripAuthLocalPassword(key, value);
+      if (!db || applyingAuthRemote) return true;
+      const payload = { updatedAt: Date.now() };
+      if (kind === 'admin') payload.adminPassword = value;
+      else payload.loginPassword = value;
+      try {
+        await update(ref(db, SYNC_AUTH_PATH), payload);
+        return true;
+      } catch (error) {
+        console.error('정기산행 비밀번호 Firebase 저장 실패:', error);
+        return false;
+      }
+    };
 
     function setFirebaseStatus(message, ok) {
       if (!statusEl) return;
@@ -2772,6 +2832,12 @@ function resizeAllTextareas(root = document) {
           if (snapshotValue && Object.prototype.hasOwnProperty.call(snapshotValue, 'hikingNotice')) {
             setTripMemberNoticeText(snapshotValue.hikingNotice);
           }
+
+          // bus-seat에서 변경한 산행계획 비밀번호/관리자 비밀번호를 정기산행 계획 로그인에 즉시 반영
+          applyTripAuthPayload({
+            loginPassword: snapshotValue?.tripPlanPassword,
+            adminPassword: snapshotValue?.adminPassword
+          }, 'busSeat');
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
         });
@@ -2804,6 +2870,7 @@ function resizeAllTextareas(root = document) {
         bindRealtimeSync();
         bindInfoTablesRealtimeSync();
         bindPlanStylesRealtimeSync();
+        bindTripAuthRealtimeSync();
         bindBusSeatMountainRealtimeSync();
 
         try {
@@ -3820,7 +3887,7 @@ function resizeAllTextareas(root = document) {
     }
     function unlockAdminPanel(){
       if(adminToggle.dataset.adminUnlocked === 'true') return true;
-      var current = getStoredPassword('trip-schedule-manager-password-v1', '0000');
+      var current = getStoredPassword('trip-schedule-manager-password-v1', '1234');
       var entered = window.prompt('관리자 비밀번호를 입력하세요.');
       if(entered === null) return false;
       if(String(entered).trim() !== current) {
@@ -3841,7 +3908,14 @@ function resizeAllTextareas(root = document) {
       var again = window.prompt('새 ' + label + '를 한 번 더 입력하세요.');
       if(again === null) return;
       if(next !== String(again).trim()) { window.alert('입력한 비밀번호가 서로 다릅니다.'); return; }
-      if(setStoredPassword(key, next)) window.alert(label + '가 변경되었습니다.');
+      if(setStoredPassword(key, next)) {
+        if (typeof window.tripScheduleSaveAuthPassword === 'function') {
+          window.tripScheduleSaveAuthPassword(kind === 'login' ? 'login' : 'admin', next).then(function(ok){
+            if(!ok) window.alert(label + '는 현재 기기에 저장되었지만 Firebase 실시간 저장은 실패했습니다.');
+          });
+        }
+        window.alert(label + '가 변경되었습니다.');
+      }
       else window.alert(label + ' 저장에 실패했습니다.');
     }
 
@@ -3890,7 +3964,7 @@ function resizeAllTextareas(root = document) {
   var LOGIN_PASSWORD_KEY = 'trip-schedule-login-password-v1';
   var ADMIN_PASSWORD_KEY = 'trip-schedule-manager-password-v1';
   var DEFAULT_LOGIN_PASSWORD = '1234';
-  var DEFAULT_ADMIN_PASSWORD = '0000';
+  var DEFAULT_ADMIN_PASSWORD = '1234';
 
   function getLoginPassword(){
     try { return localStorage.getItem(LOGIN_PASSWORD_KEY) || DEFAULT_LOGIN_PASSWORD; }
@@ -3986,14 +4060,22 @@ function resizeAllTextareas(root = document) {
   window.tripScheduleSetLoginPassword = function(nextPassword){
     var value = String(nextPassword || '').trim();
     if(!value) return false;
-    try { localStorage.setItem(LOGIN_PASSWORD_KEY, value); return true; }
+    try {
+      localStorage.setItem(LOGIN_PASSWORD_KEY, value);
+      if (typeof window.tripScheduleSaveAuthPassword === 'function') window.tripScheduleSaveAuthPassword('login', value);
+      return true;
+    }
     catch(e) { return false; }
   };
 
   window.tripScheduleSetAdminPassword = function(nextPassword){
     var value = String(nextPassword || '').trim();
     if(!value) return false;
-    try { localStorage.setItem(ADMIN_PASSWORD_KEY, value); return true; }
+    try {
+      localStorage.setItem(ADMIN_PASSWORD_KEY, value);
+      if (typeof window.tripScheduleSaveAuthPassword === 'function') window.tripScheduleSaveAuthPassword('admin', value);
+      return true;
+    }
     catch(e) { return false; }
   };
 })();
