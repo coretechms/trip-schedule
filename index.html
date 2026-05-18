@@ -50,6 +50,21 @@
       margin: 0;
       letter-spacing: -0.3px;
     }
+    .bus-seat-info-title-main-print {
+      font-size: 18px;
+      font-weight: 700;
+      color: #c51616;
+      margin-left: 10px;
+      white-space: nowrap;
+      letter-spacing: -0.3px;
+    }
+    .title-left-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
     .capture-btn {
       border: 1px solid #1737c9;
       background: #1737c9;
@@ -1163,7 +1178,10 @@
 <div class="mobile-fit-wrap" id="mobile-fit-wrap">
 <div class="sheet" id="capture-area" style="transform: none; margin: 0px auto;">
 <div class="title-bar">
+<div class="title-left-group">
 <div class="title">정기산행 계획</div>
+<span class="bus-seat-info-title-main-print" id="busSeatInfoTitleMainPrint"></span>
+</div>
 <div class="action-buttons">
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
@@ -1483,6 +1501,13 @@
     }
 
 
+    function setBusSeatInfoTitleMainPrint(rawTitle) {
+      const printEl = document.getElementById('busSeatInfoTitleMainPrint');
+      if (!printEl) return;
+      const nextText = String(rawTitle || '').trim();
+      printEl.textContent = nextText ? nextText : '';
+    }
+
     function setTripMemberNoticeText(noticeValue) {
       const bodyEl = document.getElementById('tripMemberNoticeBody');
       const stateEl = document.getElementById('tripMemberNoticeState');
@@ -1570,6 +1595,7 @@
 
     function extractBusSeatMountainInfo(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') {
+        setBusSeatInfoTitleMainPrint('');
         return { title: '', date: '' };
       }
 
@@ -1578,6 +1604,7 @@
         snapshotValue?.busInfo?.titleMain ??
         ''
       ).trim();
+      setBusSeatInfoTitleMainPrint(rawTitle);
       let dateText = '';
 
       const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
