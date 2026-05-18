@@ -3,7 +3,7 @@
 <html lang="ko" style="overflow: auto;"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=0.8, minimum-scale=0.35, maximum-scale=10.0, user-scalable=yes, viewport-fit=contain" name="viewport"/>
-<style id="trip-plan-gate-style">body{visibility:hidden;}</style>
+<style id="trip-plan-gate-style">body{display:none !important;}</style>
 <script>
   (function () {
     const TICKET_KEY = 'trip-plan-access-ticket-v1';
@@ -11,41 +11,9 @@
     const FALLBACK_TTL_MS = 10000;
     let allowed = false;
     let message = '';
-    let accessMode = 'limited';
-    let ticketPayload = null;
 
-    function isFullAccessTicket(ticket) {
-      if (!ticket || typeof ticket !== 'object') return false;
-
-      // bus-seat 산행계획 버튼에서 비밀번호/관리자 상태를 넘겨주는 여러 이름을 모두 지원합니다.
-      // 권장: ticket.accessMode = 'full' 또는 ticket.tripPlanMode = 'full'
-      const mode = String(
-        ticket.accessMode ??
-        ticket.tripPlanMode ??
-        ticket.viewMode ??
-        ticket.mode ??
-        ''
-      ).toLowerCase();
-
-      if (['full', 'admin', 'password', 'private', 'all'].includes(mode)) return true;
-      if (['limited', 'public', 'readonly', 'guest'].includes(mode)) return false;
-
-      return Boolean(
-        ticket.passwordOk === true ||
-        ticket.hasPassword === true ||
-        ticket.adminOk === true ||
-        ticket.admin === true ||
-        ticket.isAdmin === true ||
-        ticket.authenticated === true ||
-        ticket.fullAccess === true ||
-        ticket.tripPlanFull === true ||
-        ticket.tripScheduleFull === true ||
-        ticket.passwordPassed === true ||
-        ticket.passwordVerified === true
-      );
-    }
-
-    // 직접 진입도 제한보기는 허용하되, 이전 수정모드에서 저장된 차단 해제값은 무시하고 삭제합니다.
+    // 웹주소/파일 직접 진입은 항상 차단합니다.
+    // 이전 수정모드에서 저장된 차단 해제값이 있어도 무시하고 삭제합니다.
     try { localStorage.removeItem(GATE_OFF_KEY); } catch (error) {}
 
     try {
@@ -54,45 +22,36 @@
       const raw = sessionStorage.getItem(TICKET_KEY);
 
       if (!fromBusSeat) {
-        message = 'bus-seat 산행계획 버튼 진입이 아니므로 제한보기로 표시합니다.';
+        message = 'bus-seat의 산행계획 버튼으로만 진입할 수 있습니다.';
       } else if (!raw) {
-        message = '산행계획 입장권이 없어 제한보기로 표시합니다.';
+        message = '산행계획 입장권이 없습니다. bus-seat에서 다시 진입하세요.';
       } else {
         const ticket = JSON.parse(raw);
-        ticketPayload = ticket;
         const issuedAt = Number(ticket && ticket.issuedAt ? ticket.issuedAt : 0);
         const expiresAt = Number(ticket && ticket.expiresAt ? ticket.expiresAt : (issuedAt + FALLBACK_TTL_MS));
         const source = String(ticket && ticket.source ? ticket.source : '');
         const now = Date.now();
         if (source !== 'bus-seat') {
-          message = '유효하지 않은 산행계획 입장권이므로 제한보기로 표시합니다.';
+          message = '유효하지 않은 산행계획 입장권입니다.';
         } else if (!issuedAt || now > expiresAt) {
-          message = '산행계획 입장권이 만료되어 제한보기로 표시합니다.';
+          message = '산행계획 입장권이 만료되었습니다. bus-seat에서 다시 진입하세요.';
         } else {
           allowed = true;
-          accessMode = isFullAccessTicket(ticket) ? 'full' : 'limited';
         }
       }
     } catch (error) {
-      message = '산행계획 입장권을 확인할 수 없어 제한보기로 표시합니다.';
+      message = '산행계획 입장권을 확인할 수 없습니다. bus-seat에서 다시 진입하세요.';
     }
 
     try { sessionStorage.removeItem(TICKET_KEY); } catch (error) {}
 
-    window.__TRIP_PLAN_GATE__ = {
-      allowed,
-      message,
-      accessMode,
-      ticketPayload,
-      limitedView: accessMode !== 'full',
-      gateDisabled: false,
-      gateOffKey: GATE_OFF_KEY
-    };
-
-    // 화면 숨김이 남아 진입이 안 되는 문제를 막기 위해 현재 모드를 HTML에 즉시 기록합니다.
-    try {
-      document.documentElement.classList.add(accessMode === 'full' ? 'trip-full-pre' : 'trip-limited-pre');
-    } catch (error) {}
+    window.__TRIP_PLAN_GATE__ = { allowed, message, gateDisabled: false, gateOffKey: GATE_OFF_KEY };
+    if (allowed) {
+      document.addEventListener('DOMContentLoaded', function () {
+        const styleEl = document.getElementById('trip-plan-gate-style');
+        if (styleEl) styleEl.remove();
+      }, { once: true });
+    }
   })();
 </script>
 <title>정기산행 계획</title>
@@ -896,77 +855,23 @@
   }
 </style>
 
-
-
-<style id="trip-limited-view-style">
-  /* 티켓/비밀번호 없이 진입했을 때: 지정 행만 공개하고 나머지는 가림 */
-  body.trip-limited-view .action-buttons,
-  body.trip-limited-view .firebase-panel,
-  body.trip-limited-view .info-form-wrap {
-    display: none !important;
-  }
-
-  body.trip-limited-view .title-bar {
-    justify-content: center !important;
-    margin-bottom: 8px !important;
-  }
-
-  body.trip-limited-view .title::after {
-    content: " · 제한보기";
-    color: #c51616;
-    font-weight: 700;
-  }
-
-  body.trip-limited-view table.plan > tbody > tr {
-    display: none !important;
-  }
-
-  /* 공개 행: 관광버스 / 소요시간 / 예상시간 / 식당 */
-  body.trip-limited-view table.plan > tbody > tr.trip-public-row {
-    display: table-row !important;
-  }
-
-  body.trip-limited-view input,
-  body.trip-limited-view textarea,
-  body.trip-limited-view [contenteditable="true"] {
-    pointer-events: none !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    caret-color: transparent !important;
-  }
-
-  body.trip-limited-view .cell-input {
-    background-color: inherit !important;
-  }
-
-  /* 제한보기: 관광버스 기본 운임비 제목칸/입력칸은 내용만 가림 */
-  body.trip-limited-view .trip-limited-hide-cell {
-    visibility: hidden !important;
-  }
-</style>
-
 </head>
 <body style="overflow: auto;">
 <script>
   (function () {
     const gate = window.__TRIP_PLAN_GATE__ || { allowed: false, message: '접근이 차단되었습니다.' };
+    if (gate.allowed) return;
     const styleEl = document.getElementById('trip-plan-gate-style');
     if (styleEl) styleEl.remove();
-    document.body.style.visibility = 'visible';
-    document.body.style.display = '';
 
-    if (gate.accessMode === 'full') {
-      window.__TRIP_PLAN_LIMITED_VIEW__ = false;
-      document.body.classList.remove('trip-limited-view');
-      document.body.classList.add('trip-full-view');
-      return;
-    }
-
-    // bus-seat 산행계획 버튼에서 비밀번호/관리자 상태가 없거나,
-    // 직접 진입한 경우에는 지정 행만 보여주는 제한보기로 전환합니다.
-    window.__TRIP_PLAN_LIMITED_VIEW__ = true;
+    // 직접 진입 차단 상태에서는 화면을 표시하지 않고 bus-seat로 되돌립니다.
+    document.body.innerHTML = '';
+    document.body.style.display = 'none';
     try { localStorage.removeItem(gate.gateOffKey || 'trip-plan-direct-gate-disabled-v1'); } catch (error) {}
-    document.body.classList.add('trip-limited-view');
+    setTimeout(function () {
+      window.location.replace('https://coretechms.github.io/bus-seat/');
+    }, 100);
+    throw new Error('trip-plan-direct-access-blocked');
   })();
 </script>
 
@@ -1190,50 +1095,6 @@
 </div>
 </div>
 </div>
-
-<script id="trip-limited-view-script">
-  (function () {
-    function applyTripLimitedView() {
-      if (!window.__TRIP_PLAN_LIMITED_VIEW__) return;
-      document.body.classList.add('trip-limited-view');
-
-      const planTable = document.querySelector('table.plan');
-      if (!planTable || !planTable.tBodies || !planTable.tBodies[0]) return;
-
-      Array.from(planTable.tBodies[0].rows).forEach((row) => row.classList.remove('trip-public-row'));
-
-      // 행 번호 기준 공개 범위:
-      // 4~5 관광버스, 6~7 소요시간, 8~9 예상시간, 10~11 식당 (0부터 시작)
-      const publicRowIndexes = new Set([4, 5, 6, 7, 8, 9, 10, 11]);
-      const rows = Array.from(planTable.tBodies[0].rows);
-      rows.forEach((row, index) => {
-        if (publicRowIndexes.has(index)) row.classList.add('trip-public-row');
-      });
-
-      // 제한보기: 관광버스 행의 기본 운임비 제목칸과 데이터 입력칸은 숨깁니다.
-      // 행 4 = 관광버스 제목행, 행 5 = 관광버스 데이터행, 칸 1 = 기본 운임비 칸
-      [rows[4]?.cells?.[1], rows[5]?.cells?.[1]].forEach((cell) => {
-        if (cell) cell.classList.add('trip-limited-hide-cell');
-      });
-
-      // 제한보기에서는 보이는 칸도 수정하지 못하게 잠금 처리합니다.
-      document.querySelectorAll('input, textarea').forEach((el) => {
-        el.setAttribute('readonly', 'readonly');
-        el.setAttribute('tabindex', '-1');
-      });
-      document.querySelectorAll('[contenteditable="true"]').forEach((el) => {
-        el.setAttribute('contenteditable', 'false');
-      });
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', applyTripLimitedView, { once: true });
-    } else {
-      applyTripLimitedView();
-    }
-  })();
-</script>
-
 <script>
     function parseDuration(text) {
       const raw = String(text || '').replace(/예정/g, '').trim();
