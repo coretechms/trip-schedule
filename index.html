@@ -2066,6 +2066,44 @@ function resizeAllTextareas(root = document) {
     // 전화번호/휴대폰 칸도 일반 입력값처럼 저장합니다.
     // 이전 버전의 보호 로직은 빈값을 기존 번호로 복구해서 삭제가 되돌아오는 문제가 있었으므로 비활성화합니다.
     const PROTECTED_PHONE_SYNC_KEYS = new Set();
+    const LEGACY_PHONE_SYNC_KEYS = new Set([
+      'field:11',
+      'field:27',
+      'id:gimbap-phone',
+      'id:gimbap-mobile'
+    ]);
+
+    function clearLegacyPhoneLocalCaches() {
+      try { localStorage.removeItem(PHONE_LOCAL_CACHE_KEY); } catch (error) {}
+      try {
+        const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+        let changed = false;
+        LEGACY_PHONE_SYNC_KEYS.forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+            delete parsed[key];
+            changed = true;
+          }
+        });
+        if (changed) localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(parsed));
+      } catch (error) {
+        console.warn('이전 전화번호 로컬 캐시 정리 실패:', error);
+      }
+    }
+
+    async function clearLegacyPhoneBackupFromFirebase() {
+      if (!db) return;
+      const patch = {};
+      LEGACY_PHONE_SYNC_KEYS.forEach((key) => { patch[key] = null; });
+      patch.updatedAt = null;
+      try {
+        await withTimeout(update(ref(db, PHONE_BACKUP_PATH), patch), 8000);
+      } catch (error) {
+        console.warn('이전 전화번호 백업 정리 실패:', error);
+      }
+    }
 
     function isProtectedPhoneField(el) {
       if (!el) return false;
@@ -2107,28 +2145,11 @@ function resizeAllTextareas(root = document) {
     }
 
     async function readProtectedPhoneBackupFromFirebase() {
-      if (!db) return {};
-      try {
-        const snapshot = await get(ref(db, PHONE_BACKUP_PATH));
-        const value = snapshot.val();
-        return (value && typeof value === 'object') ? extractProtectedPhonePatch(value) : {};
-      } catch (error) {
-        console.warn('전화번호 백업값 읽기 실패:', error);
-        return {};
-      }
+      return {};
     }
 
     async function saveProtectedPhoneBackupToFirebase(source) {
-      if (!db) return false;
-      const patch = extractProtectedPhonePatch(source || collectFormData());
-      if (!Object.keys(patch).length) return false;
-      try {
-        await withTimeout(update(ref(db, PHONE_BACKUP_PATH), Object.assign({}, patch, { updatedAt: serverTimestamp() })), 8000);
-        return true;
-      } catch (error) {
-        console.warn('전화번호 백업 저장 실패:', error);
-        return false;
-      }
+      return false;
     }
 
     function snapshotProtectedPhoneValuesFromDom() {
@@ -2180,23 +2201,12 @@ function resizeAllTextareas(root = document) {
 
     function collectFormData() {
       const data = {};
-      const protectedCache = readProtectedPhoneCache();
       getEditableFields().forEach((el) => {
         const key = el.dataset.syncKey;
         if (!key) return;
-        // 전화번호 칸도 빈값을 그대로 저장합니다.
-        if (isProtectedPhoneField(el)) {
-          if (isBlankValue(el.value)) {
-            if (!isBlankValue(protectedCache[key])) data[key] = protectedCache[key];
-            return;
-          }
-          protectedCache[key] = el.value;
-          data[key] = el.value;
-          return;
-        }
+        // 전화번호/휴대폰 칸도 빈값을 그대로 저장합니다.
         data[key] = el.value;
       });
-      writeProtectedPhoneCache(protectedCache);
       return data;
     }
 
@@ -2228,8 +2238,7 @@ function resizeAllTextareas(root = document) {
 
     function cacheFormDataLocally(data) {
       try {
-        const merged = mergeProtectedPhoneValues(data || {});
-        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(merged));
+        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify((data && typeof data === 'object') ? data : {}));
       } catch (error) {
         console.warn('로컬 캐시 저장 실패:', error);
       }
@@ -2241,8 +2250,8 @@ function resizeAllTextareas(root = document) {
         if (!raw) return false;
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== 'object') return false;
-        applyFormData(mergeProtectedPhoneValues(parsed));
-        setFirebaseStatus('앱 시작 시 저장된 전화번호/로컬 내용을 우선 복원함', true);
+        applyFormData(parsed);
+        setFirebaseStatus('앱 시작 시 저장된 로컬 내용을 우선 복원함', true);
         return true;
       } catch (error) {
         console.warn('로컬 캐시 복원 실패:', error);
@@ -2352,8 +2361,9 @@ function resizeAllTextareas(root = document) {
 
     function bindRealtimeSync() {
       ensureSyncKeys();
+      clearLegacyPhoneLocalCaches();
       restoreCachedFormData();
-      saveProtectedPhoneBackupToFirebase(readProtectedPhoneCache());
+      clearLegacyPhoneBackupFromFirebase();
 
       const saveButton = document.getElementById('save-button');
       if (saveButton) {
@@ -2387,34 +2397,12 @@ function resizeAllTextareas(root = document) {
 
       onValue(ref(db, SYNC_FORMDATA_PATH), async (snapshot) => {
         const value = snapshot.val();
-        const firebasePhoneBackup = await readProtectedPhoneBackupFromFirebase();
         if (value && typeof value === 'object') {
-          // formData의 전화번호가 비어 있어도 별도 Firebase phoneBackup 값으로 복구합니다.
-          const mergedValue = mergeProtectedPhoneValues(Object.assign({}, firebasePhoneBackup, value));
-          PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
-            if (isBlankValue(value[key]) && !isBlankValue(firebasePhoneBackup[key])) {
-              mergedValue[key] = firebasePhoneBackup[key];
-            }
-          });
-          applyFormData(mergedValue);
-          cacheFormDataLocally(mergedValue);
-          // Firebase formData에 전화번호 키가 비어 있거나 빠져 있으면 백업/로컬 보호값으로 다시 보강 저장합니다.
-          const phonePatch = {};
-          PROTECTED_PHONE_SYNC_KEYS.forEach((key) => {
-            if (isBlankValue(value[key]) && !isBlankValue(mergedValue[key])) phonePatch[key] = mergedValue[key];
-          });
-          if (Object.keys(phonePatch).length && db && !applyingRemote) {
-            update(ref(db, SYNC_FORMDATA_PATH), phonePatch).catch((error) => console.warn('전화번호 보호값 보강 저장 실패:', error));
-            saveProtectedPhoneBackupToFirebase(phonePatch);
-          }
+          // Firebase에 저장된 빈값도 그대로 반영합니다.
+          applyFormData(value);
+          cacheFormDataLocally(value);
           setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 완료', true);
         } else {
-          const localPhoneValues = mergeProtectedPhoneValues(firebasePhoneBackup);
-          if (Object.keys(localPhoneValues).length && db) {
-            applyFormData(localPhoneValues);
-            update(ref(db, SYNC_FORMDATA_PATH), localPhoneValues).catch((error) => console.warn('전화번호 로컬/백업값 복원 저장 실패:', error));
-            saveProtectedPhoneBackupToFirebase(localPhoneValues);
-          }
           setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 대기 중', true);
         }
       }, (error) => {
@@ -3043,8 +3031,8 @@ function resizeAllTextareas(root = document) {
         setFormFieldValue(document.getElementById('gimbap-location'), data['위치'] || '');
         setFormFieldValue(document.getElementById('gimbap-shop'), data['상호'] || '');
         setFormFieldValue(document.getElementById('gimbap-name'), data['이름'] || '');
-        setFormFieldValueIfNotBlank(document.getElementById('gimbap-phone'), data['전화번호'] || '');
-        setFormFieldValueIfNotBlank(document.getElementById('gimbap-mobile'), data['휴대폰'] || '');
+        setFormFieldValue(document.getElementById('gimbap-phone'), data['전화번호'] || '');
+        setFormFieldValue(document.getElementById('gimbap-mobile'), data['휴대폰'] || '');
         setFormFieldValue(document.getElementById('gimbap-account'), data['계좌번호'] || '');
         setFormFieldValue(document.getElementById('gimbap-price'), data['단가'] || '');
 
@@ -3059,7 +3047,7 @@ function resizeAllTextareas(root = document) {
         setPlanCellValue(5, 1, 'input', data['차량정보'] || data['차종'] || '');
         setPlanCellValue(5, 2, 'input', data['차량번호'] || data['회사'] || data['회 사'] || '');
         setPlanCellValue(5, 3, 'input', data['이름'] || '');
-        setPlanCellValueIfNotBlank(5, 4, 'input', data['전화번호'] || '');
+        setPlanCellValue(5, 4, 'input', data['전화번호'] || '');
         setPlanCellValue(5, 5, 'input', data['계좌번호'] || '');
       }
 
