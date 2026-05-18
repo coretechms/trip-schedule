@@ -1065,6 +1065,22 @@
     }
 
 
+  
+    /* 비품 윗행 제목 칸도 편집 가능하도록 전환 */
+    #supply-label-water,
+    #supply-label-alcohol,
+    #supply-label-coffee,
+    #supply-label-consumables {
+      background: #ececec !important;
+      font-weight: 400 !important;
+    }
+    td.input-cell:has(#supply-label-water),
+    td.input-cell:has(#supply-label-alcohol),
+    td.input-cell:has(#supply-label-coffee),
+    td.input-cell:has(#supply-label-consumables) {
+      background: #ececec !important;
+    }
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -1271,18 +1287,18 @@
 </tr>
 <tr class="h30">
 <td class="fixed" rowspan="2">비 품</td>
-<td class="fixed">물</td>
-<td class="fixed">소주 / 막걸리</td>
-<td class="fixed">커피믹스 / 블랙</td>
-<td class="fixed" colspan="2">소모품</td>
+<td class="input-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="id:supply-label-water" id="supply-label-water" value="물"/></td>
+<td class="input-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="id:supply-label-alcohol" id="supply-label-alcohol" value="소주 / 막걸리"/></td>
+<td class="input-cell"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="id:supply-label-coffee" id="supply-label-coffee" value="커피믹스 / 블랙"/></td>
+<td class="input-cell" colspan="2"><input class="cell-input bold" data-realtime-save-bound="true" data-sync-key="id:supply-label-consumables" id="supply-label-consumables" value="소모품"/></td>
 <td class="fixed">총 인원</td>
 <td class="fixed">추가인원(기사)</td>
 </tr>
 <tr class="h30" style="height: auto;">
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:32" value=" "/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:33" value="  /  "/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:34" value="  /  "/></td>
-<td class="input-cell one-line-autogrow-row" colspan="2" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:35" rows="1" style="height: 24px;"></textarea></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:32" id="supply-water" data-direct-edit="true" value=" "/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:33" id="supply-soju-makgeolli" data-direct-edit="true" value="  /  "/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:34" id="supply-coffee" data-direct-edit="true" value="  /  "/></td>
+<td class="input-cell one-line-autogrow-row" colspan="2" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:35" id="supply-consumables" data-direct-edit="true" rows="1" style="height: 24px;"></textarea></td>
 <td class="input-cell"><input class="cell-input" id="total-people" readonly="" value=" "/></td>
 <td class="input-cell"><input class="cell-input blue" data-realtime-save-bound="true" data-sync-key="id:extra-people" id="extra-people" value=" "/></td>
 </tr>
@@ -2027,6 +2043,14 @@ function resizeAllTextareas(root = document) {
       'id:gimbap-mobile'   // 위치/상호 행 휴대폰
     ]);
 
+    // 비품 행은 모바일에서도 일반 입력칸처럼 바로 편집 가능해야 함
+    const DIRECT_EDIT_SYNC_KEYS = new Set([
+      'field:32',          // 비품: 물
+      'field:33',          // 비품: 소주 / 막걸리
+      'field:34',          // 비품: 커피믹스 / 블랙
+      'field:35'           // 비품: 소모품
+    ]);
+
     let pressTimer = null;
     let startX = 0;
     let startY = 0;
@@ -2057,6 +2081,12 @@ function resizeAllTextareas(root = document) {
       if (!cell || cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return false;
       const header = getInfoColumnHeader(cell);
       return header === '전화번호' || header === '전화번호' || header === '휴대폰' || header === '연락처';
+    }
+
+    function isDirectEditTarget(el) {
+      if (!el) return false;
+      const field = el.matches && el.matches('input.cell-input, textarea.cell-input') ? el : (el.closest && el.closest('input.cell-input, textarea.cell-input'));
+      return !!(field && (field.dataset.directEdit === 'true' || DIRECT_EDIT_SYNC_KEYS.has(String(field.dataset.syncKey || ''))));
     }
 
     function isPhoneChoiceTarget(el) {
@@ -2204,6 +2234,10 @@ function resizeAllTextareas(root = document) {
       if (!isMobileEditMode()) return;
       document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach((el) => {
         if (el.id === 'mountain-name') return;
+        if (isDirectEditTarget(el)) {
+          el.classList.remove('mobile-longpress-locked', 'mobile-longpress-editing');
+          return;
+        }
         if (!el.classList.contains('mobile-longpress-editing')) {
           el.classList.add('mobile-longpress-locked');
         }
@@ -2220,6 +2254,10 @@ function resizeAllTextareas(root = document) {
         if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
           closePhoneChoiceBox();
         }
+        return;
+      }
+      if (isDirectEditTarget(editable)) {
+        closePhoneChoiceBox();
         return;
       }
       if (editable.classList.contains('mobile-longpress-editing')) return;
@@ -2258,6 +2296,7 @@ function resizeAllTextareas(root = document) {
       if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
+      if (isDirectEditTarget(editable)) return;
       if (!editable.classList.contains('mobile-longpress-editing')) {
         event.preventDefault();
         event.stopPropagation();
@@ -2268,6 +2307,7 @@ function resizeAllTextareas(root = document) {
       if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
+      if (isDirectEditTarget(editable)) return;
       if (!editable.classList.contains('mobile-longpress-editing')) {
         event.target.blur && event.target.blur();
       }
@@ -2277,6 +2317,7 @@ function resizeAllTextareas(root = document) {
       if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
+      if (isDirectEditTarget(editable)) return;
       setTimeout(() => {
         if (document.activeElement === editable) return;
         editable.classList.remove('mobile-longpress-editing');
@@ -3999,6 +4040,22 @@ function resizeAllTextareas(root = document) {
     });
   }
 
+  function unlockAdminModeEditing(){
+    document.querySelectorAll('input, textarea').forEach(function(el){
+      var isCalculated = !!(el.closest('.readonly-cell') || el.closest('.calc-cell'));
+      var keepReadonly = isCalculated || el.id === 'mountain-name' || /^calc-/.test(el.id || '') || el.id === 'total-people' || el.id === 'meal-count' || el.id === 'gimbap-count' || el.id === 'gimbap-total';
+      if(!keepReadonly){
+        el.removeAttribute('readonly');
+        el.removeAttribute('tabindex');
+      }
+    });
+    document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(function(el){
+      if(!el.classList.contains('info-select-col') && !el.querySelector('.info-row-select-btn')){
+        el.setAttribute('contenteditable','true');
+      }
+    });
+  }
+
   function setMode(mode){
     markPublicRows();
     document.body.classList.remove('trip-read-mode','trip-admin-mode');
@@ -4007,7 +4064,11 @@ function resizeAllTextareas(root = document) {
     if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보/공지 보기';
     var backdrop = document.getElementById('tripAuthBackdrop');
     if(backdrop) backdrop.classList.add('is-hidden');
-    if(mode === 'read') lockReadModeEditing();
+    if(mode === 'read') {
+      lockReadModeEditing();
+    } else {
+      unlockAdminModeEditing();
+    }
     try { sessionStorage.setItem('trip-schedule-last-mode-v1', mode); } catch(e) {}
   }
 
@@ -4081,4 +4142,30 @@ function resizeAllTextareas(root = document) {
 })();
 </script>
 
+
+<script id="supply-row-editable-fix">
+  /* 비품 행 편집 가능 보정: 물/소주·막걸리/커피믹스·블랙/소모품 */
+  (function(){
+    function unlockSupplyRow(){
+      ['field:32','field:33','field:34','field:35'].forEach(function(key){
+        var el = document.querySelector('[data-sync-key="' + key + '"]');
+        if(!el) return;
+        el.dataset.directEdit = 'true';
+        el.removeAttribute('readonly');
+        el.removeAttribute('disabled');
+        el.removeAttribute('tabindex');
+        el.classList.remove('mobile-longpress-locked','mobile-longpress-editing');
+        el.style.pointerEvents = 'auto';
+        el.style.userSelect = 'text';
+      });
+    }
+    window.addEventListener('DOMContentLoaded', unlockSupplyRow);
+    window.addEventListener('load', unlockSupplyRow);
+    document.addEventListener('click', function(event){
+      var el = event.target && event.target.closest ? event.target.closest('[data-sync-key="field:32"],[data-sync-key="field:33"],[data-sync-key="field:34"],[data-sync-key="field:35"]') : null;
+      if(el) unlockSupplyRow();
+    }, true);
+    setInterval(unlockSupplyRow, 1500);
+  })();
+</script>
 </body></html>
