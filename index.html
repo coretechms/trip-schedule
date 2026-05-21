@@ -997,8 +997,8 @@
       bottom: 10px;
       width: auto;
       max-width: calc(100vw - 20px);
-      height: 37vh;
-      max-height: 37vh;
+      height: 33.3vh;
+      max-height: 33.3vh;
       border: 1px solid #d7c76b;
       background: #fff7c7;
       border-radius: 14px;
@@ -1010,7 +1010,7 @@
       transform: none !important;
     }
     body.trip-read-mode {
-      padding-bottom: 39vh;
+      padding-bottom: 35.1vh;
     }
     body.trip-read-mode .trip-member-notice-pad {
       display: flex;
@@ -1060,12 +1060,12 @@
         right: 8px;
         bottom: 8px;
         max-width: calc(100vw - 16px);
-        height: 38vh;
-        max-height: 38vh;
+        height: 34.2vh;
+        max-height: 34.2vh;
         border-radius: 12px;
       }
       body.trip-read-mode {
-        padding-bottom: 40vh;
+        padding-bottom: 36vh;
       }
       .trip-member-notice-title {
         min-height: 34px;
@@ -1161,14 +1161,14 @@
 
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
   <div class="trip-auth-box" role="dialog" aria-modal="true" aria-labelledby="tripAuthTitle">
-    <div class="trip-auth-title" id="tripAuthTitle">정기산행 계획</div>
-    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원모드</button>
-     <div class="trip-auth-desc">회원모드 [ 비밀번호 없음 ]</div>
-     <div class="trip-auth-desc">운 영 진 [ 비밀번호 입력 ]</div>
+    <div class="trip-auth-title" id="tripAuthTitle">산행 계획</div>
+    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 모드</button>
+    <div class="trip-auth-desc">회원모드 [비밀번호 없음]</div>
     <div class="trip-auth-login-row">
       <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호입력" aria-label="비밀번호입력">
       <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
-    </div>
+       </div>
+    <div class="trip-auth-desc">운 영 진  [비밀번호 입력]</div>
     <div class="trip-auth-message" id="tripAuthMessage"></div>
 
   </div>
@@ -1594,18 +1594,45 @@
       return '';
     }
 
+    function normalizeBusSeatInfoTitleMain(value) {
+      return String(value ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    function pickBusSeatInfoTitleMain(snapshotValue) {
+      if (snapshotValue == null) return '';
+      if (typeof snapshotValue !== 'object') return normalizeBusSeatInfoTitleMain(snapshotValue);
+
+      // bus-seat 실제 저장 구조 우선순위:
+      // 1) busSeatApp/busInfo/infoTitleMain
+      // 2) busSeatApp/busInfo/titleMain
+      // 3) 호환용 shared/mainTitle, titleFull 등
+      const candidates = [
+        snapshotValue?.busInfo?.infoTitleMain,
+        snapshotValue?.busInfo?.titleMain,
+        snapshotValue?.infoTitleMain,
+        snapshotValue?.titleMain,
+        snapshotValue?.shared?.mainTitle,
+        snapshotValue?.shared?.titleFull,
+        snapshotValue?.shared?.title,
+        snapshotValue?.mainTitle,
+        snapshotValue?.titleFull,
+        snapshotValue?.title
+      ];
+
+      for (const candidate of candidates) {
+        const normalized = normalizeBusSeatInfoTitleMain(candidate);
+        if (normalized) return normalized;
+      }
+      return '';
+    }
+
     function extractBusSeatMountainInfo(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') {
-        setBusSeatInfoTitleMainPrint('');
         return { title: '', date: '' };
       }
 
-      const rawTitle = String(
-        snapshotValue?.infoTitleMain ??
-        snapshotValue?.busInfo?.titleMain ??
-        ''
-      ).trim();
-      setBusSeatInfoTitleMainPrint(rawTitle);
+      const rawTitle = pickBusSeatInfoTitleMain(snapshotValue);
+      if (rawTitle) setBusSeatInfoTitleMainPrint(rawTitle);
       let dateText = '';
 
       const monthDayMatch = rawTitle.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -1883,10 +1910,6 @@ function resizeAllTextareas(root = document) {
         field.replaceWith(div);
       });
 
-      // 일반 [캡쳐]는 정기산행 계획 영역만 저장하고, 아래 정보 모음은 제외합니다.
-      const infoFormWrap = clone.querySelector('#info-form-wrap');
-      if (infoFormWrap) infoFormWrap.remove();
-
       clone.querySelectorAll('tr').forEach((row) => {
         row.style.height = 'auto';
       });
@@ -1941,7 +1964,6 @@ function resizeAllTextareas(root = document) {
     }
 
     async function capturePlan() {
-      if (!window.confirm('캡쳐를 진행할까요?')) return;
       const target = document.getElementById('capture-area');
       const button = document.getElementById('capture-button');
       await captureElementAsImage(
@@ -2026,7 +2048,6 @@ function resizeAllTextareas(root = document) {
     }
 
     async function captureMemberImage() {
-      if (!window.confirm('회원용 캡쳐를 진행할까요?')) return;
       const button = document.getElementById('member-capture-button');
       const target = buildMemberCaptureClone();
       if (!target) return;
@@ -2915,6 +2936,17 @@ function resizeAllTextareas(root = document) {
           }, 'busSeat');
         }, (error) => {
           console.error('bus-seat 산행지/총인원 실시간 수신 실패:', error);
+        });
+
+        onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/busInfo`), (snapshot) => {
+          const busInfoValue = snapshot.val() || {};
+          const rawTitle = pickBusSeatInfoTitleMain({ busInfo: busInfoValue });
+          if (rawTitle) {
+            const nextInfo = extractBusSeatMountainInfo({ busInfo: busInfoValue });
+            setBusSeatMountainTitle(nextInfo.title, nextInfo.date);
+          }
+        }, (error) => {
+          console.error('bus-seat busInfo/infoTitleMain 실시간 수신 실패:', error);
         });
 
         onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/seats`), (snapshot) => {
@@ -4141,6 +4173,13 @@ function resizeAllTextareas(root = document) {
     if(readBtn) readBtn.addEventListener('click', function(){ setMode('read'); });
     if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
     if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
+    var restoredMode = '';
+    try { restoredMode = sessionStorage.getItem('trip-schedule-last-mode-v1') || ''; } catch(e) {}
+    if(restoredMode === 'read' || restoredMode === 'admin') {
+      setMode(restoredMode);
+      return;
+    }
+
     if(input) {
       input.addEventListener('keydown', function(e){
         if(e.key === 'Enter') { e.preventDefault(); tryAdminLogin(); }
