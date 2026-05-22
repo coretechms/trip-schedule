@@ -2412,14 +2412,17 @@ function resizeAllTextareas(root = document) {
   appId: "1:937582511238:web:72e16b57e9f622e15a7d07"
 };
 
+    /* bus-seat 연동용 Firebase 설정
+       최신 bus-seat 파일은 bus-seat-eb86c 프로젝트의 busSeatApp 경로에 저장합니다.
+       기존 bus-set-no1 프로젝트를 읽으면 데이터 연동이 되지 않으므로 같은 DB로 맞춥니다. */
     const busSeatFirebaseConfig = {
-      apiKey: "AIzaSyBbN8CF35V00kAQzVCZoZoonXDGKTqPfZA",
-      authDomain: "bus-set-no1.firebaseapp.com",
-      databaseURL: "https://bus-set-no1-default-rtdb.asia-southeast1.firebasedatabase.app/",
-      projectId: "bus-set-no1",
-      storageBucket: "bus-set-no1.firebasestorage.app",
-      messagingSenderId: "744201337161",
-      appId: "1:744201337161:web:a63c6118182a4ed8dd0298"
+      apiKey: "AIzaSyBH3866EIMkhI--ms4xAZ7k7XS9sQFvgwQ",
+      authDomain: "bus-seat-eb86c.firebaseapp.com",
+      databaseURL: "https://bus-seat-eb86c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "bus-seat-eb86c",
+      storageBucket: "bus-seat-eb86c.firebasestorage.app",
+      messagingSenderId: "132111967366",
+      appId: "1:132111967366:web:e034a00f8c8cc4aa441d07"
     };
     const BUS_SEAT_ROOT_PATH = 'busSeatApp';
 
