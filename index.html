@@ -1351,6 +1351,29 @@
 </style>
 
 <!-- refresh-keeps-mode-exit-clears-login-v2 -->
+
+<style id="member-notice-height-and-read-refresh-fix">
+  /* 산행공지 메모장 세로 높이 20% 축소 */
+  .trip-member-notice-pad {
+    height: 26.6vh !important;
+    max-height: 26.6vh !important;
+  }
+  body.trip-read-mode {
+    padding-bottom: 28.1vh !important;
+  }
+  @media (max-width: 768px) {
+    .trip-member-notice-pad {
+      height: 27.4vh !important;
+      max-height: 27.4vh !important;
+    }
+    body.trip-read-mode {
+      padding-bottom: 28.8vh !important;
+    }
+    .trip-member-notice-body {
+      min-height: 0 !important;
+    }
+  }
+</style>
 </head>
 <body style="overflow: auto;">
 
@@ -3132,7 +3155,14 @@ function resizeAllTextareas(root = document) {
 
     function getEditableFields() {
       return Array.from(document.querySelectorAll('input.cell-input, textarea.cell-input'))
-        .filter((el) => !el.readOnly && !el.disabled && el.id !== 'mountain-name');
+        .filter((el) => {
+          if (!el || el.disabled || el.id === 'mountain-name') return false;
+          /* 회원모드에서는 입력칸이 readonly로 잠기므로, readonly 여부로 저장/복원 대상을 제외하면
+             새로고침 후 회비/산행지/관광버스 값이 화면에 다시 적용되지 않는다.
+             data-sync-key가 있는 셀은 읽기전용 상태에서도 Firebase/로컬 복원 대상에 포함한다. */
+          if (el.dataset && el.dataset.syncKey) return true;
+          return !el.readOnly;
+        });
     }
 
     // 전화번호/휴대폰 칸도 일반 입력값처럼 저장합니다.
@@ -3323,6 +3353,9 @@ function resizeAllTextareas(root = document) {
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
       if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
       if (typeof alignMountainNameCenter === 'function') alignMountainNameCenter();
+      if (document.body && document.body.classList.contains('trip-read-mode') && typeof window.tripScheduleRefreshMemberPublicRows === 'function') {
+        window.tripScheduleRefreshMemberPublicRows();
+      }
     }
 
     function cacheFormDataLocally(data) {
@@ -4800,6 +4833,15 @@ function resizeAllTextareas(root = document) {
   var MODE_SESSION_KEY = 'trip-schedule-last-mode-v1';
   var EXIT_SESSION_KEY = 'trip-schedule-app-exited-v1';
 
+  function isReloadNavigation(){
+    try {
+      var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      if (nav && nav.type) return nav.type === 'reload';
+      if (performance.navigation) return performance.navigation.type === 1;
+    } catch(e) {}
+    return false;
+  }
+
   function getLoginPassword(){
     try { return localStorage.getItem(LOGIN_PASSWORD_KEY) || DEFAULT_LOGIN_PASSWORD; }
     catch(e) { return DEFAULT_LOGIN_PASSWORD; }
@@ -4928,11 +4970,15 @@ function resizeAllTextareas(root = document) {
     }
 
     var restoredMode = '';
-    if(!wasExited) {
+    if(!wasExited && isReloadNavigation()) {
       try { restoredMode = sessionStorage.getItem(MODE_SESSION_KEY) || ''; } catch(e) {}
+    } else {
+      /* 앱을 새로 연 경우/URL로 다시 들어온 경우는 이전 세션을 이어가지 않고 로그인 화면부터 시작 */
+      try { sessionStorage.removeItem(MODE_SESSION_KEY); } catch(e) {}
     }
     if(restoredMode === 'read' || restoredMode === 'admin') {
       setMode(restoredMode);
+      setTimeout(markPublicRows, 80);
       return;
     }
 
@@ -4997,6 +5043,37 @@ function resizeAllTextareas(root = document) {
 })();
 </script>
 
+
+
+<script id="member-refresh-public-rows-safety">
+  /* 회원모드 새로고침/원격복원 후 공개행 값이 가려지지 않도록 최종 보정 */
+  (function(){
+    function fixMemberPublicRows(){
+      try {
+        if (typeof window.tripScheduleRefreshMemberPublicRows === 'function') {
+          window.tripScheduleRefreshMemberPublicRows();
+        }
+        if (!document.body.classList.contains('trip-read-mode')) return;
+        document.querySelectorAll('table.plan > tbody > tr.trip-public-row input.cell-input, table.plan > tbody > tr.trip-public-row textarea.cell-input').forEach(function(el){
+          el.style.visibility = 'visible';
+          el.style.opacity = '1';
+          if (!el.closest('.trip-mask-cell')) {
+            el.style.color = '';
+            el.style.webkitTextFillColor = '';
+          }
+        });
+      } catch(e) {}
+    }
+    window.addEventListener('load', function(){
+      fixMemberPublicRows();
+      setTimeout(fixMemberPublicRows, 300);
+      setTimeout(fixMemberPublicRows, 1200);
+      setTimeout(fixMemberPublicRows, 2500);
+    });
+    window.addEventListener('pageshow', function(){ setTimeout(fixMemberPublicRows, 80); });
+    window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(fixMemberPublicRows, 80); });
+  })();
+</script>
 
 <script id="supply-row-editable-fix">
   /* 비품 행 편집 가능 보정: 물/소주·막걸리/커피믹스·블랙/소모품 */
