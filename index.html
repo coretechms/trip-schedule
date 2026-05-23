@@ -1503,6 +1503,50 @@
   }
 </style>
 
+
+
+<style id="trip-hide-cell-admin-member-style">
+  /* 가림 설정: 관리자모드에서는 대각선 표시만, 회원모드에서는 내용 완전 가림 */
+  .trip-hidden-cell {
+    position: relative !important;
+  }
+  body.trip-admin-mode .trip-hidden-cell::after,
+  body:not(.trip-read-mode) .trip-hidden-cell::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 3px;
+    background: repeating-linear-gradient(135deg,
+      rgba(80,80,80,0.00) 0px,
+      rgba(80,80,80,0.00) 7px,
+      rgba(80,80,80,0.26) 8px,
+      rgba(80,80,80,0.26) 11px,
+      rgba(80,80,80,0.00) 12px,
+      rgba(80,80,80,0.00) 18px
+    );
+  }
+  body.trip-read-mode .trip-hidden-cell,
+  body.trip-read-mode .trip-hidden-cell * {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    caret-color: transparent !important;
+  }
+  body.trip-read-mode .trip-hidden-cell input,
+  body.trip-read-mode .trip-hidden-cell textarea {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background-color: inherit !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="hide-cell"] {
+    background: linear-gradient(180deg, #f5f5f5 0%, #e5e7eb 100%) !important;
+    border-color: rgba(80,80,80,0.55) !important;
+    color: #333 !important;
+  }
+</style>
+
 </head>
 <body style="overflow: auto;">
 
@@ -1736,6 +1780,7 @@
 <button data-info-action="text-gray-cell" type="button">회색</button>
 <button data-info-action="text-red-cell" type="button">빨강</button>
 <button data-info-action="text-blue-cell" type="button">파랑</button>
+<button data-info-action="hide-cell" type="button">가림</button>
 <button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">배경</button>
 <button data-info-action="bg-white-cell" type="button">흰색</button>
 <button data-info-action="bg-yellow-cell" type="button">노랑</button>
@@ -3877,6 +3922,7 @@ function resizeAllTextareas(root = document) {
         const value = (item && typeof item === 'object' && !Array.isArray(item)) ? item : { html: item };
         cell.contentEditable = 'true';
         cell.innerHTML = value.html || '';
+        cell.classList.toggle('trip-hidden-cell', !!value.hidden);
         if (value.style && typeof value.style === 'object') {
           cell.style.fontWeight = value.style.fontWeight || '';
           cell.style.color = value.style.color || '';
@@ -3889,8 +3935,12 @@ function resizeAllTextareas(root = document) {
         if (cell.style.fontWeight) style.fontWeight = cell.style.fontWeight;
         if (cell.style.color) style.color = cell.style.color;
         if (cell.style.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
-        if (!Object.keys(style).length) return cell.innerHTML;
-        return { html: cell.innerHTML, style };
+        const hidden = cell.classList.contains('trip-hidden-cell');
+        if (!Object.keys(style).length && !hidden) return cell.innerHTML;
+        const result = { html: cell.innerHTML };
+        if (Object.keys(style).length) result.style = style;
+        if (hidden) result.hidden = true;
+        return result;
       }
 
       function selectPlanCell(target) {
@@ -3952,10 +4002,11 @@ function resizeAllTextareas(root = document) {
         const style = {
           fontWeight: parts.main?.style?.fontWeight || '',
           color: parts.main?.style?.color || '',
-          backgroundColor: parts.cell?.style?.backgroundColor || parts.main?.style?.backgroundColor || ''
+          backgroundColor: parts.cell?.style?.backgroundColor || parts.main?.style?.backgroundColor || '',
+          hidden: !!((parts.cell && parts.cell.classList.contains('trip-hidden-cell')) || (parts.main && parts.main.classList && parts.main.classList.contains('trip-hidden-cell')))
         };
         const map = loadPlanStyleMap();
-        if (!style.fontWeight && !style.color && !style.backgroundColor) delete map[key];
+        if (!style.fontWeight && !style.color && !style.backgroundColor && !style.hidden) delete map[key];
         else map[key] = style;
         try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
         publishPlanStyleMap(map);
@@ -3994,12 +4045,21 @@ function resizeAllTextareas(root = document) {
         } else if (action === 'bg-pink-cell') {
           if (cell) cell.style.setProperty('background-color', '#ffe4ef', 'important');
           main.style.setProperty('background-color', '#ffe4ef', 'important');
+        } else if (action === 'hide-cell') {
+          const targetCell = cell || main;
+          if (targetCell && targetCell.classList) {
+            targetCell.classList.toggle('trip-hidden-cell');
+          }
         } else if (action === 'clear-style-cell') {
           main.style.removeProperty('font-weight');
           main.style.removeProperty('color');
           main.style.removeProperty('-webkit-text-fill-color');
           main.style.removeProperty('background-color');
-          if (cell) cell.style.removeProperty('background-color');
+          if (cell) {
+            cell.style.removeProperty('background-color');
+            cell.classList.remove('trip-hidden-cell');
+          }
+          if (main.classList) main.classList.remove('trip-hidden-cell');
         }
       }
 
@@ -4034,6 +4094,8 @@ function resizeAllTextareas(root = document) {
             else parts.main.style.removeProperty('background-color');
           }
           if (parts.cell && style.backgroundColor) parts.cell.style.setProperty('background-color', style.backgroundColor, 'important');
+          if (parts.cell) parts.cell.classList.toggle('trip-hidden-cell', !!style.hidden);
+          else if (parts.main && parts.main.classList) parts.main.classList.toggle('trip-hidden-cell', !!style.hidden);
         });
       }
 
@@ -4702,7 +4764,7 @@ function resizeAllTextareas(root = document) {
         if (action === 'delete-col') deleteColumn();
         if (action === 'save') saveInfoForm(true);
         if (action === 'load') loadInfoForm(true);
-        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'bg-pink-cell', 'clear-style-cell'].includes(action)) {
+        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'hide-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'bg-pink-cell', 'clear-style-cell'].includes(action)) {
           applySelectedCellStyle(action);
           event.preventDefault();
           return;
@@ -5018,11 +5080,8 @@ function resizeAllTextareas(root = document) {
     // 회원모드 공개 범위: 회비, 산행지, 관광버스, 소요시간/예상시간, 식당까지 표시
     // 비품 행부터 아래(비품/김밥/정보모음)는 회원모드에서 숨김
     [0,1,2,3,4,5,6,7,8].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('trip-public-row'); });
-    // 회원모드: 관광버스 행에서 기본 운임비와 계좌번호는 제목/입력칸 모두 가림
-    if(rows[4] && rows[4].cells[1]) rows[4].cells[1].classList.add('trip-mask-cell'); // 기본 운임비 제목
-    if(rows[5] && rows[5].cells[0]) rows[5].cells[0].classList.add('trip-mask-cell'); // 기본 운임비 입력칸
-    if(rows[4] && rows[4].cells[6]) rows[4].cells[6].classList.add('trip-mask-cell'); // 계좌번호 제목
-    if(rows[5] && rows[5].cells[5]) rows[5].cells[5].classList.add('trip-mask-cell'); // 계좌번호 입력칸
+    // 회원모드: 관광버스 두번째 행 첫칸/마지막칸은 기본 가림해제
+    // 관리자모드에서 '가림' 버튼으로 설정된 칸(.trip-hidden-cell)만 회원모드에서 완전 가림 처리
   }
 
   function lockReadModeEditing(){
