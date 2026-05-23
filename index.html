@@ -557,6 +557,7 @@
     .info-toolbar button[data-info-action="text-gray-cell"] { color: #777777; }
     .info-toolbar button[data-info-action="bg-yellow-cell"] { background: #fff200; }
     .info-toolbar button[data-info-action="bg-sky-cell"] { background: #eaf6ff; }
+    .info-toolbar button[data-info-action="bg-pink-cell"] { background: #ffe4ef; }
     .info-toolbar .info-json-btn{
       display:inline-flex !important;
       align-items:center !important;
@@ -1411,6 +1412,97 @@
     }
   }
 </style>
+
+
+<style id="info-edit-group-transparent-fix">
+  /* 정보모음 편집 그룹 박스 배경 투명 처리 */
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+</style>
+<style id="bg-white-button-visible-fix">
+  /* 배경 그룹의 흰색 버튼 자체 배경을 흰색으로 고정 */
+  #info-form-wrap .info-toolbar button[data-info-action="bg-white-cell"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    border-color: #999999 !important;
+  }
+</style>
+
+
+<style id="info-toolbar-pretty-buttons-style">
+  /* 정보모음 편집 그룹 버튼 디자인 개선: 기능/스크립트 변경 없음 */
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
+    gap: 7px !important;
+    padding: 7px 4px !important;
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button:not(.info-group-label-btn) {
+    height: 30px !important;
+    min-width: 48px !important;
+    padding: 3px 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(120,120,120,0.55) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f6f8 100%) !important;
+    color: #111 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+    transition: transform .08s ease, box-shadow .08s ease, filter .08s ease !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button:not(.info-group-label-btn):active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.12) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] .info-group-label-btn {
+    height: 30px !important;
+    min-width: auto !important;
+    padding: 3px 6px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #333 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="text-black-cell"] {
+    color: #111 !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="text-gray-cell"] {
+    color: #777 !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="text-red-cell"] {
+    color: #c51616 !important;
+    border-color: rgba(197,22,22,0.35) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="text-blue-cell"] {
+    color: #203fd8 !important;
+    border-color: rgba(32,63,216,0.35) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-white-cell"] {
+    background: #ffffff !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-yellow-cell"] {
+    background: linear-gradient(180deg, #fff86a 0%, #fff200 100%) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-sky-cell"] {
+    background: linear-gradient(180deg, #f3fbff 0%, #eaf6ff 100%) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-pink-cell"] {
+    background: linear-gradient(180deg, #ffe8f1 0%, #ffd6e7 100%) !important;
+  }
+  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="clear-style-cell"] {
+    background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
+    border-color: rgba(180,83,9,0.45) !important;
+    color: #9a3412 !important;
+  }
+</style>
+
 </head>
 <body style="overflow: auto;">
 
@@ -1638,14 +1730,17 @@
 <button data-info-action="delete-row" type="button">선택행 삭제</button>
 <button data-info-action="add-col" type="button">우측 칸 추가</button>
 <button data-info-action="delete-col" type="button">칸 열 삭제</button>
+<button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">글자</button>
 <button data-info-action="toggle-bold-cell" type="button">굵게</button>
-<button data-info-action="text-black-cell" type="button">글자검정</button>
-<button data-info-action="text-gray-cell" type="button">글자회색</button>
-<button data-info-action="text-red-cell" type="button">글자빨강</button>
-<button data-info-action="text-blue-cell" type="button">글자파랑</button>
-<button data-info-action="bg-white-cell" type="button">배경흰색</button>
-<button data-info-action="bg-yellow-cell" type="button">배경노랑</button>
-<button data-info-action="bg-sky-cell" type="button">배경하늘</button>
+<button data-info-action="text-black-cell" type="button">검정</button>
+<button data-info-action="text-gray-cell" type="button">회색</button>
+<button data-info-action="text-red-cell" type="button">빨강</button>
+<button data-info-action="text-blue-cell" type="button">파랑</button>
+<button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">배경</button>
+<button data-info-action="bg-white-cell" type="button">흰색</button>
+<button data-info-action="bg-yellow-cell" type="button">노랑</button>
+<button data-info-action="bg-sky-cell" type="button">하늘</button>
+<button data-info-action="bg-pink-cell" type="button">분홍</button>
 <button data-info-action="clear-style-cell" type="button">서식해제</button>
 <button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
 <button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
@@ -3890,6 +3985,9 @@ function resizeAllTextareas(root = document) {
         } else if (action === 'bg-sky-cell') {
           if (cell) cell.style.backgroundColor = '#eaf6ff';
           main.style.backgroundColor = '#eaf6ff';
+        } else if (action === 'bg-pink-cell') {
+          if (cell) cell.style.backgroundColor = '#ffe4ef';
+          main.style.backgroundColor = '#ffe4ef';
         } else if (action === 'clear-style-cell') {
           main.style.fontWeight = '';
           main.style.color = '';
@@ -4596,7 +4694,7 @@ function resizeAllTextareas(root = document) {
         if (action === 'delete-col') deleteColumn();
         if (action === 'save') saveInfoForm(true);
         if (action === 'load') loadInfoForm(true);
-        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'clear-style-cell'].includes(action)) {
+        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'bg-pink-cell', 'clear-style-cell'].includes(action)) {
           applySelectedCellStyle(action);
           event.preventDefault();
           return;
