@@ -3476,10 +3476,11 @@ function resizeAllTextareas(root = document) {
         const localCount = countMeaningfulFormValues(localCached);
         const remoteCount = countMeaningfulFormValues(value);
         if (value && typeof value === 'object') {
-          /* 새로고침 직후 Firebase에 비어 있는 기본값이 먼저 내려오면
-             방금 복원한 로컬 입력값을 덮어쓰지 않고 로컬값을 다시 업로드합니다. */
-          if (localCount > remoteCount && localFormDataRestoredAt && Date.now() - localFormDataRestoredAt < 15000) {
-            setFirebaseStatus('로컬 저장 내용 보호 중 · 비어 있는 원격값 덮어쓰기 차단', true);
+          /* 새로고침 직후 원격 데이터가 완전히 비어 있을 때만 로컬값을 보호합니다.
+             원격값이 조금이라도 있으면 Firebase 최신값을 우선 반영하여
+             모바일/다른 기기에서 오래된 로컬 캐시가 최신 내용을 덮어쓰지 않게 합니다. */
+          if (remoteCount === 0 && localCount > 0 && localFormDataRestoredAt && Date.now() - localFormDataRestoredAt < 15000) {
+            setFirebaseStatus('빈 원격값 감지 · 로컬 저장 내용 보호 중', true);
             scheduleRealtimeSave();
             return;
           }
@@ -4855,11 +4856,23 @@ function resizeAllTextareas(root = document) {
     if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
     if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
     var restoredMode = '';
+    var isMobileEntry = false;
+    try {
+      isMobileEntry = !!(window.matchMedia && window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches);
+    } catch(e) { isMobileEntry = false; }
     try { restoredMode = sessionStorage.getItem('trip-schedule-last-mode-v1') || ''; } catch(e) {}
-    if(restoredMode === 'read' || restoredMode === 'admin') {
+    if(isMobileEntry) {
+      try { sessionStorage.removeItem('trip-schedule-last-mode-v1'); } catch(e) {}
+      restoredMode = '';
+    }
+    if(!isMobileEntry && (restoredMode === 'read' || restoredMode === 'admin')) {
       setMode(restoredMode);
       return;
     }
+
+    var backdrop = document.getElementById('tripAuthBackdrop');
+    if(backdrop) backdrop.classList.remove('is-hidden');
+    document.body.classList.remove('trip-read-mode','trip-admin-mode');
 
     if(input) {
       input.addEventListener('keydown', function(e){
