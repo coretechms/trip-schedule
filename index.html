@@ -1351,13 +1351,13 @@
 <td class="fixed bold">귀 가</td>
 </tr>
 <tr class="h14" id="duration-values-row">
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-stop1" id="duration-stop1" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-meal" id="duration-meal" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
 </tr>
 <tr class="h20 expected-top" id="expected-top-row">
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
@@ -1376,7 +1376,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -2004,7 +2004,7 @@
           titleRow.appendChild(makeFixedCell('귀 가', 'bold'));
         } else {
           const labelId = 'duration-label-' + (i + 1);
-          const labelClass = i === 2 ? 'sky-cell bold blue' : 'sky-cell';
+          const labelClass = i === 2 ? 'sky-cell blue' : 'sky-cell';
           titleRow.appendChild(makeInputCell(labelId, normalizedTitles[i] || ' ', labelClass, 'id:' + labelId));
         }
       }
@@ -2018,13 +2018,13 @@
       while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
       expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'red key-font-14', 'id:base-time'));
       for (let i = 1; i <= count - 1; i += 1) {
-        const cls = i === 2 ? 'bold blue' : 'bold';
+        const cls = i === 2 ? ' ' : ' ';
         expectedTopRow.appendChild(makeReadonlyCalcCell('calc-top-' + i, cls));
       }
 
       while (expectedBottomRow.firstChild) expectedBottomRow.removeChild(expectedBottomRow.firstChild);
       for (let i = 1; i <= count; i += 1) {
-        const cls = i === count ? 'blue bold' : (i === 2 ? 'bold' : '');
+        const cls = i === count ? ' ' : (i === 2 ? ' ' : ' ');
         expectedBottomRow.appendChild(makeReadonlyCalcCell('calc-bottom-' + i, cls));
       }
 
@@ -2832,6 +2832,28 @@ function resizeAllTextareas(root = document) {
     let db = null;
     let applyingRemote = false;
     let applyingAuthRemote = false;
+    let localFormDataRestoredAt = 0;
+
+    function countMeaningfulFormValues(data) {
+      if (!data || typeof data !== 'object') return 0;
+      return Object.entries(data).reduce((count, entry) => {
+        const key = String(entry[0] || '');
+        const value = entry[1];
+        if (key === 'updatedAt') return count;
+        return String(value ?? '').replace(/\u00a0/g, ' ').trim() ? count + 1 : count;
+      }, 0);
+    }
+
+    function readLocalFormDataCache() {
+      try {
+        const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+      } catch (error) {
+        console.warn('로컬 캐시 읽기 실패:', error);
+        return {};
+      }
+    }
 
     function setTripAuthLocalPassword(key, value) {
       const next = String(value || '').trim();
@@ -3097,11 +3119,10 @@ function resizeAllTextareas(root = document) {
 
     function restoreCachedFormData() {
       try {
-        const raw = localStorage.getItem(LOCAL_CACHE_KEY);
-        if (!raw) return false;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return false;
+        const parsed = readLocalFormDataCache();
+        if (!parsed || typeof parsed !== 'object' || !countMeaningfulFormValues(parsed)) return false;
         applyFormData(parsed);
+        localFormDataRestoredAt = Date.now();
         setFirebaseStatus('앱 시작 시 저장된 로컬 내용을 우선 복원함', true);
         return true;
       } catch (error) {
@@ -3224,6 +3245,10 @@ function resizeAllTextareas(root = document) {
         saveButton.title = '입력 내용이 자동으로 저장됩니다.';
       }
 
+      window.addEventListener('beforeunload', () => {
+        try { cacheFormDataLocally(collectFormData()); } catch (error) {}
+      });
+
       getEditableFields().forEach((el) => {
         /* HTML에 data-realtime-save-bound="true"가 미리 저장되어 있어도
            실제 자동저장 이벤트는 반드시 1회 연결되도록 DOM 내부 플래그를 사용합니다. */
@@ -3248,13 +3273,27 @@ function resizeAllTextareas(root = document) {
 
       onValue(ref(db, SYNC_FORMDATA_PATH), async (snapshot) => {
         const value = snapshot.val();
+        const localCached = readLocalFormDataCache();
+        const localCount = countMeaningfulFormValues(localCached);
+        const remoteCount = countMeaningfulFormValues(value);
         if (value && typeof value === 'object') {
-          // Firebase에 저장된 빈값도 그대로 반영합니다.
+          /* 새로고침 직후 Firebase에 비어 있는 기본값이 먼저 내려오면
+             방금 복원한 로컬 입력값을 덮어쓰지 않고 로컬값을 다시 업로드합니다. */
+          if (localCount > remoteCount && localFormDataRestoredAt && Date.now() - localFormDataRestoredAt < 15000) {
+            setFirebaseStatus('로컬 저장 내용 보호 중 · 비어 있는 원격값 덮어쓰기 차단', true);
+            scheduleRealtimeSave();
+            return;
+          }
           applyFormData(value);
           cacheFormDataLocally(value);
           setFirebaseStatus('실시간 동기화 연결됨 · 저장된 내용 반영 완료', true);
         } else {
-          setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 대기 중', true);
+          if (localCount > 0) {
+            setFirebaseStatus('저장된 로컬 내용을 Firebase로 복구 중', true);
+            scheduleRealtimeSave();
+          } else {
+            setFirebaseStatus('실시간 동기화 연결됨 · 자동 저장 대기 중', true);
+          }
         }
       }, (error) => {
         console.error(error);
@@ -3590,6 +3629,34 @@ function resizeAllTextareas(root = document) {
         else savePlanStyleForTarget(target);
       }
 
+      function countInfoTablesDataText(data) {
+        if (!Array.isArray(data)) return 0;
+        let count = 0;
+        data.forEach((table) => {
+          if (!Array.isArray(table)) return;
+          table.forEach((row) => {
+            if (!Array.isArray(row)) return;
+            row.forEach((cell, idx) => {
+              if (idx === 0) return;
+              const html = (cell && typeof cell === 'object') ? (cell.html || '') : String(cell || '');
+              const text = String(html).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+              if (text) count += 1;
+            });
+          });
+        });
+        return count;
+      }
+
+      function readLocalInfoTablesData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          return Array.isArray(parsed) ? parsed : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
       function applyInfoTablesData(data, showAlert) {
         if (!Array.isArray(data)) return;
         try {
@@ -3621,6 +3688,14 @@ function resizeAllTextareas(root = document) {
       }
 
       window.__tripScheduleApplyInfoTablesFromFirebase = function (data, showAlert) {
+        const localData = readLocalInfoTablesData();
+        if (countInfoTablesDataText(localData) > countInfoTablesDataText(data)) {
+          window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
+          if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
+            window.__tripScheduleSaveInfoTablesToFirebase(localData);
+          }
+          return;
+        }
         applyInfoTablesData(data, !!showAlert);
       };
 
@@ -3659,6 +3734,10 @@ function resizeAllTextareas(root = document) {
           syncColumnWidths(table);
           saveInfoForm(false);
         }
+      });
+
+      window.addEventListener('beforeunload', function () {
+        try { saveInfoForm(false); } catch (error) {}
       });
 
       function getSelectedTable() {
@@ -4213,6 +4292,7 @@ function resizeAllTextareas(root = document) {
       }
 
       window.addEventListener('DOMContentLoaded', function () {
+        loadInfoForm(false);
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
         if (window.__tripSchedulePendingPlanStyleMap) {
