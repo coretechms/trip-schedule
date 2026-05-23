@@ -2904,10 +2904,11 @@ function resizeAllTextareas(root = document) {
 
   </script>
 <script>
-  /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
-  /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
+  /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 운영진 0.8초 / 회원모드 2초 이상 누른 칸만 수정 가능 */
+  /* 0.8초 전 움직임은 화면 드래그/스크롤로 처리되며, 전화번호 보호 칸은 길게 누른 뒤 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
   (function () {
-    const LONG_PRESS_MS = 1000;
+    const ADMIN_LONG_PRESS_MS = 800;
+    const MEMBER_LONG_PRESS_MS = 2000;
     const MOVE_LIMIT = 12;
     const PHONE_SYNC_KEYS = new Set([
       'field:11',          // 관광버스 행 전화번호
@@ -2933,6 +2934,10 @@ function resizeAllTextareas(root = document) {
 
     function isMobileEditMode() {
       return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+    }
+
+    function getLongPressMs() {
+      return document.body && document.body.classList.contains('trip-read-mode') ? MEMBER_LONG_PRESS_MS : ADMIN_LONG_PRESS_MS;
     }
 
     function normalizeHeaderText(text) {
@@ -3006,6 +3011,10 @@ function resizeAllTextareas(root = document) {
       lockAllExcept(el);
       el.classList.remove('mobile-longpress-locked');
       el.classList.add('mobile-longpress-editing');
+      if (el.matches && el.matches('input.cell-input, textarea.cell-input') && el.dataset.mobileReadonlyLock === 'true') {
+        el.readOnly = false;
+        delete el.dataset.mobileReadonlyLock;
+      }
 
       if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
         el.contentEditable = 'true';
@@ -3109,10 +3118,18 @@ function resizeAllTextareas(root = document) {
         if (el.id === 'mountain-name') return;
         if (isDirectEditTarget(el)) {
           el.classList.remove('mobile-longpress-locked', 'mobile-longpress-editing');
+          if (el.dataset.mobileReadonlyLock === 'true') {
+            el.readOnly = false;
+            delete el.dataset.mobileReadonlyLock;
+          }
           return;
         }
         if (!el.classList.contains('mobile-longpress-editing')) {
           el.classList.add('mobile-longpress-locked');
+          if (!el.readOnly) {
+            el.readOnly = true;
+            el.dataset.mobileReadonlyLock = 'true';
+          }
         }
       });
       document.querySelectorAll('.info-section-table th, .info-section-table td').forEach((cell) => {
@@ -3135,11 +3152,8 @@ function resizeAllTextareas(root = document) {
       }
       if (editable.classList.contains('mobile-longpress-editing')) return;
 
-      if (isPhoneChoiceTarget(editable)) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-
+      // 일반 터치/탭에서는 readonly 잠금으로 커서/키보드를 막고, 0.8초 전 움직임은 화면 드래그/스크롤로 통과시킵니다.
+      // 길게 누른 뒤 enableEditing()에서만 readonly를 해제하고 포커스를 부여합니다.
       targetEl = editable;
       startX = event.clientX || 0;
       startY = event.clientY || 0;
@@ -3151,7 +3165,7 @@ function resizeAllTextareas(root = document) {
           enableEditing(targetEl);
         }
         pressTimer = null;
-      }, LONG_PRESS_MS);
+      }, getLongPressMs());
     }, true);
 
     document.addEventListener('pointermove', function (event) {
@@ -3195,6 +3209,10 @@ function resizeAllTextareas(root = document) {
         if (document.activeElement === editable) return;
         editable.classList.remove('mobile-longpress-editing');
         editable.classList.add('mobile-longpress-locked');
+        if (editable.matches && editable.matches('input.cell-input, textarea.cell-input') && !editable.readOnly) {
+          editable.readOnly = true;
+          editable.dataset.mobileReadonlyLock = 'true';
+        }
         if (editable.matches && editable.matches('.info-section-table th, .info-section-table td')) {
           editable.contentEditable = 'false';
         }
