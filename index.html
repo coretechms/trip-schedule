@@ -277,8 +277,12 @@
     .expected-top .cell-input.bold {
       font-weight: 700 !important;
     }
-    #calc-bottom-7 {
-      font-weight: 700 !important;
+    /* 예상시간 아래행 기본 글자 굵기: 가는 글자 */
+    #expected-bottom-row .cell-input,
+    #expected-bottom-row input[id^="calc-bottom-"],
+    #expected-bottom-row .cell-input.bold,
+    #expected-bottom-row input[id^="calc-bottom-"].bold {
+      font-weight: 400;
     }
     .calc-cell {
       background: #eaf6ff !important;
@@ -1351,13 +1355,13 @@
 <td class="fixed bold">귀 가</td>
 </tr>
 <tr class="h14" id="duration-values-row">
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration" id="duration" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-stop1" id="duration-stop1" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-meal" id="duration-meal" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="0:00"/></td>
 </tr>
 <tr class="h20 expected-top" id="expected-top-row">
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
@@ -1376,7 +1380,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -1830,6 +1834,40 @@
       '0:00',
       '0:00'
     ];
+    const DURATION_STRUCTURE_LOCAL_KEY = 'tripSchedule.durationExpected.structure.v1';
+
+    function saveDurationStructureLocally() {
+      try {
+        const payload = {
+          count: getDurationInputs().length || 7,
+          values: getDurationColumnValues(),
+          titles: getDurationTitleValues(),
+          savedAt: Date.now()
+        };
+        localStorage.setItem(DURATION_STRUCTURE_LOCAL_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('소요시간 열 구조 로컬 저장 실패:', error);
+      }
+    }
+
+    function restoreDurationStructureLocally() {
+      try {
+        const raw = localStorage.getItem(DURATION_STRUCTURE_LOCAL_KEY);
+        const payload = raw ? JSON.parse(raw) : null;
+        if (!payload || typeof payload !== 'object') return false;
+        const values = Array.isArray(payload.values) ? payload.values : [];
+        const titles = Array.isArray(payload.titles) ? payload.titles : [];
+        const count = Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Number(payload.count) || values.length || 7));
+        if (count <= 0) return false;
+        while (values.length < count) values.push(DURATION_DEFAULT_VALUES[values.length] || '0:00');
+        while (titles.length < count) titles.push(' ');
+        rebuildDurationColumns(values.slice(0, count), titles.slice(0, count), selectedDurationColumnIndex);
+        return true;
+      } catch (error) {
+        console.warn('소요시간 열 구조 로컬 복원 실패:', error);
+        return false;
+      }
+    }
 
     function getDurationColumnCountInput() {
       return document.getElementById('duration-column-count');
@@ -2004,7 +2042,7 @@
           titleRow.appendChild(makeFixedCell('귀 가', 'bold'));
         } else {
           const labelId = 'duration-label-' + (i + 1);
-          const labelClass = i === 2 ? 'sky-cell blue' : 'sky-cell';
+          const labelClass = i === 2 ? 'sky-cell bold blue' : 'sky-cell';
           titleRow.appendChild(makeInputCell(labelId, normalizedTitles[i] || ' ', labelClass, 'id:' + labelId));
         }
       }
@@ -2018,13 +2056,13 @@
       while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
       expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'red key-font-14', 'id:base-time'));
       for (let i = 1; i <= count - 1; i += 1) {
-        const cls = i === 2 ? ' ' : ' ';
+        const cls = i === 2 ? 'bold blue' : 'bold';
         expectedTopRow.appendChild(makeReadonlyCalcCell('calc-top-' + i, cls));
       }
 
       while (expectedBottomRow.firstChild) expectedBottomRow.removeChild(expectedBottomRow.firstChild);
       for (let i = 1; i <= count; i += 1) {
-        const cls = i === count ? ' ' : (i === 2 ? ' ' : ' ');
+        const cls = i === count ? 'blue' : '';
         expectedBottomRow.appendChild(makeReadonlyCalcCell('calc-bottom-' + i, cls));
       }
 
@@ -2036,7 +2074,9 @@
       bindDurationCalculationInputs();
       if (typeof bindMobileLongPressEditing === 'function') bindMobileLongPressEditing();
       updateExpectedTimes();
+      saveDurationStructureLocally();
       if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
+      try { window.dispatchEvent(new CustomEvent('trip-duration-structure-changed')); } catch (error) {}
       if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
     }
 
@@ -2138,6 +2178,7 @@
           deleteSelectedDurationColumn();
         });
       }
+      restoreDurationStructureLocally();
       updatePlanColumnWidths(getDurationInputs().length || 7);
       bindDurationColumnSelection();
       bindDurationCalculationInputs();
@@ -3100,6 +3141,18 @@ function resizeAllTextareas(root = document) {
             el.value = nextValue;
           }
         });
+        // 소요열추가/삭제로 동적으로 생긴 칸은 열 구조를 먼저 복원한 뒤 한 번 더 값을 넣어야
+        // 새로고침 후 추가 열과 그 입력값이 사라지지 않습니다.
+        if (typeof syncDurationColumnStructureFromStorage === 'function') {
+          syncDurationColumnStructureFromStorage();
+          getEditableFields().forEach((el) => {
+            const key = el.dataset.syncKey;
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+              el.value = data[key];
+            }
+          });
+          if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
+        }
       } finally {
         applyingRemote = false;
       }
@@ -3231,27 +3284,8 @@ function resizeAllTextareas(root = document) {
     };
 
 
-    function bindRealtimeSync() {
-      ensureSyncKeys();
-      clearLegacyPhoneLocalCaches();
-      restoreCachedFormData();
-      clearLegacyPhoneBackupFromFirebase();
-
-      const saveButton = document.getElementById('save-button');
-      if (saveButton) {
-        saveButton.textContent = '[실시간 동기화]';
-        saveButton.disabled = true;
-        saveButton.setAttribute('aria-disabled', 'true');
-        saveButton.title = '입력 내용이 자동으로 저장됩니다.';
-      }
-
-      window.addEventListener('beforeunload', () => {
-        try { cacheFormDataLocally(collectFormData()); } catch (error) {}
-      });
-
+    function bindRealtimeInputHandlers() {
       getEditableFields().forEach((el) => {
-        /* HTML에 data-realtime-save-bound="true"가 미리 저장되어 있어도
-           실제 자동저장 이벤트는 반드시 1회 연결되도록 DOM 내부 플래그를 사용합니다. */
         if (el.__realtimeSaveBound === true) return;
         el.__realtimeSaveBound = true;
         el.dataset.realtimeSaveBound = 'true';
@@ -3270,6 +3304,38 @@ function resizeAllTextareas(root = document) {
           scheduleRealtimeSave();
         });
       });
+    }
+
+    window.addEventListener('trip-duration-structure-changed', () => {
+      try {
+        ensureSyncKeys();
+        bindRealtimeInputHandlers();
+        cacheFormDataLocally(collectFormData());
+        scheduleRealtimeSave();
+      } catch (error) {
+        console.warn('소요시간 열 구조 변경 저장 실패:', error);
+      }
+    });
+
+    function bindRealtimeSync() {
+      ensureSyncKeys();
+      clearLegacyPhoneLocalCaches();
+      restoreCachedFormData();
+      clearLegacyPhoneBackupFromFirebase();
+
+      const saveButton = document.getElementById('save-button');
+      if (saveButton) {
+        saveButton.textContent = '[실시간 동기화]';
+        saveButton.disabled = true;
+        saveButton.setAttribute('aria-disabled', 'true');
+        saveButton.title = '입력 내용이 자동으로 저장됩니다.';
+      }
+
+      window.addEventListener('beforeunload', () => {
+        try { cacheFormDataLocally(collectFormData()); } catch (error) {}
+      });
+
+      bindRealtimeInputHandlers();
 
       onValue(ref(db, SYNC_FORMDATA_PATH), async (snapshot) => {
         const value = snapshot.val();
@@ -4753,6 +4819,26 @@ function resizeAllTextareas(root = document) {
     var target = document.getElementById('expected-bottom-row');
     if(target && window.MutationObserver){
       new MutationObserver(markCells).observe(target, { childList: true, subtree: true });
+    }
+  })();
+</script>
+
+<script id="expected-bottom-default-thin-fix">
+  /* 예상시간 아래행(calc-bottom)은 기본값을 가는 글자로 유지하고, 추가되는 칸도 동일 적용 */
+  (function(){
+    function makeDefaultThin(){
+      document.querySelectorAll('#expected-bottom-row input[id^="calc-bottom-"]').forEach(function(input){
+        input.classList.remove('bold');
+        if (!input.style.fontWeight) input.style.fontWeight = '400';
+      });
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', makeDefaultThin);
+    else makeDefaultThin();
+    window.addEventListener('load', makeDefaultThin);
+    window.addEventListener('trip-duration-structure-changed', makeDefaultThin);
+    var row = document.getElementById('expected-bottom-row');
+    if(row && window.MutationObserver){
+      new MutationObserver(makeDefaultThin).observe(row, { childList:true, subtree:true });
     }
   })();
 </script>
