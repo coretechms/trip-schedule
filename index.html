@@ -2213,16 +2213,39 @@
       rebuildDurationColumns(values, titles, nextSelected);
     }
 
-    function syncDurationColumnStructureFromStorage() {
-      const hidden = getDurationColumnCountInput();
-      if (!hidden) return;
-      const target = Number(hidden.value || 7);
-      const current = getDurationInputs().length || 7;
-      /* 새로고침/동기화 중 기본값 7이 추가열을 덮어 삭제하지 않도록
-         자동 복원은 확장 방향만 허용하고, 축소는 소요열삭제 버튼에서만 처리한다. */
-      if (target && target > current) {
-        setDurationColumnCount(target);
+    function inferDurationColumnCountFromData(data) {
+      let maxCount = 0;
+      if (data && typeof data === 'object') {
+        const rawHidden = data['id:duration-column-count'];
+        const hiddenCount = Number(rawHidden);
+        if (Number.isFinite(hiddenCount) && hiddenCount > 0) maxCount = Math.max(maxCount, hiddenCount);
+        Object.keys(data).forEach((key) => {
+          const matchExtra = key.match(/^id:duration-extra-(\d+)$/);
+          if (matchExtra) maxCount = Math.max(maxCount, Number(matchExtra[1]));
+          const matchLabel = key.match(/^id:duration-label-(\d+)$/);
+          if (matchLabel) maxCount = Math.max(maxCount, Number(matchLabel[1]) + 1);
+        });
       }
+      const localInputs = typeof getDurationInputs === 'function' ? getDurationInputs().length : 0;
+      const hidden = getDurationColumnCountInput();
+      const hiddenDomCount = hidden ? Number(hidden.value || 0) : 0;
+      maxCount = Math.max(maxCount, localInputs || 0, hiddenDomCount || 0, 7);
+      return Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Math.floor(maxCount)));
+    }
+
+    function syncDurationColumnStructureFromStorage(data) {
+      const current = getDurationInputs().length || 7;
+      const target = inferDurationColumnCountFromData(data);
+      if (!target || target === current) return;
+
+      const currentValues = getDurationColumnValues();
+      const currentTitles = getDurationTitleValues();
+      const nextValues = currentValues.slice(0, target);
+      const nextTitles = currentTitles.slice(0, target);
+      while (nextValues.length < target) nextValues.push(DURATION_DEFAULT_VALUES[nextValues.length] || '0:00');
+      while (nextTitles.length < target) nextTitles.push(' ');
+
+      rebuildDurationColumns(nextValues, nextTitles, selectedDurationColumnIndex);
     }
 
 
@@ -3229,6 +3252,10 @@ function resizeAllTextareas(root = document) {
     }
 
     function collectFormData() {
+      const hiddenDurationCount = document.getElementById('duration-column-count');
+      if (hiddenDurationCount && typeof getDurationInputs === 'function') {
+        hiddenDurationCount.value = String(getDurationInputs().length || Number(hiddenDurationCount.value) || 7);
+      }
       const data = {};
       getEditableFields().forEach((el) => {
         const key = el.dataset.syncKey;
@@ -3259,7 +3286,7 @@ function resizeAllTextareas(root = document) {
         // 소요열추가/삭제로 동적으로 생긴 칸은 열 구조를 먼저 복원한 뒤 한 번 더 값을 넣어야
         // 새로고침 후 추가 열과 그 입력값이 사라지지 않습니다.
         if (typeof syncDurationColumnStructureFromStorage === 'function') {
-          syncDurationColumnStructureFromStorage();
+          syncDurationColumnStructureFromStorage(data);
           getEditableFields().forEach((el) => {
             const key = el.dataset.syncKey;
             if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -4856,16 +4883,8 @@ function resizeAllTextareas(root = document) {
     if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
     if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
     var restoredMode = '';
-    var isMobileEntry = false;
-    try {
-      isMobileEntry = !!(window.matchMedia && window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches);
-    } catch(e) { isMobileEntry = false; }
     try { restoredMode = sessionStorage.getItem('trip-schedule-last-mode-v1') || ''; } catch(e) {}
-    if(isMobileEntry) {
-      try { sessionStorage.removeItem('trip-schedule-last-mode-v1'); } catch(e) {}
-      restoredMode = '';
-    }
-    if(!isMobileEntry && (restoredMode === 'read' || restoredMode === 'admin')) {
+    if(restoredMode === 'read' || restoredMode === 'admin') {
       setMode(restoredMode);
       return;
     }
