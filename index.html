@@ -1787,8 +1787,8 @@
 <button data-info-action="bg-sky-cell" type="button">하늘</button>
 <button data-info-action="bg-pink-cell" type="button">분홍</button>
 <button data-info-action="clear-style-cell" type="button">서식해제</button>
-<button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
-<button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
+<button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">전체백업(JSON)</button>
+<button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">전체복구(JSON)</button>
 <input accept="application/json,.json" id="infoRestoreFile" style="display:none" type="file"/>
 </div>
 <table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
@@ -4613,29 +4613,51 @@ function resizeAllTextareas(root = document) {
         clearSelection();
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
-        const data = infoTables().map(serializeTable);
+
+        if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+        if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
+        if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
+
+        const infoData = infoTables().map(serializeTable);
+        const planData = (typeof collectFormData === 'function') ? collectFormData() : {};
+        const planStyles = (typeof loadPlanStyleMap === 'function') ? loadPlanStyleMap() : {};
+        const durationStructure = (typeof getDurationInputs === 'function') ? {
+          columnCount: getDurationInputs().length,
+          hiddenValue: (document.getElementById('duration-column-count') || {}).value || ''
+        } : null;
+
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(infoData));
+          if (typeof cacheFormDataLocally === 'function') cacheFormDataLocally(planData);
           window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
           if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
-            window.__tripScheduleSaveInfoTablesToFirebase(data);
+            window.__tripScheduleSaveInfoTablesToFirebase(infoData);
+          }
+          if (typeof window.__tripScheduleForceSaveNow === 'function') {
+            window.__tripScheduleForceSaveNow();
           }
         } catch (error) {
-          alert('정보 모음 백업 준비 실패: 브라우저 저장 공간을 확인하세요.');
+          alert('전체 백업 준비 실패: 브라우저 저장 공간을 확인하세요.');
           return;
         }
 
         const payload = {
-          type: 'trip-schedule-info-form-data',
-          version: '1.0',
+          type: 'trip-schedule-full-backup',
+          version: '2.0',
           savedAt: new Date().toISOString(),
-          tables: data
+          planData: planData,
+          planStyles: planStyles,
+          durationStructure: durationStructure,
+          infoTables: infoData,
+          // 이전 버전 복구 호환용: 기존 정보모음 복구 코드가 tables를 읽을 수 있게 유지
+          tables: infoData
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
         const link = document.createElement('a');
         const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         link.href = URL.createObjectURL(blob);
-        link.download = '정보모음_데이터백업_' + stamp + '.json';
+        link.download = '정기산행계획_정보모음_전체백업_' + stamp + '.json';
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -4648,28 +4670,63 @@ function resizeAllTextareas(root = document) {
         reader.onload = function () {
           try {
             const parsed = JSON.parse(String(reader.result || ''));
-            const data = Array.isArray(parsed)
+            const infoData = Array.isArray(parsed)
               ? parsed
-              : (Array.isArray(parsed.tables)
-                ? parsed.tables
-                : (Array.isArray(parsed.data)
-                  ? parsed.data
-                  : (Array.isArray(parsed.infoTables) ? parsed.infoTables : null)));
-            if (!Array.isArray(data)) {
-              alert('복구할 수 있는 정보 모음 JSON 데이터가 아닙니다.');
+              : (Array.isArray(parsed.infoTables)
+                ? parsed.infoTables
+                : (Array.isArray(parsed.tables)
+                  ? parsed.tables
+                  : (Array.isArray(parsed.data) ? parsed.data : null)));
+            const planData = (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.planData && typeof parsed.planData === 'object') ? parsed.planData : null;
+            const planStyles = (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.planStyles && typeof parsed.planStyles === 'object') ? parsed.planStyles : null;
+
+            if (!Array.isArray(infoData) && !planData) {
+              alert('복구할 수 있는 정기산행 계획/정보 모음 JSON 데이터가 아닙니다.');
               return;
             }
-            applyInfoTablesData(data, false);
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-              window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
-              if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
-                window.__tripScheduleSaveInfoTablesToFirebase(data);
+
+            if (planData) {
+              try {
+                if (typeof cacheFormDataLocally === 'function') cacheFormDataLocally(planData);
+                if (typeof applyFormData === 'function') applyFormData(planData);
+                if (typeof window.__tripScheduleForceSaveNow === 'function') window.__tripScheduleForceSaveNow();
+              } catch (error) {
+                console.error('정기산행 계획 복구 실패:', error);
               }
-            } catch (error) {}
+            }
+
+            if (planStyles) {
+              try {
+                if (typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') {
+                  window.__tripScheduleApplyPlanStylesFromFirebase(planStyles);
+                }
+                if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+                  window.__tripScheduleSavePlanStylesToFirebase(planStyles);
+                }
+              } catch (error) {
+                console.error('정기산행 계획 서식 복구 실패:', error);
+              }
+            }
+
+            if (Array.isArray(infoData)) {
+              applyInfoTablesData(infoData, false);
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(infoData));
+                window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
+                if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
+                  window.__tripScheduleSaveInfoTablesToFirebase(infoData);
+                }
+              } catch (error) {}
+            }
+
+            if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
+            if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
+            if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
+            if (typeof syncAllInfoTableColumnWidths === 'function') syncAllInfoTableColumnWidths();
+
             const fileInput = document.getElementById('infoRestoreFile');
             if (fileInput) fileInput.value = '';
-            alert('정보 모음 JSON 데이터 복구 완료');
+            alert(planData ? '정기산행 계획/정보 모음 JSON 데이터 복구 완료' : '정보 모음 JSON 데이터 복구 완료');
           } catch (error) {
             alert('JSON 데이터 파일을 읽지 못했습니다.');
           }
@@ -4816,11 +4873,11 @@ function resizeAllTextareas(root = document) {
     }
     var backup=document.getElementById('infoBackupJsonBtn') || toolbar.querySelector('[data-info-action="backup-json"]');
     if(!backup){
-      backup=document.createElement('button'); backup.type='button'; backup.id='infoBackupJsonBtn'; backup.className='info-json-btn'; backup.dataset.infoAction='backup-json'; backup.textContent='정보모음 백업(JSON)'; toolbar.appendChild(backup);
+      backup=document.createElement('button'); backup.type='button'; backup.id='infoBackupJsonBtn'; backup.className='info-json-btn'; backup.dataset.infoAction='backup-json'; backup.textContent='전체백업(JSON)'; toolbar.appendChild(backup);
     }
     var restore=document.getElementById('infoRestoreJsonBtn') || toolbar.querySelector('[data-info-action="restore-json"]');
     if(!restore){
-      restore=document.createElement('button'); restore.type='button'; restore.id='infoRestoreJsonBtn'; restore.className='info-json-btn'; restore.dataset.infoAction='restore-json'; restore.textContent='정보모음 복구(JSON)'; toolbar.appendChild(restore);
+      restore=document.createElement('button'); restore.type='button'; restore.id='infoRestoreJsonBtn'; restore.className='info-json-btn'; restore.dataset.infoAction='restore-json'; restore.textContent='전체복구(JSON)'; toolbar.appendChild(restore);
     }
     backup.id='infoBackupJsonBtn'; restore.id='infoRestoreJsonBtn';
     backup.setAttribute('data-info-action','backup-json'); restore.setAttribute('data-info-action','restore-json');
@@ -4863,7 +4920,7 @@ function resizeAllTextareas(root = document) {
       var payload={type:'trip-schedule-info-form-backup',version:'1.0',savedAt:new Date().toISOString(),tables:{main:tableToData(document.getElementById('info-main-table')),company:tableToData(document.getElementById('info-company-table'))}};
       var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
       var a=document.createElement('a'); var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
-      a.href=URL.createObjectURL(blob); a.download='정보모음_데이터백업_'+stamp+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
+      a.href=URL.createObjectURL(blob); a.download='정기산행계획_데이터백업_'+stamp+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
     }
     function restoreJsonFile(file){
       if(!file) return;
