@@ -1389,6 +1389,7 @@
 </style>
 
 <!-- refresh-keeps-mode-exit-clears-login-v2 -->
+<!-- v19-admin-hide-diagonal-thin -->
 
 <style id="member-notice-height-and-read-refresh-fix">
   /* 산행공지 메모장 세로 높이 20% 축소 */
@@ -1506,7 +1507,7 @@
 
 
 <style id="trip-hide-cell-admin-member-style">
-  /* 가림 설정: 관리자모드에서는 대각선 표시만, 회원모드에서는 내용 완전 가림 */
+  /* 가림 설정: 관리자모드에서는 연한 회색 덮개로 표시, 회원모드에서는 내용 완전 가림 */
   .trip-hidden-cell {
     position: relative !important;
   }
@@ -1518,14 +1519,8 @@
     pointer-events: none;
     z-index: 5;
     border-radius: 3px;
-    background: repeating-linear-gradient(135deg,
-      rgba(80,80,80,0.00) 0px,
-      rgba(80,80,80,0.00) 7px,
-      rgba(80,80,80,0.26) 8px,
-      rgba(80,80,80,0.26) 11px,
-      rgba(80,80,80,0.00) 12px,
-      rgba(80,80,80,0.00) 18px
-    );
+    background: rgba(180, 180, 180, 0.32) !important;
+    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
   }
   body.trip-read-mode .trip-hidden-cell,
   body.trip-read-mode .trip-hidden-cell * {
@@ -1547,6 +1542,16 @@
   }
 </style>
 
+
+<style id="trip-admin-hide-gray-overlay-override">
+  /* 최종 우선순위: 관리자 모드 가림 표시를 대각선 없이 연한 회색으로 고정 */
+  body.trip-admin-mode .trip-hidden-cell::after,
+  body:not(.trip-read-mode) .trip-hidden-cell::after {
+    background: rgba(180, 180, 180, 0.32) !important;
+    background-image: none !important;
+    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
+  }
+</style>
 </head>
 <body style="overflow: auto;">
 
@@ -1787,8 +1792,8 @@
 <button data-info-action="bg-sky-cell" type="button">하늘</button>
 <button data-info-action="bg-pink-cell" type="button">분홍</button>
 <button data-info-action="clear-style-cell" type="button">서식해제</button>
-<button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">전체백업(JSON)</button>
-<button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">전체복구(JSON)</button>
+<button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
+<button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
 <input accept="application/json,.json" id="infoRestoreFile" style="display:none" type="file"/>
 </div>
 <table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
@@ -3949,6 +3954,8 @@ function resizeAllTextareas(root = document) {
         clearSelection();
         selectedCell = null;
         selectedStyleTarget = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : cell;
+        window.__tripScheduleSelectedStyleTarget = selectedStyleTarget;
+        window.__tripScheduleSelectedStyleCell = cell || null;
         if (cell) cell.classList.add('style-selected-cell');
         if (selectedStyleTarget && selectedStyleTarget !== cell) selectedStyleTarget.classList.add('style-selected-cell');
       }
@@ -4108,17 +4115,21 @@ function resizeAllTextareas(root = document) {
       };
 
       function applySelectedCellStyle(action) {
-        const target = selectedStyleTarget || selectedCell;
+        const globalPlanTarget = window.__tripScheduleSelectedStyleTarget && document.documentElement.contains(window.__tripScheduleSelectedStyleTarget)
+          ? window.__tripScheduleSelectedStyleTarget
+          : null;
+        const target = globalPlanTarget || selectedStyleTarget || selectedCell;
         if (!target) {
           alert('먼저 서식을 바꿀 칸을 클릭하세요.');
           return;
         }
-        if (selectedCell && selectedCell.closest('.info-section-table') && isInfoSelectCell(selectedCell)) {
+        const isInfoTarget = selectedCell && selectedCell.closest('.info-section-table') && !globalPlanTarget;
+        if (isInfoTarget && isInfoSelectCell(selectedCell)) {
           alert('선택 버튼 칸은 서식을 바꿀 수 없습니다.');
           return;
         }
         applyStyleToTarget(target, action);
-        if (selectedCell && selectedCell.closest('.info-section-table')) saveInfoForm(false);
+        if (isInfoTarget) saveInfoForm(false);
         else savePlanStyleForTarget(target);
       }
 
@@ -4613,51 +4624,29 @@ function resizeAllTextareas(root = document) {
         clearSelection();
         normalizeAllSelectColumns();
         syncAllInfoTableColumnWidths();
-
-        if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
-        if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
-        if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
-        if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
-
-        const infoData = infoTables().map(serializeTable);
-        const planData = (typeof collectFormData === 'function') ? collectFormData() : {};
-        const planStyles = (typeof loadPlanStyleMap === 'function') ? loadPlanStyleMap() : {};
-        const durationStructure = (typeof getDurationInputs === 'function') ? {
-          columnCount: getDurationInputs().length,
-          hiddenValue: (document.getElementById('duration-column-count') || {}).value || ''
-        } : null;
-
+        const data = infoTables().map(serializeTable);
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(infoData));
-          if (typeof cacheFormDataLocally === 'function') cacheFormDataLocally(planData);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
           window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
           if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
-            window.__tripScheduleSaveInfoTablesToFirebase(infoData);
-          }
-          if (typeof window.__tripScheduleForceSaveNow === 'function') {
-            window.__tripScheduleForceSaveNow();
+            window.__tripScheduleSaveInfoTablesToFirebase(data);
           }
         } catch (error) {
-          alert('전체 백업 준비 실패: 브라우저 저장 공간을 확인하세요.');
+          alert('정보 모음 백업 준비 실패: 브라우저 저장 공간을 확인하세요.');
           return;
         }
 
         const payload = {
-          type: 'trip-schedule-full-backup',
-          version: '2.0',
+          type: 'trip-schedule-info-form-data',
+          version: '1.0',
           savedAt: new Date().toISOString(),
-          planData: planData,
-          planStyles: planStyles,
-          durationStructure: durationStructure,
-          infoTables: infoData,
-          // 이전 버전 복구 호환용: 기존 정보모음 복구 코드가 tables를 읽을 수 있게 유지
-          tables: infoData
+          tables: data
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
         const link = document.createElement('a');
         const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         link.href = URL.createObjectURL(blob);
-        link.download = '정기산행계획_정보모음_전체백업_' + stamp + '.json';
+        link.download = '정보모음_데이터백업_' + stamp + '.json';
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -4670,63 +4659,28 @@ function resizeAllTextareas(root = document) {
         reader.onload = function () {
           try {
             const parsed = JSON.parse(String(reader.result || ''));
-            const infoData = Array.isArray(parsed)
+            const data = Array.isArray(parsed)
               ? parsed
-              : (Array.isArray(parsed.infoTables)
-                ? parsed.infoTables
-                : (Array.isArray(parsed.tables)
-                  ? parsed.tables
-                  : (Array.isArray(parsed.data) ? parsed.data : null)));
-            const planData = (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.planData && typeof parsed.planData === 'object') ? parsed.planData : null;
-            const planStyles = (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.planStyles && typeof parsed.planStyles === 'object') ? parsed.planStyles : null;
-
-            if (!Array.isArray(infoData) && !planData) {
-              alert('복구할 수 있는 정기산행 계획/정보 모음 JSON 데이터가 아닙니다.');
+              : (Array.isArray(parsed.tables)
+                ? parsed.tables
+                : (Array.isArray(parsed.data)
+                  ? parsed.data
+                  : (Array.isArray(parsed.infoTables) ? parsed.infoTables : null)));
+            if (!Array.isArray(data)) {
+              alert('복구할 수 있는 정보 모음 JSON 데이터가 아닙니다.');
               return;
             }
-
-            if (planData) {
-              try {
-                if (typeof cacheFormDataLocally === 'function') cacheFormDataLocally(planData);
-                if (typeof applyFormData === 'function') applyFormData(planData);
-                if (typeof window.__tripScheduleForceSaveNow === 'function') window.__tripScheduleForceSaveNow();
-              } catch (error) {
-                console.error('정기산행 계획 복구 실패:', error);
+            applyInfoTablesData(data, false);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
+              if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
+                window.__tripScheduleSaveInfoTablesToFirebase(data);
               }
-            }
-
-            if (planStyles) {
-              try {
-                if (typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') {
-                  window.__tripScheduleApplyPlanStylesFromFirebase(planStyles);
-                }
-                if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
-                  window.__tripScheduleSavePlanStylesToFirebase(planStyles);
-                }
-              } catch (error) {
-                console.error('정기산행 계획 서식 복구 실패:', error);
-              }
-            }
-
-            if (Array.isArray(infoData)) {
-              applyInfoTablesData(infoData, false);
-              try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(infoData));
-                window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
-                if (typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') {
-                  window.__tripScheduleSaveInfoTablesToFirebase(infoData);
-                }
-              } catch (error) {}
-            }
-
-            if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
-            if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
-            if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
-            if (typeof syncAllInfoTableColumnWidths === 'function') syncAllInfoTableColumnWidths();
-
+            } catch (error) {}
             const fileInput = document.getElementById('infoRestoreFile');
             if (fileInput) fileInput.value = '';
-            alert(planData ? '정기산행 계획/정보 모음 JSON 데이터 복구 완료' : '정보 모음 JSON 데이터 복구 완료');
+            alert('정보 모음 JSON 데이터 복구 완료');
           } catch (error) {
             alert('JSON 데이터 파일을 읽지 못했습니다.');
           }
@@ -4873,11 +4827,11 @@ function resizeAllTextareas(root = document) {
     }
     var backup=document.getElementById('infoBackupJsonBtn') || toolbar.querySelector('[data-info-action="backup-json"]');
     if(!backup){
-      backup=document.createElement('button'); backup.type='button'; backup.id='infoBackupJsonBtn'; backup.className='info-json-btn'; backup.dataset.infoAction='backup-json'; backup.textContent='전체백업(JSON)'; toolbar.appendChild(backup);
+      backup=document.createElement('button'); backup.type='button'; backup.id='infoBackupJsonBtn'; backup.className='info-json-btn'; backup.dataset.infoAction='backup-json'; backup.textContent='정보모음 백업(JSON)'; toolbar.appendChild(backup);
     }
     var restore=document.getElementById('infoRestoreJsonBtn') || toolbar.querySelector('[data-info-action="restore-json"]');
     if(!restore){
-      restore=document.createElement('button'); restore.type='button'; restore.id='infoRestoreJsonBtn'; restore.className='info-json-btn'; restore.dataset.infoAction='restore-json'; restore.textContent='전체복구(JSON)'; toolbar.appendChild(restore);
+      restore=document.createElement('button'); restore.type='button'; restore.id='infoRestoreJsonBtn'; restore.className='info-json-btn'; restore.dataset.infoAction='restore-json'; restore.textContent='정보모음 복구(JSON)'; toolbar.appendChild(restore);
     }
     backup.id='infoBackupJsonBtn'; restore.id='infoRestoreJsonBtn';
     backup.setAttribute('data-info-action','backup-json'); restore.setAttribute('data-info-action','restore-json');
@@ -4920,7 +4874,7 @@ function resizeAllTextareas(root = document) {
       var payload={type:'trip-schedule-info-form-backup',version:'1.0',savedAt:new Date().toISOString(),tables:{main:tableToData(document.getElementById('info-main-table')),company:tableToData(document.getElementById('info-company-table'))}};
       var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
       var a=document.createElement('a'); var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
-      a.href=URL.createObjectURL(blob); a.download='정기산행계획_데이터백업_'+stamp+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
+      a.href=URL.createObjectURL(blob); a.download='정보모음_데이터백업_'+stamp+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
     }
     function restoreJsonFile(file){
       if(!file) return;
@@ -5620,4 +5574,510 @@ function resizeAllTextareas(root = document) {
     });
   })();
 </script>
+
+
+<script id="full-plan-info-json-backup-fix-v3">
+(function(){
+  'use strict';
+  var PLAN_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
+  var INFO_CACHE_KEY = 'tripSchedule.infoForm.tables.v2';
+  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
+
+  function cssEscape(value){
+    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
+  }
+  function readJsonStorage(key){
+    try { var raw=localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+  }
+  function writeJsonStorage(key, value){
+    try { localStorage.setItem(key, JSON.stringify(value || {})); } catch(e){}
+  }
+  function getElementKey(el, index){
+    return el.getAttribute('data-sync-key') || (el.id ? 'id:' + el.id : 'plan-index:' + index);
+  }
+  function fieldValue(el){
+    if(el.tagName === 'SELECT') return el.value;
+    if(el.type === 'checkbox' || el.type === 'radio') return !!el.checked;
+    return el.value == null ? '' : String(el.value);
+  }
+  function setFieldValue(el, value){
+    if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!value;
+    else el.value = value == null ? '' : String(value);
+    try { el.dispatchEvent(new Event('input', {bubbles:true})); } catch(e){}
+    try { el.dispatchEvent(new Event('change', {bubbles:true})); } catch(e){}
+  }
+  function makePath(el, root){
+    var parts=[];
+    while(el && el!==root){
+      var parent=el.parentElement; if(!parent) break;
+      var same=Array.prototype.filter.call(parent.children,function(c){return c.tagName===el.tagName;});
+      parts.unshift(el.tagName.toLowerCase()+':'+same.indexOf(el));
+      el=parent;
+    }
+    return parts.join('/');
+  }
+  function findByPath(root, path){
+    if(!root || !path) return null;
+    var el=root;
+    path.split('/').forEach(function(part){
+      if(!el) return;
+      var sp=part.split(':'), tag=sp[0].toUpperCase(), idx=Number(sp[1]||0);
+      var same=Array.prototype.filter.call(el.children,function(c){return c.tagName===tag;});
+      el=same[idx] || null;
+    });
+    return el;
+  }
+
+  function collectPlanBackup(){
+    var planTable=document.querySelector('table.plan');
+    var fields={};
+    var fieldList=[];
+    var inputs=planTable ? planTable.querySelectorAll('input, textarea, select') : [];
+    inputs.forEach(function(el, i){
+      var key=getElementKey(el, i);
+      var rec={
+        key:key,
+        id:el.id || '',
+        tag:el.tagName.toLowerCase(),
+        type:el.getAttribute('type') || '',
+        value:fieldValue(el),
+        className:el.className || '',
+        style:el.getAttribute('style') || '',
+        path:makePath(el, planTable)
+      };
+      fields[key]=rec.value;
+      fieldList.push(rec);
+    });
+    var durationCount=document.getElementById('duration-column-count');
+    if(durationCount){
+      var count=document.querySelectorAll('#duration-values-row input').length || Number(durationCount.value) || 7;
+      durationCount.value=String(count);
+      fields['id:duration-column-count']=String(count);
+    }
+    var cells=[];
+    if(planTable){
+      planTable.querySelectorAll('td, th').forEach(function(cell){
+        if((cell.className||'') || cell.getAttribute('style')){
+          cells.push({path:makePath(cell, planTable), className:cell.className||'', style:cell.getAttribute('style')||''});
+        }
+      });
+    }
+    var colgroups=[];
+    if(planTable){
+      planTable.querySelectorAll('colgroup').forEach(function(cg){
+        colgroups.push(Array.from(cg.children).map(function(col){return col.getAttribute('style')||'';}));
+      });
+    }
+    return {
+      formData: fields,
+      fields: fieldList,
+      cells: cells,
+      colgroups: colgroups,
+      planCellStyles: readJsonStorage(PLAN_STYLE_KEY) || {},
+      durationExpectedTableHtml: (document.getElementById('durationExpectedTable') || {}).outerHTML || '',
+      gimbapTableHtml: (document.querySelector('.gimbap-inner-table') || {}).outerHTML || '',
+      titleText: (document.getElementById('busSeatInfoTitleMainPrint') || {}).textContent || ''
+    };
+  }
+
+  function cellData(cell){
+    return {
+      html: cell.querySelector('.info-row-select-btn') ? '' : cell.innerHTML,
+      text: cell.querySelector('.info-row-select-btn') ? '' : cell.innerText,
+      className: cell.className || '',
+      style: cell.getAttribute('style') || '',
+      contentEditable: cell.getAttribute('contenteditable') || ''
+    };
+  }
+  function tableToData(table){
+    if(!table) return null;
+    return {
+      id: table.id || '',
+      tableStyle: table.getAttribute('style') || '',
+      colWidths: Array.from(table.querySelectorAll('col')).map(function(c){return c.getAttribute('style')||'';}),
+      header: Array.from(table.querySelectorAll('thead tr')).map(function(tr){return Array.from(tr.cells).map(cellData);}),
+      body: Array.from(table.querySelectorAll('tbody tr')).map(function(tr){return Array.from(tr.cells).map(cellData);})
+    };
+  }
+  function collectInfoBackup(){
+    return {
+      tables: {
+        main: tableToData(document.getElementById('info-main-table')),
+        company: tableToData(document.getElementById('info-company-table'))
+      },
+      localStorageTables: readJsonStorage(INFO_CACHE_KEY) || null
+    };
+  }
+  function makeSelectCell(){
+    var td=document.createElement('td'); td.className='info-select-col'; td.contentEditable='false';
+    var b=document.createElement('button'); b.className='info-row-select-btn'; b.type='button'; b.textContent='선택'; td.appendChild(b);
+    return td;
+  }
+  function applyInfoTable(table, data){
+    if(!table || !data) return;
+    if(data.tableStyle) table.setAttribute('style', data.tableStyle);
+    var cols=table.querySelectorAll('col');
+    (data.colWidths || []).forEach(function(style,i){ if(cols[i]) cols[i].setAttribute('style',style); });
+    var thead=table.tHead || table.createTHead();
+    var tbody=table.tBodies[0] || table.createTBody();
+    thead.innerHTML=''; tbody.innerHTML='';
+    (data.header || []).forEach(function(row){
+      var tr=document.createElement('tr');
+      row.forEach(function(c,idx){
+        var th=document.createElement('th');
+        if(idx===0){ th.className='info-select-col'; th.contentEditable='false'; th.textContent='선택'; }
+        else { th.contentEditable='true'; th.className=c.className||''; if(c.style) th.setAttribute('style',c.style); th.innerHTML=c.html||''; }
+        tr.appendChild(th);
+      });
+      thead.appendChild(tr);
+    });
+    (data.body || []).forEach(function(row){
+      var tr=document.createElement('tr');
+      row.forEach(function(c,idx){
+        if(idx===0){ tr.appendChild(makeSelectCell()); return; }
+        var td=document.createElement('td'); td.contentEditable='true'; td.className=c.className||''; if(c.style) td.setAttribute('style',c.style); td.innerHTML=c.html||''; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  function applyPlanBackup(plan){
+    if(!plan || typeof plan !== 'object') return;
+    var planTable=document.querySelector('table.plan');
+    var data=plan.formData || {};
+    if(Array.isArray(plan.fields)){
+      plan.fields.forEach(function(rec){ if(rec && rec.key && !Object.prototype.hasOwnProperty.call(data, rec.key)) data[rec.key]=rec.value; });
+    }
+    Object.keys(data).forEach(function(key){
+      var el=null;
+      if(key.indexOf('id:')===0) el=document.getElementById(key.slice(3));
+      if(!el) el=document.querySelector('[data-sync-key="'+cssEscape(key)+'"]');
+      if(el) setFieldValue(el, data[key]);
+    });
+    if(Array.isArray(plan.fields) && planTable){
+      plan.fields.forEach(function(rec){
+        var el=null;
+        if(rec.id) el=document.getElementById(rec.id);
+        if(!el && rec.key) el=document.querySelector('[data-sync-key="'+cssEscape(rec.key)+'"]');
+        if(!el && rec.path) el=findByPath(planTable, rec.path);
+        if(el){
+          setFieldValue(el, rec.value);
+          if(rec.className) el.className=rec.className;
+          if(rec.style) el.setAttribute('style', rec.style);
+        }
+      });
+    }
+    if(Array.isArray(plan.cells) && planTable){
+      plan.cells.forEach(function(rec){
+        var cell=findByPath(planTable, rec.path);
+        if(cell){ cell.className=rec.className || ''; if(rec.style) cell.setAttribute('style', rec.style); else cell.removeAttribute('style'); }
+      });
+    }
+    if(plan.planCellStyles) writeJsonStorage(PLAN_STYLE_KEY, plan.planCellStyles);
+    writeJsonStorage(PLAN_CACHE_KEY, data);
+    try { window.dispatchEvent(new Event('resize')); } catch(e){}
+    try { window.dispatchEvent(new Event('trip-duration-structure-changed')); } catch(e){}
+  }
+  function downloadFullBackup(){
+    var active=document.activeElement; if(active && active.blur) active.blur();
+    var payload={
+      type:'trip-schedule-full-plan-info-backup',
+      version:'3.0',
+      savedAt:new Date().toISOString(),
+      plan: collectPlanBackup(),
+      info: collectInfoBackup()
+    };
+    writeJsonStorage(PLAN_CACHE_KEY, payload.plan.formData);
+    if(payload.info.localStorageTables) writeJsonStorage(INFO_CACHE_KEY, payload.info.localStorageTables);
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+    var a=document.createElement('a');
+    var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    a.href=URL.createObjectURL(blob);
+    a.download='정기산행계획_정보모음_전체백업_'+stamp+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},800);
+  }
+  function restoreFullBackupFile(file){
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var parsed=JSON.parse(String(reader.result||''));
+        var plan=parsed.plan || parsed.planData || null;
+        var info=parsed.info || null;
+        if(!plan && (parsed.formData || parsed.fields)) plan=parsed;
+        if(plan) applyPlanBackup(plan);
+        var tables=null;
+        if(info && info.tables) tables=info.tables;
+        else if(parsed.tables && (parsed.tables.main || parsed.tables.company)) tables=parsed.tables;
+        if(tables){
+          applyInfoTable(document.getElementById('info-main-table'), tables.main || tables.infoMainTable || tables['info-main-table']);
+          applyInfoTable(document.getElementById('info-company-table'), tables.company || tables.infoCompanyTable || tables['info-company-table']);
+        }
+        alert('정기산행 계획/정보모음 JSON 복구 완료');
+      }catch(e){
+        console.error(e);
+        alert('JSON 파일을 읽지 못했습니다.');
+      }
+      var input=document.getElementById('infoRestoreFile'); if(input) input.value='';
+    };
+    reader.readAsText(file,'utf-8');
+  }
+  function bindFullBackupButtons(){
+    var backup=document.getElementById('infoBackupJsonBtn');
+    var restore=document.getElementById('infoRestoreJsonBtn');
+    var input=document.getElementById('infoRestoreFile');
+    if(backup){ backup.textContent='전체 백업(JSON)'; backup.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} downloadFullBackup(); return false; }; }
+    if(restore){ restore.textContent='전체 복구(JSON)'; restore.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} if(input) input.click(); return false; }; }
+    if(input && !input.__fullBackupFixBound){
+      input.__fullBackupFixBound=true;
+      input.addEventListener('change',function(e){
+        var f=e.target.files && e.target.files[0];
+        if(f) restoreFullBackupFile(f);
+      }, true);
+    }
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target && e.target.closest && e.target.closest('#infoBackupJsonBtn,#infoRestoreJsonBtn');
+    if(!b) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    if(b.id==='infoBackupJsonBtn') downloadFullBackup();
+    else { var input=document.getElementById('infoRestoreFile'); if(input) input.click(); }
+  }, true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindFullBackupButtons); else bindFullBackupButtons();
+  window.addEventListener('load', bindFullBackupButtons);
+  setTimeout(bindFullBackupButtons, 500);
+})();
+</script>
+
+
+<style id="trip-hide-selected-cell-final-css">
+  /* 선택 칸 오작동 방지판: 추가 JS 핸들러 없이 기본 선택 대상에만 가림 적용 */
+  body.trip-admin-mode .trip-hidden-cell::after,
+  body:not(.trip-read-mode) .trip-hidden-cell::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 2px !important;
+    z-index: 5 !important;
+    pointer-events: none !important;
+    border-radius: 3px !important;
+    background: rgba(180, 180, 180, 0.28) !important;
+    background-image: none !important;
+    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.12) !important;
+  }
+  body.trip-read-mode .trip-hidden-cell,
+  body.trip-read-mode .trip-hidden-cell *,
+  body.trip-read-mode .trip-hidden-cell input,
+  body.trip-read-mode .trip-hidden-cell textarea,
+  body.trip-read-mode #duration-values-row td.trip-hidden-cell,
+  body.trip-read-mode #duration-values-row td.trip-hidden-cell *,
+  body.trip-read-mode #expected-bottom-row td.trip-hidden-cell,
+  body.trip-read-mode #expected-bottom-row td.trip-hidden-cell * {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    caret-color: transparent !important;
+    pointer-events: none !important;
+    user-select: none !important;
+  }
+  body.trip-read-mode #duration-values-row td.trip-hidden-cell,
+  body.trip-read-mode #expected-bottom-row td.trip-hidden-cell {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  body.trip-read-mode #duration-values-row td.trip-hidden-cell::before,
+  body.trip-read-mode #expected-bottom-row td.trip-hidden-cell::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+    background: inherit !important;
+  }
+</style>
+
+
+
+<script id="duration-expected-hide-unset-save-final-fix">
+/*
+  소요시간/예상시간 가림 해제 저장 최종 보정
+  - 기존 applyPlanStyleMap은 저장값이 삭제된 칸의 .trip-hidden-cell을 먼저 지우지 않아,
+    가림 해제 후에도 이전 클래스가 화면/Firebase 복원에 남을 수 있었다.
+  - 이 스크립트는 소요시간/예상시간 내부 테이블의 숨김 상태를 row/cell 기준으로 강제 저장하고,
+    적용 전 전체 숨김 클래스를 먼저 정리한 뒤 저장된 칸만 다시 가림 처리한다.
+*/
+(function(){
+  'use strict';
+  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
+
+  function readMap(){
+    try { var raw = localStorage.getItem(PLAN_STYLE_KEY); var obj = raw ? JSON.parse(raw) : {}; return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {}; }
+    catch(e){ return {}; }
+  }
+  function writeMap(map){
+    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
+    try {
+      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+        window.__tripScheduleSavePlanStylesToFirebase(map || {});
+      }
+    } catch(e){}
+  }
+  function styleFromCell(cell){
+    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
+    var main = field || cell;
+    return {
+      fontWeight: (main && main.style && main.style.fontWeight) || '',
+      color: (main && main.style && main.style.color) || '',
+      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
+      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
+    };
+  }
+  function isEmptyStyle(s){
+    return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden);
+  }
+  function cssEscape(value){
+    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
+  }
+  function durationKeyForCell(cell){
+    var table = document.getElementById('durationExpectedTable');
+    if(!cell || !table || !table.contains(cell)) return '';
+    var row = cell.parentElement;
+    var r = Array.prototype.indexOf.call(table.rows, row);
+    var c = Array.prototype.indexOf.call(row.children, cell);
+    if(r < 0 || c < 0) return '';
+    return 'durationExpected:r' + r + ':c' + c;
+  }
+  function fieldKeysForCell(cell){
+    var keys=[];
+    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
+    if(field){
+      if(field.id) keys.push('field-id:' + field.id);
+      if(field.dataset && field.dataset.syncKey) keys.push('field-sync:' + field.dataset.syncKey);
+    }
+    return keys;
+  }
+  function cleanAndApplyPlanStyleMap(map){
+    map = (map && typeof map === 'object' && !Array.isArray(map)) ? map : readMap();
+    var plan = document.querySelector('table.plan');
+    if(plan){
+      plan.querySelectorAll('td.trip-hidden-cell, th.trip-hidden-cell').forEach(function(cell){
+        cell.classList.remove('trip-hidden-cell');
+      });
+    }
+    Object.keys(map).forEach(function(key){
+      var style = map[key];
+      if(!style || typeof style !== 'object') return;
+      var target = null;
+      if(key.indexOf('field-id:') === 0){
+        target = document.getElementById(key.slice('field-id:'.length));
+      } else if(key.indexOf('field-sync:') === 0){
+        target = document.querySelector('table.plan [data-sync-key="' + cssEscape(key.slice('field-sync:'.length)) + '"]');
+      } else {
+        var m = key.match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
+        if(m){
+          var table = m[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (m[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
+          var row = table && table.rows[Number(m[2])];
+          target = row && row.children[Number(m[3])];
+        }
+      }
+      if(!target) return;
+      var cell = target.closest ? target.closest('td,th') : null;
+      var field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : (target.querySelector ? target.querySelector('input.cell-input, textarea.cell-input') : null);
+      var main = field || target;
+      if(main && main.style){
+        if(style.fontWeight) main.style.setProperty('font-weight', style.fontWeight, 'important');
+        else main.style.removeProperty('font-weight');
+        if(style.color){
+          main.style.setProperty('color', style.color, 'important');
+          main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
+        } else {
+          main.style.removeProperty('color');
+          main.style.removeProperty('-webkit-text-fill-color');
+        }
+        if(style.backgroundColor) main.style.setProperty('background-color', style.backgroundColor, 'important');
+        else main.style.removeProperty('background-color');
+      }
+      if(cell && style.backgroundColor) cell.style.setProperty('background-color', style.backgroundColor, 'important');
+      if(cell && style.hidden) cell.classList.add('trip-hidden-cell');
+    });
+  }
+
+  var originalApplyFromFirebase = window.__tripScheduleApplyPlanStylesFromFirebase;
+  window.__tripScheduleApplyPlanStylesFromFirebase = function(styleMap){
+    if(styleMap && typeof styleMap === 'object' && !Array.isArray(styleMap)){
+      try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(styleMap)); } catch(e){}
+      cleanAndApplyPlanStyleMap(styleMap);
+      return;
+    }
+    if(typeof originalApplyFromFirebase === 'function') return originalApplyFromFirebase(styleMap);
+  };
+  window.__tripScheduleApplyPlanStylesNow = function(){ cleanAndApplyPlanStyleMap(readMap()); };
+
+  function selectedCell(){
+    var cell = window.__tripScheduleSelectedStyleCell;
+    if(cell && cell.closest && cell.closest('td,th')) cell = cell.closest('td,th');
+    if(cell && document.contains(cell)) return cell;
+    var marked = document.querySelector('td.style-selected-cell, th.style-selected-cell');
+    if(marked) return marked;
+    var inputMarked = document.querySelector('input.style-selected-cell, textarea.style-selected-cell');
+    return inputMarked && inputMarked.closest ? inputMarked.closest('td,th') : null;
+  }
+
+  function saveCellHiddenState(cell){
+    if(!cell) return;
+    var map = readMap();
+    var dKey = durationKeyForCell(cell);
+    var keys = [];
+    if(dKey) keys.push(dKey);
+    keys = keys.concat(fieldKeysForCell(cell));
+    if(!keys.length) return;
+
+    var style = styleFromCell(cell);
+    // 소요시간/예상시간 내부 테이블은 좌표키를 대표키로 사용한다.
+    // 해제 시 field-id/field-sync에 남은 hidden 값까지 모두 제거한다.
+    keys.forEach(function(k){ delete map[k]; });
+    if(!isEmptyStyle(style)){
+      map[dKey || keys[0]] = style;
+    }
+    writeMap(map);
+    cleanAndApplyPlanStyleMap(map);
+  }
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedCell();
+    if(!cell || !cell.closest('#durationExpectedTable')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    cell.classList.toggle('trip-hidden-cell');
+    saveCellHiddenState(cell);
+  }, true);
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedCell();
+    if(!cell || !cell.closest('#durationExpectedTable')) return;
+    setTimeout(function(){
+      if(cell.classList) cell.classList.remove('trip-hidden-cell');
+      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
+      if(field && field.classList) field.classList.remove('trip-hidden-cell');
+      var map = readMap();
+      var dKey = durationKeyForCell(cell);
+      if(dKey) delete map[dKey];
+      fieldKeysForCell(cell).forEach(function(k){ delete map[k]; });
+      writeMap(map);
+      cleanAndApplyPlanStyleMap(map);
+    }, 0);
+  }, true);
+
+  window.addEventListener('load', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
+  window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
+})();
+</script>
+
 </body></html>
