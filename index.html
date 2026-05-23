@@ -1536,6 +1536,37 @@
     color: #333 !important;
   }
 </style>
+
+<style id="gimbap-total-overflow-fixed-v30">
+  /* 김밥/금액 오른쪽 계산칸이 표 외곽선 밖으로 밀려나가지 않도록 고정 */
+  .gimbap-inner-table .gimbap-total-value-cell {
+    width: 82px !important;
+    min-width: 82px !important;
+    max-width: 82px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+  }
+  .gimbap-inner-table .gimbap-total-value-cell #gimbap-total {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 28px !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    padding: 3px 2px !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+  .gimbap-inner-table .gimbap-total-value-cell #gimbap-total.style-selected-cell {
+    outline-offset: -2px !important;
+    box-shadow: inset 0 0 0 2px #1737c9 !important;
+  }
+</style>
+
 </head>
 <body style="overflow: auto;">
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
@@ -1745,7 +1776,7 @@
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-account" id="gimbap-account" style="height: 28px;"></textarea></td>
 <td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="id:gimbap-price" id="gimbap-price" value=""/></td>
 <td class="fixed bold gimbap-total-label-cell">금 액 :</td>
-<td class="input-cell calc-cell gimbap-total-value-cell" style="width: 82px; min-width: 82px;"><input class="cell-input bold" id="gimbap-total" readonly="" style="width: 72px;" value="0 원"/></td>
+<td class="input-cell calc-cell gimbap-total-value-cell" style="width: 82px; min-width: 82px; max-width: 82px; padding: 0; overflow: hidden;"><input class="cell-input bold" id="gimbap-total" readonly="" style="width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;" value="0 원"/></td>
 </tr>
 </tbody>
 </table>
@@ -1843,24 +1874,27 @@
     }
 
     function adjustGimbapTotalWidth() {
+      // 금액 오른쪽 계산칸은 외곽선 안에 고정한다.
+      // 기존 자동 폭 조정은 4,000원처럼 값이 들어갈 때 셀/표 폭을 키워 외곽선 밖으로 밀어내는 원인이었다.
       const totalEl = document.getElementById('gimbap-total');
       if (!totalEl) return;
-      const text = String(totalEl.value || '0 원');
-      let visualLength = 0;
-      Array.from(text).forEach((ch) => {
-        visualLength += /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(ch) ? 1.8 : 1;
-      });
-      const nextWidth = Math.max(72, Math.ceil(visualLength * 8.8) + 26);
-      totalEl.style.width = nextWidth + 'px';
+      totalEl.style.width = '100%';
+      totalEl.style.minWidth = '0';
+      totalEl.style.maxWidth = '100%';
+      totalEl.style.boxSizing = 'border-box';
+      totalEl.style.display = 'block';
       const totalCell = totalEl.closest('td');
       if (totalCell) {
-        totalCell.style.width = (nextWidth + 10) + 'px';
-        totalCell.style.minWidth = (nextWidth + 10) + 'px';
+        totalCell.style.width = '82px';
+        totalCell.style.minWidth = '82px';
+        totalCell.style.maxWidth = '82px';
+        totalCell.style.padding = '0';
+        totalCell.style.overflow = 'hidden';
+        totalCell.style.boxSizing = 'border-box';
       }
       const table = totalEl.closest('table');
       if (table) {
-        table.style.tableLayout = 'auto';
-        table.style.width = 'auto';
+        table.style.width = '100%';
         table.style.minWidth = '100%';
       }
     }
