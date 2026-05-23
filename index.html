@@ -947,6 +947,25 @@
     body.trip-read-mode table.plan > tbody > tr { display: none; }
     body.trip-read-mode table.plan > tbody > tr.trip-public-row { display: table-row; }
 
+    /* 회원모드 공개행 강제 표시: 회비/산행지/관광버스/소요시간·예상시간/식당 */
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row {
+      display: table-row !important;
+      visibility: visible !important;
+    }
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row input,
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row textarea {
+      color: inherit !important;
+      -webkit-text-fill-color: currentColor !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row .red { color: #c51616 !important; }
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row .blue { color: #203fd8 !important; }
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row.member-hide-from-supply {
+      display: none !important;
+    }
+
+
     /* 회원모드: 비품행부터 아래 행은 표시하지 않음 */
     body.trip-read-mode table.plan > tbody > tr.member-hide-from-supply {
       display: none !important;
@@ -4792,7 +4811,12 @@ function resizeAllTextareas(root = document) {
     var tbody = document.querySelector('table.plan > tbody');
     if(!tbody) return;
     var rows = Array.from(tbody.children).filter(function(el){ return el && el.tagName === 'TR'; });
-    rows.forEach(function(row){ row.classList.remove('trip-public-row'); row.classList.remove('member-hide-from-supply'); });
+    rows.forEach(function(row){
+      row.classList.remove('trip-public-row');
+      row.classList.remove('member-hide-from-supply');
+      row.style.display = '';
+      row.querySelectorAll('.trip-mask-cell').forEach(function(cell){ cell.classList.remove('trip-mask-cell'); });
+    });
     // 비품 행부터 아래는 회원모드에서 숨김 처리
     [9,10,11].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('member-hide-from-supply'); });
     // 회원모드 공개 범위: 회비, 산행지, 관광버스, 소요시간/예상시간, 식당까지 표시
@@ -4903,6 +4927,12 @@ function resizeAllTextareas(root = document) {
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindAuth);
   else bindAuth();
+
+  // 회원모드 공개행이 Firebase/동적 복원 후에도 유지되도록 한 번 더 보정
+  window.tripScheduleRefreshMemberPublicRows = markPublicRows;
+  setTimeout(markPublicRows, 300);
+  setTimeout(markPublicRows, 1200);
+
 
   window.tripScheduleSetLoginPassword = function(nextPassword){
     var value = String(nextPassword || '').trim();
