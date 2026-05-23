@@ -400,6 +400,13 @@
       font-size: 14px !important;
     }
 
+
+    /* 요청 수정: 회비 숫자 입력칸 글자 크기 살짝 확대 */
+    #fee-amount {
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+    }
+
   
     /* 소요시간 행 위 가로줄만 굵은 선 */
     tr.duration-top-line > td,
@@ -1176,8 +1183,89 @@
       outline-offset: -2px !important;
     }
 
+    /* 소요시간/예상시간 안정화: 기본 글자색/굵기 고정 */
+    #expected-top-row #base-time {
+      color: #c51616 !important;
+    }
+    #expected-top-row input[id^="calc-top-"] {
+      color: #111111 !important;
+    }
+    #expected-bottom-row input[id^="calc-bottom-"] {
+      font-weight: 400 !important;
+    }
 
-  </style>
+
+
+    /* 편집 가능 고정 라벨: 특별산행/추가비용, 입장료/주차료, 예약제, 도선료왕복 */
+    .editable-fixed-cell {
+      padding: 0 !important;
+      background: #ececec !important;
+      vertical-align: middle !important;
+    }
+    .editable-fixed-cell .plan-label-input {
+      min-height: 28px;
+      height: 100%;
+      padding: 3px 4px;
+      border: 0;
+      outline: none;
+      background: #ececec !important;
+      color: inherit;
+      font: inherit;
+      font-weight: 400;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+      word-break: keep-all;
+    }
+    .editable-fixed-cell .plan-label-input.left { text-align: center !important; }
+
+    /* 자동 폭 조정 대상: 글자 잘림 방지 + 중앙 정렬 */
+    .editable-fixed-cell .plan-label-input,
+    #special-extra-label,
+    #entry-parking-label,
+    #reservation-label,
+    #ferry-label {
+      text-align: center !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      word-break: keep-all !important;
+    }
+    table.plan > tbody > tr > td,
+    table.plan > tbody > tr > th {
+      vertical-align: middle !important;
+    }
+    .plan .fixed,
+    .plan .cell-input {
+      text-align: center;
+    }
+    /* 전화번호/연락처 칸 잘림 방지 */
+    table.plan input.cell-input,
+    table.plan textarea.cell-input {
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+
+    /* 비품 제목 칸은 글자 길이에 맞춰 열 폭을 자동 조정하고 줄바꿈을 방지 */
+    #supply-label-water,
+    #supply-label-alcohol,
+    #supply-label-coffee,
+    #supply-label-consumables {
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: clip !important;
+      word-break: keep-all !important;
+      min-width: 0 !important;
+    }
+
+  
+    /* 회비 행 두번째열 아래행: 숫자/한글 모두 입력 가능한 일반 입력칸 */
+    input[data-sync-key="field:2"] {
+      text-align: center !important;
+      ime-mode: active;
+    }
+</style>
 
 <style id="info-json-force-visible-style">
   #info-form-wrap .info-toolbar{display:flex!important;gap:6px!important;flex-wrap:wrap!important;align-items:center!important;overflow:visible!important;}
@@ -1292,20 +1380,20 @@
 <tbody><tr class="h30">
 <td class="fixed" rowspan="2">회 비</td>
 <td class="input-cell" colspan="2" rowspan="2"><input class="cell-input bold amount-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:fee-amount" id="fee-amount" value=""/></td>
-<td class="fixed left" colspan="3">특별산행 / 추가비용 :</td>
+<td class="fixed left editable-fixed-cell" colspan="3"><input class="cell-input left plan-label-input" id="special-extra-label" data-realtime-save-bound="true" data-sync-key="id:special-extra-label" value="특별산행 / 추가비용 :"/></td>
 <td class="fixed blue" rowspan="2">산행날자</td>
 <td class="input-cell" rowspan="2"><input class="cell-input blue key-font-14" data-realtime-save-bound="true" data-sync-key="id:hike-date" id="hike-date" value=" 월  일"/></td>
 </tr>
 <tr class="h30">
-<td class="input-cell" colspan="3"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="field:2" value=""/></td>
+<td class="input-cell" colspan="3"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:2" value="" inputmode="text" autocomplete="off"/></td>
 </tr>
 <tr class="h30" style="height: auto;">
 <td class="fixed" rowspan="2">산행지</td>
 <td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
 <td class="fixed spaced" colspan="2">주 소</td>
-<td class="fixed gray">입 장 료 / 주차료</td>
-<td class="fixed gray">예 약 제</td>
-<td class="fixed gray">도 선 료 왕복</td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="entry-parking-label" data-realtime-save-bound="true" data-sync-key="id:entry-parking-label" value="입 장 료 / 주차료"/></td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="reservation-label" data-realtime-save-bound="true" data-sync-key="id:reservation-label" value="예 약 제"/></td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="ferry-label" data-realtime-save-bound="true" data-sync-key="id:ferry-label" value="도 선 료 왕복"/></td>
 </tr>
 <tr class="h30">
 <td class="input-cell address-cell" colspan="2"><input class="cell-input left address-input" data-realtime-save-bound="true" data-sync-key="field:3" value=""/></td>
@@ -2124,7 +2212,9 @@
       if (!hidden) return;
       const target = Number(hidden.value || 7);
       const current = getDurationInputs().length || 7;
-      if (target && target !== current) {
+      /* 새로고침/동기화 중 기본값 7이 추가열을 덮어 삭제하지 않도록
+         자동 복원은 확장 방향만 허용하고, 축소는 소요열삭제 버튼에서만 처리한다. */
+      if (target && target > current) {
         setDurationColumnCount(target);
       }
     }
@@ -2147,7 +2237,6 @@
     }
 
     function updateExpectedTimes() {
-      syncDurationColumnStructureFromStorage();
       const baseEl = document.getElementById('base-time');
       if (!baseEl) return;
       const base = parseTime(baseEl.value);
@@ -2175,6 +2264,7 @@
         el.__durationCalcBound = true;
         el.addEventListener('input', function () {
           updateExpectedTimes();
+          saveDurationStructureLocally();
           if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
         });
       });
@@ -4859,6 +4949,199 @@ function resizeAllTextareas(root = document) {
     if(row && window.MutationObserver){
       new MutationObserver(makeDefaultThin).observe(row, { childList:true, subtree:true });
     }
+  })();
+</script>
+
+<script id="editable-plan-label-and-supply-auto-width-fix">
+  /* 상단 고정 라벨/비품/전화번호 칸: 글자 잘림 방지 자동 폭 조정 + 중앙 정렬 */
+  (function(){
+    var labelIds = ['special-extra-label','entry-parking-label','reservation-label','ferry-label'];
+    var supplyIds = ['supply-label-water','supply-label-alcohol','supply-label-coffee','supply-label-consumables'];
+    var fitInputIds = labelIds.concat(supplyIds, [
+      'gimbap-phone','gimbap-mobile','duration-start','duration-hike','duration-move','duration-stop1','duration-meal','duration-skywalk','duration-home'
+    ]);
+
+    function ensureEditablePlanLabels(){
+      labelIds.forEach(function(id){
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.removeAttribute('readonly');
+        el.removeAttribute('disabled');
+        el.dataset.realtimeSaveBound = 'true';
+        if(!el.dataset.syncKey) el.dataset.syncKey = 'id:' + id;
+        el.style.pointerEvents = 'auto';
+        el.style.userSelect = 'text';
+        el.style.textAlign = 'center';
+        el.style.whiteSpace = 'nowrap';
+        el.style.overflow = 'visible';
+      });
+      if(typeof ensureSyncKeys === 'function') ensureSyncKeys();
+      if(typeof bindRealtimeInputHandlers === 'function') bindRealtimeInputHandlers();
+    }
+
+    function visualWeight(text){
+      var value = String(text || '').trim();
+      if(!value) return 4;
+      var weight = 0;
+      Array.from(value).forEach(function(ch){
+        if(/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(ch)) weight += 1.9;
+        else if(/[0-9]/.test(ch)) weight += 1.05;
+        else if(/[A-Z]/.test(ch)) weight += 1.1;
+        else if(/[a-z]/.test(ch)) weight += 0.9;
+        else if(/\s/.test(ch)) weight += 0.45;
+        else weight += 0.75;
+      });
+      return Math.max(4, weight);
+    }
+
+    function addNeed(widths, colIndex, text, factor, minExtra){
+      if(colIndex < 0 || colIndex >= widths.length) return;
+      var need = Math.max(minExtra || 0, visualWeight(text) * (factor || 1));
+      widths[colIndex] = Math.max(widths[colIndex], need);
+    }
+
+    function setColWidth(col, width){
+      if(!col) return;
+      col.style.width = width.toFixed(3) + '%';
+    }
+
+    function normalize(widths){
+      var total = widths.reduce(function(a,b){ return a + b; }, 0) || 100;
+      return widths.map(function(w){ return w * 100 / total; });
+    }
+
+    function distributeSpanNeed(widths, indexes, text, targetPerWeight){
+      var need = visualWeight(text) * (targetPerWeight || 1.05);
+      var current = indexes.reduce(function(sum, idx){ return sum + (widths[idx] || 0); }, 0);
+      if(need <= current) return;
+      var add = (need - current) / indexes.length;
+      indexes.forEach(function(idx){ widths[idx] += add; });
+    }
+
+    function autoFitPlanColumns(){
+      var plan = document.querySelector('table.plan');
+      var colgroup = plan ? plan.querySelector(':scope > colgroup') : null;
+      if(!colgroup || colgroup.children.length < 8) return;
+
+      /* 기본폭: 전체 8열. 0열은 제목열, 5열은 전화번호/입장료, 6~7열은 예약제/도선료 및 계좌번호 영역 */
+      var widths = [6.5, 11.2, 11.8, 11.8, 11.8, 14.0, 13.5, 13.4];
+
+      var special = document.getElementById('special-extra-label');
+      var entry = document.getElementById('entry-parking-label');
+      var reservation = document.getElementById('reservation-label');
+      var ferry = document.getElementById('ferry-label');
+      var water = document.getElementById('supply-label-water');
+      var alcohol = document.getElementById('supply-label-alcohol');
+      var coffee = document.getElementById('supply-label-coffee');
+      var consumables = document.getElementById('supply-label-consumables');
+
+      distributeSpanNeed(widths, [3,4,5], special && special.value, 1.08);
+      addNeed(widths, 5, entry && entry.value, 1.18, 12.0);
+      addNeed(widths, 6, reservation && reservation.value, 1.18, 10.0);
+      addNeed(widths, 7, ferry && ferry.value, 1.18, 10.5);
+
+      addNeed(widths, 1, water && water.value, 1.08, 8.5);
+      addNeed(widths, 2, alcohol && alcohol.value, 1.08, 10.0);
+      addNeed(widths, 3, coffee && coffee.value, 1.08, 10.0);
+      distributeSpanNeed(widths, [4,5], consumables && consumables.value, 1.10);
+
+      /* 관광버스 전화번호 제목/값, 식당 연락처 제목/값까지 반영 */
+      addNeed(widths, 5, '전화번호', 1.35, 12.5);
+      var busPhone = document.querySelector('input[data-sync-key="field:11"]');
+      addNeed(widths, 5, busPhone && busPhone.value, 0.95, 12.5);
+      addNeed(widths, 2, '연락처', 1.35, 10.5);
+      var restaurantPhone = document.querySelector('textarea[data-sync-key="field:27"]');
+      addNeed(widths, 2, restaurantPhone && restaurantPhone.value, 0.95, 10.5);
+
+      widths = normalize(widths);
+      for(var i=0;i<8;i++) setColWidth(colgroup.children[i], widths[i]);
+    }
+
+    function autoFitGimbapColumns(){
+      var table = document.querySelector('.gimbap-inner-table');
+      var colgroup = table ? table.querySelector('colgroup') : null;
+      if(!colgroup || colgroup.children.length < 9) return;
+      var phone = document.getElementById('gimbap-phone');
+      var mobile = document.getElementById('gimbap-mobile');
+      var account = document.getElementById('gimbap-account');
+      var widths = [10.5, 12.0, 9.0, 13.5, 13.5, 18.0, 7.0, 8.0, 8.5];
+      addNeed(widths, 3, '전화번호', 1.25, 13.5);
+      addNeed(widths, 3, phone && phone.value, 0.95, 13.5);
+      addNeed(widths, 4, '휴대폰', 1.25, 12.8);
+      addNeed(widths, 4, mobile && mobile.value, 0.95, 12.8);
+      addNeed(widths, 5, '계좌번호', 1.10, 17.0);
+      addNeed(widths, 5, account && account.value, 0.85, 17.0);
+      widths = normalize(widths);
+      for(var i=0;i<Math.min(widths.length, colgroup.children.length);i++) setColWidth(colgroup.children[i], widths[i]);
+      table.style.tableLayout = 'fixed';
+      table.style.width = '100%';
+      table.style.minWidth = '100%';
+    }
+
+    function centerAndNoClip(){
+      var selectors = [
+        '#special-extra-label','#entry-parking-label','#reservation-label','#ferry-label',
+        '#supply-label-water','#supply-label-alcohol','#supply-label-coffee','#supply-label-consumables',
+        'input[data-sync-key="field:11"]','textarea[data-sync-key="field:27"]',
+        '#gimbap-phone','#gimbap-mobile'
+      ];
+      selectors.forEach(function(sel){
+        document.querySelectorAll(sel).forEach(function(el){
+          el.style.textAlign = 'center';
+          el.style.whiteSpace = 'nowrap';
+          el.style.overflow = 'visible';
+          el.style.textOverflow = 'clip';
+          el.style.wordBreak = 'keep-all';
+        });
+      });
+    }
+
+    var fitTimer = null;
+    function autoFitAll(){
+      centerAndNoClip();
+      autoFitPlanColumns();
+      autoFitGimbapColumns();
+    }
+    function scheduleFit(){
+      if(fitTimer) clearTimeout(fitTimer);
+      fitTimer = setTimeout(autoFitAll, 40);
+    }
+
+    function bindAutoFit(){
+      fitInputIds.forEach(function(id){
+        var el = document.getElementById(id);
+        if(!el || el.__autoWidthBound) return;
+        el.__autoWidthBound = true;
+        el.addEventListener('input', scheduleFit);
+        el.addEventListener('change', scheduleFit);
+      });
+      ['field:11','field:27'].forEach(function(key){
+        document.querySelectorAll('[data-sync-key="' + key + '"]').forEach(function(el){
+          if(el.__autoWidthBound) return;
+          el.__autoWidthBound = true;
+          el.addEventListener('input', scheduleFit);
+          el.addEventListener('change', scheduleFit);
+        });
+      });
+      autoFitAll();
+    }
+
+    function init(){
+      ensureEditablePlanLabels();
+      bindAutoFit();
+      setTimeout(function(){ ensureEditablePlanLabels(); autoFitAll(); }, 300);
+      setTimeout(autoFitAll, 1000);
+      setTimeout(autoFitAll, 1800);
+    }
+
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+    window.addEventListener('load', init);
+    window.addEventListener('resize', scheduleFit);
+    window.addEventListener('trip-duration-structure-changed', scheduleFit);
+    window.addEventListener('beforeunload', function(){
+      try { if(typeof cacheFormDataLocally === 'function' && typeof collectFormData === 'function') cacheFormDataLocally(collectFormData()); } catch(e) {}
+    });
   })();
 </script>
 </body></html>
