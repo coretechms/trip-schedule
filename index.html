@@ -1380,7 +1380,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -2056,7 +2056,7 @@
       while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
       expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'red key-font-14', 'id:base-time'));
       for (let i = 1; i <= count - 1; i += 1) {
-        const cls = i === 2 ? 'bold blue' : 'bold';
+        const cls = 'bold';
         expectedTopRow.appendChild(makeReadonlyCalcCell('calc-top-' + i, cls));
       }
 
@@ -2074,6 +2074,7 @@
       bindDurationCalculationInputs();
       if (typeof bindMobileLongPressEditing === 'function') bindMobileLongPressEditing();
       updateExpectedTimes();
+      normalizeExpectedTopDefaultColors();
       saveDurationStructureLocally();
       if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
       try { window.dispatchEvent(new CustomEvent('trip-duration-structure-changed')); } catch (error) {}
@@ -2128,6 +2129,23 @@
       }
     }
 
+
+
+    function normalizeExpectedTopDefaultColors() {
+      const baseEl = document.getElementById('base-time');
+      if (baseEl && !baseEl.dataset.userStyledColor) {
+        baseEl.classList.add('red');
+        baseEl.classList.remove('blue');
+        baseEl.style.color = baseEl.style.color || '';
+      }
+      document.querySelectorAll('#expected-top-row input[id^="calc-top-"]').forEach(function(input) {
+        if (!input.dataset.userStyledColor && !input.style.color) {
+          input.classList.remove('red', 'blue');
+          input.style.color = '';
+        }
+      });
+    }
+
     function updateExpectedTimes() {
       syncDurationColumnStructureFromStorage();
       const baseEl = document.getElementById('base-time');
@@ -2147,6 +2165,7 @@
 
       const lastTop = document.getElementById('calc-top-' + durations.length);
       if (lastTop) lastTop.value = '';
+      normalizeExpectedTopDefaultColors();
     }
 
     function bindDurationCalculationInputs() {
