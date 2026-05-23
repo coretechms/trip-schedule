@@ -946,6 +946,12 @@
     body.trip-read-mode .firebase-panel { display: none !important; }
     body.trip-read-mode table.plan > tbody > tr { display: none; }
     body.trip-read-mode table.plan > tbody > tr.trip-public-row { display: table-row; }
+
+    /* 회원모드: 비품행부터 아래 행은 표시하지 않음 */
+    body.trip-read-mode table.plan > tbody > tr.member-hide-from-supply {
+      display: none !important;
+    }
+
     body.trip-read-mode input,
     body.trip-read-mode textarea,
     body.trip-read-mode [contenteditable="true"] {
@@ -3261,6 +3267,7 @@ function resizeAllTextareas(root = document) {
             }
           });
           if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
+          if (typeof bindRealtimeInputHandlers === 'function') bindRealtimeInputHandlers();
         }
       } finally {
         applyingRemote = false;
@@ -3318,7 +3325,13 @@ function resizeAllTextareas(root = document) {
 
     async function saveFormData(showSuccessMessage = true) {
       if (!db || applyingRemote) return;
+      if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
+      ensureSyncKeys();
       const formData = collectFormData();
+      const hiddenDurationCount = document.getElementById('duration-column-count');
+      if (hiddenDurationCount && hiddenDurationCount.dataset.syncKey) {
+        formData[hiddenDurationCount.dataset.syncKey] = hiddenDurationCount.value || String((typeof getDurationInputs === 'function' ? getDurationInputs().length : 7) || 7);
+      }
       cacheFormDataLocally(formData);
 
       try {
@@ -3334,7 +3347,7 @@ function resizeAllTextareas(root = document) {
       } catch (error) {
         console.error(error);
         setFirebaseStatus('저장 실패: 데이터베이스 주소 또는 규칙을 확인하세요.', false);
-        showSaveFailureAlert('저장에 실패했습니다. 데이터베이스 주소 또는 규칙을 확인하세요.');
+        if (showSuccessMessage) showSaveFailureAlert('저장에 실패했습니다. 데이터베이스 주소 또는 규칙을 확인하세요.');
       }
     }
 
@@ -3440,8 +3453,19 @@ function resizeAllTextareas(root = document) {
         saveButton.title = '입력 내용이 자동으로 저장됩니다.';
       }
 
-      window.addEventListener('beforeunload', () => {
-        try { cacheFormDataLocally(collectFormData()); } catch (error) {}
+      function persistTripScheduleLocalSnapshot() {
+        try {
+          if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
+          ensureSyncKeys();
+          cacheFormDataLocally(collectFormData());
+        } catch (error) {
+          console.warn('로컬 스냅샷 저장 실패:', error);
+        }
+      }
+
+      window.addEventListener('beforeunload', persistTripScheduleLocalSnapshot);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') persistTripScheduleLocalSnapshot();
       });
 
       bindRealtimeInputHandlers();
@@ -4740,8 +4764,12 @@ function resizeAllTextareas(root = document) {
     var tbody = document.querySelector('table.plan > tbody');
     if(!tbody) return;
     var rows = Array.from(tbody.children).filter(function(el){ return el && el.tagName === 'TR'; });
-    rows.forEach(function(row){ row.classList.remove('trip-public-row'); });
-    [4,5,6,7,8,9,10,11].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('trip-public-row'); });
+    rows.forEach(function(row){ row.classList.remove('trip-public-row'); row.classList.remove('member-hide-from-supply'); });
+    // 비품 행부터 아래는 회원모드에서 숨김 처리
+    [9,10,11].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('member-hide-from-supply'); });
+    // 회원모드 공개 범위: 회비, 산행지, 관광버스, 소요시간/예상시간, 식당까지 표시
+    // 비품 행부터 아래(비품/김밥/정보모음)는 회원모드에서 숨김
+    [0,1,2,3,4,5,6,7,8].forEach(function(idx){ if(rows[idx]) rows[idx].classList.add('trip-public-row'); });
     // 회원모드: 관광버스 행에서 기본 운임비와 계좌번호는 제목/입력칸 모두 가림
     if(rows[4] && rows[4].cells[1]) rows[4].cells[1].classList.add('trip-mask-cell'); // 기본 운임비 제목
     if(rows[5] && rows[5].cells[0]) rows[5].cells[0].classList.add('trip-mask-cell'); // 기본 운임비 입력칸
