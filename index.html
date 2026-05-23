@@ -1096,6 +1096,73 @@
       background: #ececec !important;
     }
 
+    /* 소요시간/예상시간 열 편집 버튼 */
+    .duration-column-btn {
+      border: 1px solid #b45309;
+      background: #fff7ed;
+      color: #9a3412;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .duration-column-btn:active { transform: translateY(1px); }
+    body.trip-read-mode .duration-column-btn { display: none !important; }
+    #duration-values-row .duration-column-selected,
+    #duration-values-row .duration-column-selected .cell-input {
+      outline: 2px solid #b45309 !important;
+      outline-offset: -2px !important;
+      background: #fff7ed !important;
+    }
+
+    /* 소요시간/예상시간 전용 독립 표: 열 추가/삭제가 다른 행 폭에 영향 주지 않도록 분리 */
+    .duration-expected-wrapper-cell {
+      padding: 0 !important;
+      background: #ececec !important;
+      border-top: 2px solid #222 !important;
+      border-bottom: 2px solid #222 !important;
+    }
+    .duration-expected-table {
+      width: 100% !important;
+      max-width: 100% !important;
+      border-collapse: collapse !important;
+      table-layout: fixed !important;
+      background: #ececec !important;
+      font-size: 14px !important;
+    }
+    .duration-expected-table td,
+    .duration-expected-table th {
+      border: 1px dotted #444 !important;
+      padding: 3px 4px;
+      text-align: center;
+      vertical-align: middle;
+      word-break: keep-all;
+      background: #ececec;
+      line-height: 1.15;
+    }
+    .duration-expected-table .input-cell { background: #ffffff !important; padding: 0; }
+    .duration-expected-table .sky-cell,
+    .duration-expected-table .sky-cell .cell-input { background: #eaf6ff !important; }
+    .duration-expected-table .readonly-cell .cell-input { pointer-events: none; user-select: none; caret-color: transparent; }
+    .duration-expected-table tr.duration-top-line > td,
+    .duration-expected-table tr.duration-top-line > th { border-top: 0 !important; }
+    .duration-expected-table tr.expected-bottom-bold-line > td,
+    .duration-expected-table tr.expected-bottom-bold-line > th { border-bottom: 0 !important; }
+
+
+    /* 요청 수정: 예상시간 위/아래 계산행 사이 중간 가로선 제거 */
+    .duration-expected-table #expected-top-row > td:not(:first-child) {
+      border-bottom: 0 !important;
+    }
+    .duration-expected-table #expected-bottom-row > td {
+      border-top: 0 !important;
+    }
+
+
   </style>
 
 <style id="info-json-force-visible-style">
@@ -1187,6 +1254,8 @@
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
 <button class="capture-btn" id="capture-button" type="button">[캡쳐]</button>
+<button class="duration-column-btn" id="durationAddColumnBtn" type="button">소요열추가</button>
+<button class="duration-column-btn" id="durationDeleteColumnBtn" type="button">소요열삭제</button>
 </div>
 </div>
 <div class="trip-mode-badge" id="tripModeBadge"></div>
@@ -1247,7 +1316,21 @@
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:11" value=""/></td>
 <td class="input-cell" colspan="2"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:12" value=""/></td>
 </tr>
-<tr class="h26 duration-top-line">
+<tr class="duration-expected-wrapper-row">
+<td class="duration-expected-wrapper-cell" colspan="8">
+<table class="duration-expected-table" id="durationExpectedTable">
+<colgroup>
+<col style="width: 6.5%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+<col style="width: 13.357%;"/>
+</colgroup>
+<tbody>
+<tr class="h26 duration-top-line" id="duration-title-row">
 <td class="fixed" rowspan="2">소요시간</td>
 <td class="fixed bold">출 발</td>
 <td class="input-cell sky-cell"><input class="cell-input " data-realtime-save-bound="true" data-sync-key="field:13" value=" "/></td>
@@ -1257,7 +1340,7 @@
 <td class="input-cell sky-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:17" value=" "/></td>
 <td class="fixed bold">귀 가</td>
 </tr>
-<tr class="h14">
+<tr class="h14" id="duration-values-row">
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="2:30 예정"/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="4:30 예정"/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="00:50 예정"/></td>
@@ -1266,7 +1349,7 @@
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="1:00 예정"/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="2:40 예정"/></td>
 </tr>
-<tr class="h20 expected-top">
+<tr class="h20 expected-top" id="expected-top-row">
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
 <td class="input-cell"><input class="cell-input red key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="09:00 -&gt;"/></td>
@@ -1276,7 +1359,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-5" readonly="" value="16:00 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-6" readonly="" value="17:00 -&gt;"/></td>
 </tr>
-<tr class="h20 expected-bottom expected-bottom-bold-line">
+<tr class="h20 expected-bottom expected-bottom-bold-line" id="expected-bottom-row">
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-1" readonly="" value="09:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-bottom-2" readonly="" value="13:30"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-3" readonly="" value="14:20"/></td>
@@ -1284,6 +1367,10 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" value="16:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" value="17:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" value="19:40"/></td>
+</tr>
+</tbody>
+</table>
+</td>
 </tr>
 <tr class="h30">
 <td class="fixed" rowspan="2">식 당</td>
@@ -1355,6 +1442,7 @@
 </td>
 </tr>
 </tbody></table>
+<input class="cell-input" data-sync-key="id:duration-column-count" id="duration-column-count" type="hidden" value="7"/>
 <div class="info-form-wrap" id="info-form-wrap">
 <div class="info-title">정보 모음</div>
 <div class="info-toolbar">
@@ -1710,48 +1798,341 @@
       adjustGimbapTotalWidth();
     }
 
+    const DURATION_COLUMN_MIN = 2;
+    const DURATION_COLUMN_MAX = 12;
+    let selectedDurationColumnIndex = null;
+    const DURATION_DEFAULT_IDS = [
+      'duration-start',
+      'duration-hike',
+      'duration-move',
+      'duration-stop1',
+      'duration-meal',
+      'duration-skywalk',
+      'duration-home'
+    ];
+    const DURATION_DEFAULT_VALUES = [
+      '2:30 예정',
+      '4:30 예정',
+      '00:50 예정',
+      '00:40 예정',
+      '1:00 예정',
+      '1:00 예정',
+      '2:40 예정'
+    ];
+
+    function getDurationColumnCountInput() {
+      return document.getElementById('duration-column-count');
+    }
+
+    function getDurationInputs() {
+      const row = document.getElementById('duration-values-row');
+      return row ? Array.from(row.querySelectorAll('input.cell-input')) : [];
+    }
+
+    function getDurationTitleValues() {
+      const row = document.getElementById('duration-title-row');
+      if (!row) return [];
+      return Array.from(row.children).slice(1).map((cell) => {
+        const input = cell.querySelector('input, textarea');
+        return input ? String(input.value || '') : String(cell.textContent || '');
+      });
+    }
+
+    function getDurationColumnValues() {
+      return getDurationInputs().map((input) => String(input.value || ''));
+    }
+
+    function makeFixedCell(text, className = '') {
+      const cell = document.createElement('td');
+      cell.className = ('fixed ' + className).trim();
+      cell.textContent = text;
+      return cell;
+    }
+
+    function makeInputCell(id, value, extraClass = '', syncKey = '') {
+      const cell = document.createElement('td');
+      cell.className = 'input-cell';
+      if (extraClass.includes('sky-cell')) cell.classList.add('sky-cell');
+      const input = document.createElement('input');
+      input.className = ('cell-input ' + extraClass.replace('sky-cell', '')).trim();
+      input.value = value || ' ';
+      if (id) {
+        input.id = id;
+        input.dataset.syncKey = syncKey || ('id:' + id);
+      } else if (syncKey) {
+        input.dataset.syncKey = syncKey;
+      }
+      input.dataset.realtimeSaveBound = 'true';
+      cell.appendChild(input);
+      return cell;
+    }
+
+    function makeReadonlyCalcCell(id, className = '') {
+      const cell = document.createElement('td');
+      cell.className = 'input-cell readonly-cell';
+      const input = document.createElement('input');
+      input.className = ('cell-input key-font-14 ' + className).trim();
+      input.id = id;
+      input.readOnly = true;
+      input.value = ' ';
+      cell.appendChild(input);
+      return cell;
+    }
+
+    function getDurationId(index, count) {
+      if (index < DURATION_DEFAULT_IDS.length) return DURATION_DEFAULT_IDS[index];
+      return 'duration-extra-' + (index + 1);
+    }
+
+    function getDurationSyncKey(index, id) {
+      return 'id:' + id;
+    }
+
+    function normalizeDurationIndex(index, count) {
+      const value = Number(index);
+      if (!Number.isFinite(value)) return Math.max(0, count - 2);
+      return Math.max(0, Math.min(count - 1, Math.floor(value)));
+    }
+
+    function setSelectedDurationColumn(index) {
+      const count = getDurationInputs().length || 7;
+      selectedDurationColumnIndex = normalizeDurationIndex(index, count);
+      refreshDurationColumnSelection();
+    }
+
+    function clearDurationColumnSelection() {
+      document.querySelectorAll('.duration-column-selected').forEach((cell) => {
+        cell.classList.remove('duration-column-selected');
+      });
+    }
+
+    function markDurationCell(cell, index) {
+      if (!cell) return;
+      cell.dataset.durationColumnIndex = String(index);
+      cell.addEventListener('click', () => setSelectedDurationColumn(index));
+      cell.addEventListener('focusin', () => setSelectedDurationColumn(index));
+      const input = cell.querySelector('input, textarea');
+      if (input) {
+        input.dataset.durationColumnIndex = String(index);
+        input.addEventListener('focus', () => setSelectedDurationColumn(index));
+        input.addEventListener('click', () => setSelectedDurationColumn(index));
+      }
+    }
+
+    function updatePlanColumnWidths(count) {
+      /* 바깥 산행계획 표의 colgroup은 건드리지 않는다.
+         소요시간/예상시간 내부 표의 폭만 재분배해서 다른 행 열 폭이 늘거나 줄지 않게 한다. */
+      const durationTable = document.getElementById('durationExpectedTable');
+      if (!durationTable) return;
+      const totalDurationColumns = Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Number(count) || 7));
+      let colgroup = durationTable.querySelector(':scope > colgroup');
+      if (!colgroup) {
+        colgroup = document.createElement('colgroup');
+        durationTable.insertBefore(colgroup, durationTable.firstChild);
+      }
+      colgroup.innerHTML = '';
+      const labelWidth = 6.5;
+      const restWidth = (100 - labelWidth) / totalDurationColumns;
+      const labelCol = document.createElement('col');
+      labelCol.style.width = labelWidth.toFixed(3) + '%';
+      colgroup.appendChild(labelCol);
+      for (let i = 0; i < totalDurationColumns; i += 1) {
+        const col = document.createElement('col');
+        col.style.width = restWidth.toFixed(3) + '%';
+        colgroup.appendChild(col);
+      }
+      durationTable.style.width = '100%';
+      durationTable.style.maxWidth = '100%';
+      durationTable.style.tableLayout = 'fixed';
+    }
+
+    function refreshDurationColumnSelection() {
+      clearDurationColumnSelection();
+      const count = getDurationInputs().length || 7;
+      if (selectedDurationColumnIndex === null || selectedDurationColumnIndex === undefined) return;
+      selectedDurationColumnIndex = normalizeDurationIndex(selectedDurationColumnIndex, count);
+      const valuesRow = document.getElementById('duration-values-row');
+      const valueCell = valuesRow ? valuesRow.children[selectedDurationColumnIndex] : null;
+      if (valueCell) valueCell.classList.add('duration-column-selected');
+    }
+
+    function bindDurationColumnSelection() {
+      const valuesRow = document.getElementById('duration-values-row');
+      const count = getDurationInputs().length || 7;
+      for (let i = 0; i < count; i += 1) {
+        if (valuesRow) markDurationCell(valuesRow.children[i], i);
+      }
+      refreshDurationColumnSelection();
+    }
+
+    function rebuildDurationColumns(columnValues, titleValues, selectedIndexAfterRebuild = null) {
+      const titleRow = document.getElementById('duration-title-row');
+      const valuesRow = document.getElementById('duration-values-row');
+      const expectedTopRow = document.getElementById('expected-top-row');
+      const expectedBottomRow = document.getElementById('expected-bottom-row');
+      if (!titleRow || !valuesRow || !expectedTopRow || !expectedBottomRow) return;
+
+      const count = Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, columnValues.length || 7));
+      const normalizedValues = columnValues.slice(0, count);
+      while (normalizedValues.length < count) {
+        normalizedValues.push(DURATION_DEFAULT_VALUES[normalizedValues.length] || '00:00 예정');
+      }
+      const normalizedTitles = titleValues.slice(0, count);
+      while (normalizedTitles.length < count) normalizedTitles.push(' ');
+      normalizedTitles[0] = '출 발';
+      normalizedTitles[count - 1] = '귀 가';
+
+      const oldBaseValue = document.getElementById('base-time')?.value || '06:30';
+
+      while (titleRow.children.length > 1) titleRow.removeChild(titleRow.lastElementChild);
+      for (let i = 0; i < count; i += 1) {
+        if (i === 0) {
+          titleRow.appendChild(makeFixedCell('출 발', 'bold'));
+        } else if (i === count - 1) {
+          titleRow.appendChild(makeFixedCell('귀 가', 'bold'));
+        } else {
+          const labelId = 'duration-label-' + (i + 1);
+          const labelClass = i === 2 ? 'sky-cell bold blue' : 'sky-cell';
+          titleRow.appendChild(makeInputCell(labelId, normalizedTitles[i] || ' ', labelClass, 'id:' + labelId));
+        }
+      }
+
+      while (valuesRow.firstChild) valuesRow.removeChild(valuesRow.firstChild);
+      for (let i = 0; i < count; i += 1) {
+        const id = getDurationId(i, count);
+        valuesRow.appendChild(makeInputCell(id, normalizedValues[i] || DURATION_DEFAULT_VALUES[i] || '00:00 예정', '', getDurationSyncKey(i, id)));
+      }
+
+      while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
+      expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'red key-font-14', 'id:base-time'));
+      for (let i = 1; i <= count - 1; i += 1) {
+        const cls = i === 2 ? 'bold blue' : 'bold';
+        expectedTopRow.appendChild(makeReadonlyCalcCell('calc-top-' + i, cls));
+      }
+
+      while (expectedBottomRow.firstChild) expectedBottomRow.removeChild(expectedBottomRow.firstChild);
+      for (let i = 1; i <= count; i += 1) {
+        const cls = i === count ? 'blue bold' : (i === 2 ? 'bold' : '');
+        expectedBottomRow.appendChild(makeReadonlyCalcCell('calc-bottom-' + i, cls));
+      }
+
+      const hidden = getDurationColumnCountInput();
+      if (hidden) hidden.value = String(count);
+      selectedDurationColumnIndex = selectedIndexAfterRebuild === null ? null : normalizeDurationIndex(selectedIndexAfterRebuild, count);
+      updatePlanColumnWidths(count);
+      bindDurationColumnSelection();
+      bindDurationCalculationInputs();
+      if (typeof bindMobileLongPressEditing === 'function') bindMobileLongPressEditing();
+      updateExpectedTimes();
+      if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
+      if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
+    }
+
+    function setDurationColumnCount(nextCount) {
+      const currentValues = getDurationColumnValues();
+      const currentTitles = getDurationTitleValues();
+      const count = Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Number(nextCount) || currentValues.length || 7));
+      rebuildDurationColumns(currentValues.slice(0, count), currentTitles.slice(0, count), selectedDurationColumnIndex);
+    }
+
+    function insertDurationColumnRightOfSelection() {
+      const values = getDurationColumnValues();
+      const titles = getDurationTitleValues();
+      const current = values.length || 7;
+      if (current >= DURATION_COLUMN_MAX) {
+        alert('소요시간 열은 최대 ' + DURATION_COLUMN_MAX + '개까지 가능합니다.');
+        return;
+      }
+      const selected = normalizeDurationIndex(selectedDurationColumnIndex, current);
+      /* 귀가 칸은 항상 마지막에 유지하기 위해 마지막 칸 선택 시 귀가 바로 앞에 추가 */
+      const insertAt = selected >= current - 1 ? current - 1 : selected + 1;
+      values.splice(insertAt, 0, '00:00 예정');
+      titles.splice(insertAt, 0, ' ');
+      rebuildDurationColumns(values, titles, insertAt);
+    }
+
+    function deleteSelectedDurationColumn() {
+      const values = getDurationColumnValues();
+      const titles = getDurationTitleValues();
+      const current = values.length || 7;
+      if (current <= DURATION_COLUMN_MIN) {
+        alert('소요시간 열은 최소 2개 이상 필요합니다.');
+        return;
+      }
+      const selected = normalizeDurationIndex(selectedDurationColumnIndex, current);
+      values.splice(selected, 1);
+      titles.splice(selected, 1);
+      const nextSelected = Math.min(selected, values.length - 1);
+      rebuildDurationColumns(values, titles, nextSelected);
+    }
+
+    function syncDurationColumnStructureFromStorage() {
+      const hidden = getDurationColumnCountInput();
+      if (!hidden) return;
+      const target = Number(hidden.value || 7);
+      const current = getDurationInputs().length || 7;
+      if (target && target !== current) {
+        setDurationColumnCount(target);
+      }
+    }
+
     function updateExpectedTimes() {
+      syncDurationColumnStructureFromStorage();
       const baseEl = document.getElementById('base-time');
       if (!baseEl) return;
       const base = parseTime(baseEl.value);
       if (base === null) return;
 
-      const d1 = parseDuration(document.getElementById('duration-start').value);
-      const d2 = parseDuration(document.getElementById('duration-hike').value);
-      const d3 = parseDuration(document.getElementById('duration-move').value);
-      const d4 = parseDuration(document.getElementById('duration-stop1').value);
-      const d5 = parseDuration(document.getElementById('duration-meal').value);
-      const d6 = parseDuration(document.getElementById('duration-skywalk').value);
-      const d7 = parseDuration(document.getElementById('duration-home').value);
+      const durations = getDurationInputs().map((input) => parseDuration(input.value));
+      let running = base;
+      durations.forEach((duration, index) => {
+        running += duration;
+        const topEl = document.getElementById('calc-top-' + (index + 1));
+        const bottomEl = document.getElementById('calc-bottom-' + (index + 1));
+        if (topEl) topEl.value = formatTime(running) + ' ->';
+        if (bottomEl) bottomEl.value = formatTime(running);
+      });
 
-      const t1 = base + d1;
-      const t2 = t1 + d2;
-      const t3 = t2 + d3;
-      const t4 = t3 + d4;
-      const t5 = t4 + d5;
-      const t6 = t5 + d6;
-      const t7 = t6 + d7;
-
-      document.getElementById('calc-top-1').value = formatTime(t1) + ' ->';
-      document.getElementById('calc-top-2').value = formatTime(t2) + ' ->';
-      document.getElementById('calc-top-3').value = formatTime(t3) + ' ->';
-      document.getElementById('calc-top-4').value = formatTime(t4) + ' ->';
-      document.getElementById('calc-top-5').value = formatTime(t5) + ' ->';
-      document.getElementById('calc-top-6').value = formatTime(t6) + ' ->';
-
-      document.getElementById('calc-bottom-1').value = formatTime(t1);
-      document.getElementById('calc-bottom-2').value = formatTime(t2);
-      document.getElementById('calc-bottom-3').value = formatTime(t3);
-      document.getElementById('calc-bottom-4').value = formatTime(t4);
-      document.getElementById('calc-bottom-5').value = formatTime(t5);
-      document.getElementById('calc-bottom-6').value = formatTime(t6);
-      document.getElementById('calc-bottom-7').value = formatTime(t7);
+      const lastTop = document.getElementById('calc-top-' + durations.length);
+      if (lastTop) lastTop.value = '';
     }
 
-    ['base-time', 'duration-start', 'duration-hike', 'duration-move', 'duration-stop1', 'duration-meal', 'duration-skywalk', 'duration-home'].forEach(function(id) {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', updateExpectedTimes);
-    });
+    function bindDurationCalculationInputs() {
+      ['base-time'].concat(getDurationInputs().map((input) => input.id)).forEach(function(id) {
+        const el = document.getElementById(id);
+        if (!el || el.__durationCalcBound) return;
+        el.__durationCalcBound = true;
+        el.addEventListener('input', function () {
+          updateExpectedTimes();
+          if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
+        });
+      });
+    }
+
+    function initializeDurationColumnEditor() {
+      const addBtn = document.getElementById('durationAddColumnBtn');
+      const delBtn = document.getElementById('durationDeleteColumnBtn');
+      if (addBtn && !addBtn.__durationColumnBound) {
+        addBtn.__durationColumnBound = true;
+        addBtn.addEventListener('click', function () {
+          if (document.body.classList.contains('trip-read-mode')) return;
+          insertDurationColumnRightOfSelection();
+        });
+      }
+      if (delBtn && !delBtn.__durationColumnBound) {
+        delBtn.__durationColumnBound = true;
+        delBtn.addEventListener('click', function () {
+          if (document.body.classList.contains('trip-read-mode')) return;
+          deleteSelectedDurationColumn();
+        });
+      }
+      updatePlanColumnWidths(getDurationInputs().length || 7);
+      bindDurationColumnSelection();
+      bindDurationCalculationInputs();
+      updateExpectedTimes();
+    }
+
+    initializeDurationColumnEditor();
 
     ['total-people', 'extra-people', 'gimbap-price'].forEach(function(id) {
       const el = document.getElementById(id);
