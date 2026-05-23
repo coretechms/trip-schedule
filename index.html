@@ -1350,6 +1350,7 @@
   }
 </style>
 
+<!-- refresh-keeps-mode-exit-clears-login-v2 -->
 </head>
 <body style="overflow: auto;">
 
@@ -4796,6 +4797,8 @@ function resizeAllTextareas(root = document) {
   var ADMIN_PASSWORD_KEY = 'trip-schedule-manager-password-v1';
   var DEFAULT_LOGIN_PASSWORD = '1234';
   var DEFAULT_ADMIN_PASSWORD = '1234';
+  var MODE_SESSION_KEY = 'trip-schedule-last-mode-v1';
+  var EXIT_SESSION_KEY = 'trip-schedule-app-exited-v1';
 
   function getLoginPassword(){
     try { return localStorage.getItem(LOGIN_PASSWORD_KEY) || DEFAULT_LOGIN_PASSWORD; }
@@ -4868,7 +4871,10 @@ function resizeAllTextareas(root = document) {
     } else {
       unlockAdminModeEditing();
     }
-    try { sessionStorage.setItem('trip-schedule-last-mode-v1', mode); } catch(e) {}
+    try {
+      sessionStorage.setItem(MODE_SESSION_KEY, mode);
+      sessionStorage.removeItem(EXIT_SESSION_KEY);
+    } catch(e) {}
   }
 
   function tryAdminLogin(){
@@ -4892,7 +4898,12 @@ function resizeAllTextareas(root = document) {
     var readExitBtn = document.getElementById('tripReadExitBtn');
     function goBusSeat(){ window.location.href = 'https://coretechms.github.io/bus-seat/'; }
     function exitApp(){
-      try { sessionStorage.removeItem('trip-schedule-last-mode-v1'); } catch(e) {}
+      // 사용자가 앱의 '나가기'를 누른 경우에만 로그인 세션을 종료한다.
+      // 브라우저 새로고침은 이 함수를 실행하지 않으므로 현재 회원/관리자 모드가 유지된다.
+      try {
+        sessionStorage.removeItem(MODE_SESSION_KEY);
+        sessionStorage.setItem(EXIT_SESSION_KEY, '1');
+      } catch(e) {}
       try { window.close(); } catch(e) {}
       setTimeout(function(){
         if(history.length > 1) {
@@ -4906,8 +4917,20 @@ function resizeAllTextareas(root = document) {
     if(readBtn) readBtn.addEventListener('click', function(){ setMode('read'); });
     if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
     if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
+    var wasExited = false;
+    try { wasExited = sessionStorage.getItem(EXIT_SESSION_KEY) === '1'; } catch(e) {}
+    if(wasExited) {
+      // 앱에서 나갔다가 돌아온 경우는 반드시 로그인 화면부터 시작한다.
+      try {
+        sessionStorage.removeItem(MODE_SESSION_KEY);
+        sessionStorage.removeItem(EXIT_SESSION_KEY);
+      } catch(e) {}
+    }
+
     var restoredMode = '';
-    try { restoredMode = sessionStorage.getItem('trip-schedule-last-mode-v1') || ''; } catch(e) {}
+    if(!wasExited) {
+      try { restoredMode = sessionStorage.getItem(MODE_SESSION_KEY) || ''; } catch(e) {}
+    }
     if(restoredMode === 'read' || restoredMode === 'admin') {
       setMode(restoredMode);
       return;
@@ -4927,6 +4950,22 @@ function resizeAllTextareas(root = document) {
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindAuth);
   else bindAuth();
+
+  // 모바일 브라우저/앱의 뒤로가기 캐시에서 복귀할 때도, 나가기 후 복귀라면 로그인 화면을 보장한다.
+  window.addEventListener('pageshow', function(){
+    var wasExited = false;
+    try { wasExited = sessionStorage.getItem(EXIT_SESSION_KEY) === '1'; } catch(e) {}
+    if(!wasExited) return;
+    try {
+      sessionStorage.removeItem(MODE_SESSION_KEY);
+      sessionStorage.removeItem(EXIT_SESSION_KEY);
+    } catch(e) {}
+    document.body.classList.remove('trip-read-mode','trip-admin-mode');
+    var backdrop = document.getElementById('tripAuthBackdrop');
+    if(backdrop) backdrop.classList.remove('is-hidden');
+    var input = document.getElementById('tripAdminPasswordInput');
+    if(input) setTimeout(function(){ input.focus(); }, 80);
+  });
 
   // 회원모드 공개행이 Firebase/동적 복원 후에도 유지되도록 한 번 더 보정
   window.tripScheduleRefreshMemberPublicRows = markPublicRows;
