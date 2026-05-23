@@ -543,6 +543,7 @@
     }
     .info-toolbar button[data-info-action="text-red-cell"] { color: #c51616; }
     .info-toolbar button[data-info-action="text-blue-cell"] { color: #203fd8; }
+    .info-toolbar button[data-info-action="text-gray-cell"] { color: #777777; }
     .info-toolbar button[data-info-action="bg-yellow-cell"] { background: #fff200; }
     .info-toolbar button[data-info-action="bg-sky-cell"] { background: #eaf6ff; }
     .info-toolbar .info-json-btn{
@@ -1162,6 +1163,15 @@
       border-top: 0 !important;
     }
 
+    /* 예상시간 아래행 계산칸: 내용은 자동계산 유지, 글자/색상/배경색 서식만 편집 가능 */
+    #expected-bottom-row .readonly-cell {
+      cursor: pointer;
+    }
+    #expected-bottom-row .readonly-cell.style-selected-cell {
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
+    }
+
 
   </style>
 
@@ -1261,7 +1271,7 @@
 <div class="trip-mode-badge" id="tripModeBadge"></div>
 <div class="firebase-panel" id="firebase-panel">
 <div class="firebase-title">실시간 동기화 상태</div>
-<div>이 문서는 Firebase Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
+<div>이 문서는 Realtime Database와 연결되며 입력 내용이 자동으로 저장되고 다른 화면에도 실시간 반영됩니다.</div>
 <div class="firebase-status" id="firebase-status" style="color: rgb(11, 122, 40);">실시간 동기화 연결됨 · 저장된 내용 반영 완료</div>
 </div>
 <table class="plan">
@@ -1341,32 +1351,32 @@
 <td class="fixed bold">귀 가</td>
 </tr>
 <tr class="h14" id="duration-values-row">
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="2:30 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="4:30 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="00:50 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-stop1" id="duration-stop1" value="00:40 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-meal" id="duration-meal" value="1:00 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="1:00 예정"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="2:40 예정"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-start" id="duration-start" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-hike" id="duration-hike" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-move" id="duration-move" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-stop1" id="duration-stop1" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-meal" id="duration-meal" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-skywalk" id="duration-skywalk" value="0:00"/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="id:duration-home" id="duration-home" value="0:00"/></td>
 </tr>
 <tr class="h20 expected-top" id="expected-top-row">
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
 <td class="input-cell"><input class="cell-input red key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="09:00 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold blue key-font-14" id="calc-top-2" readonly="" value="13:30 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-3" readonly="" value="14:20 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-4" readonly="" value="15:00 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-5" readonly="" value="16:00 -&gt;"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-6" readonly="" value="17:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="0:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold blue key-font-14" id="calc-top-2" readonly="" value="0:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-3" readonly="" value="0:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-4" readonly="" value="0:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-5" readonly="" value="0:00 -&gt;"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-6" readonly="" value="0:00 -&gt;"/></td>
 </tr>
 <tr class="h20 expected-bottom expected-bottom-bold-line" id="expected-bottom-row">
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-1" readonly="" value="09:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-bottom-2" readonly="" value="13:30"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-3" readonly="" value="14:20"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" value="15:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" value="16:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" value="17:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" value="19:40"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-1" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-bottom-2" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-3" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue bold key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -1452,6 +1462,7 @@
 <button data-info-action="delete-col" type="button">칸 열 삭제</button>
 <button data-info-action="toggle-bold-cell" type="button">굵게</button>
 <button data-info-action="text-black-cell" type="button">글자검정</button>
+<button data-info-action="text-gray-cell" type="button">글자회색</button>
 <button data-info-action="text-red-cell" type="button">글자빨강</button>
 <button data-info-action="text-blue-cell" type="button">글자파랑</button>
 <button data-info-action="bg-white-cell" type="button">배경흰색</button>
@@ -1495,7 +1506,7 @@
 </div>
 <script>
     function parseDuration(text) {
-      const raw = String(text || '').replace(/예정/g, '').trim();
+      const raw = String(text || '').replace(/ /g, '').trim();
       const match = raw.match(/(\d{1,2})\s*:\s*(\d{2})/);
       if (!match) return 0;
       return Number(match[1]) * 60 + Number(match[2]);
@@ -1811,13 +1822,13 @@
       'duration-home'
     ];
     const DURATION_DEFAULT_VALUES = [
-      '2:30 예정',
-      '4:30 예정',
-      '00:50 예정',
-      '00:40 예정',
-      '1:00 예정',
-      '1:00 예정',
-      '2:40 예정'
+      '0:00',
+      '0:00',
+      '0:00',
+      '0:00',
+      '0:00',
+      '0:00',
+      '0:00'
     ];
 
     function getDurationColumnCountInput() {
@@ -1874,6 +1885,7 @@
       input.className = ('cell-input key-font-14 ' + className).trim();
       input.id = id;
       input.readOnly = true;
+      input.dataset.styleEditableCalc = 'true';
       input.value = ' ';
       cell.appendChild(input);
       return cell;
@@ -1975,7 +1987,7 @@
       const count = Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, columnValues.length || 7));
       const normalizedValues = columnValues.slice(0, count);
       while (normalizedValues.length < count) {
-        normalizedValues.push(DURATION_DEFAULT_VALUES[normalizedValues.length] || '00:00 예정');
+        normalizedValues.push(DURATION_DEFAULT_VALUES[normalizedValues.length] || '0:00');
       }
       const normalizedTitles = titleValues.slice(0, count);
       while (normalizedTitles.length < count) normalizedTitles.push(' ');
@@ -2000,7 +2012,7 @@
       while (valuesRow.firstChild) valuesRow.removeChild(valuesRow.firstChild);
       for (let i = 0; i < count; i += 1) {
         const id = getDurationId(i, count);
-        valuesRow.appendChild(makeInputCell(id, normalizedValues[i] || DURATION_DEFAULT_VALUES[i] || '00:00 예정', '', getDurationSyncKey(i, id)));
+        valuesRow.appendChild(makeInputCell(id, normalizedValues[i] || DURATION_DEFAULT_VALUES[i] || '0:00', '', getDurationSyncKey(i, id)));
       }
 
       while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
@@ -2046,7 +2058,7 @@
       const selected = normalizeDurationIndex(selectedDurationColumnIndex, current);
       /* 귀가 칸은 항상 마지막에 유지하기 위해 마지막 칸 선택 시 귀가 바로 앞에 추가 */
       const insertAt = selected >= current - 1 ? current - 1 : selected + 1;
-      values.splice(insertAt, 0, '00:00 예정');
+      values.splice(insertAt, 0, '0:00');
       titles.splice(insertAt, 0, ' ');
       rebuildDurationColumns(values, titles, insertAt);
     }
@@ -3507,6 +3519,8 @@ function resizeAllTextareas(root = document) {
           main.style.fontWeight = (current === '700' || current === 'bold') ? '' : '700';
         } else if (action === 'text-black-cell') {
           main.style.color = '#111111';
+        } else if (action === 'text-gray-cell') {
+          main.style.color = '#777777';
         } else if (action === 'text-red-cell') {
           main.style.color = '#c51616';
         } else if (action === 'text-blue-cell') {
@@ -4178,7 +4192,7 @@ function resizeAllTextareas(root = document) {
         if (action === 'delete-col') deleteColumn();
         if (action === 'save') saveInfoForm(true);
         if (action === 'load') loadInfoForm(true);
-        if (['toggle-bold-cell', 'text-black-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'clear-style-cell'].includes(action)) {
+        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'clear-style-cell'].includes(action)) {
           applySelectedCellStyle(action);
           event.preventDefault();
           return;
@@ -4623,6 +4637,43 @@ function resizeAllTextareas(root = document) {
       if(el) unlockSupplyRow();
     }, true);
     setInterval(unlockSupplyRow, 1500);
+  })();
+</script>
+
+<script id="expected-bottom-style-edit-fix">
+  /* 예상시간 아래행은 자동계산(readonly)을 유지하면서 셀 서식만 편집 가능하게 보강 */
+  (function(){
+    var PLAN_STYLE_STORAGE_KEY = 'tripSchedule.planCellStyles.v1';
+    function loadMap(){
+      try { var raw = localStorage.getItem(PLAN_STYLE_STORAGE_KEY); return raw ? (JSON.parse(raw) || {}) : {}; }
+      catch(e){ return {}; }
+    }
+    function applyCalcBottomSavedStyles(){
+      var map = loadMap();
+      document.querySelectorAll('#expected-bottom-row input[id^="calc-bottom-"]').forEach(function(input){
+        input.dataset.styleEditableCalc = 'true';
+        var style = map['field-id:' + input.id];
+        if(!style) return;
+        input.style.fontWeight = style.fontWeight || '';
+        input.style.color = style.color || '';
+        input.style.backgroundColor = style.backgroundColor || '';
+        var cell = input.closest('td,th');
+        if(cell && style.backgroundColor) cell.style.backgroundColor = style.backgroundColor;
+      });
+    }
+    function markCells(){
+      document.querySelectorAll('#expected-bottom-row .readonly-cell').forEach(function(cell){
+        cell.title = '클릭 후 정보모음 편집 그룹의 굵게/글자색/배경색 버튼으로 서식 변경';
+      });
+      applyCalcBottomSavedStyles();
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', markCells);
+    else markCells();
+    window.addEventListener('load', markCells);
+    var target = document.getElementById('expected-bottom-row');
+    if(target && window.MutationObserver){
+      new MutationObserver(markCells).observe(target, { childList: true, subtree: true });
+    }
   })();
 </script>
 </body></html>
