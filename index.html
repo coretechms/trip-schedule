@@ -954,8 +954,6 @@
     }
     body.trip-read-mode table.plan > tbody > tr.trip-public-row input,
     body.trip-read-mode table.plan > tbody > tr.trip-public-row textarea {
-      color: inherit !important;
-      -webkit-text-fill-color: currentColor !important;
       opacity: 1 !important;
       visibility: visible !important;
     }
@@ -1284,6 +1282,45 @@
       min-width: 0 !important;
     }
 
+
+
+    /* 회원모드: 소요시간 윗행은 관리자모드에서 저장된 글자색/굵기를 그대로 표시 */
+    body.trip-read-mode #duration-title-row td,
+    body.trip-read-mode #duration-title-row th {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    body.trip-read-mode #duration-title-row .fixed {
+      background: #ececec !important;
+      text-align: center !important;
+    }
+    body.trip-read-mode #duration-title-row .fixed.bold {
+      font-weight: 700 !important;
+    }
+    body.trip-read-mode #duration-title-row .sky-cell,
+    body.trip-read-mode #duration-title-row .sky-cell .cell-input {
+      background: #eaf6ff !important;
+    }
+    body.trip-read-mode #duration-title-row input.cell-input {
+      /* 색상/굵기는 관리자모드의 class, inline style, Firebase 복원값을 덮어쓰지 않는다 */
+      -webkit-text-fill-color: currentColor !important;
+      text-align: center !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    body.trip-read-mode #duration-title-row input.cell-input.bold {
+      font-weight: 700 !important;
+    }
+    body.trip-read-mode #duration-title-row input.cell-input.blue {
+      color: #203fd8 !important;
+      -webkit-text-fill-color: #203fd8 !important;
+      font-weight: 700 !important;
+    }
+    body.trip-read-mode #duration-title-row input.cell-input.red {
+      color: #c51616 !important;
+      -webkit-text-fill-color: #c51616 !important;
+      font-weight: 700 !important;
+    }
   
     /* 회비 행 두번째열 아래행: 숫자/한글 모두 입력 가능한 일반 입력칸 */
     input[data-sync-key="field:2"] {
@@ -3879,11 +3916,19 @@ function resizeAllTextareas(root = document) {
           if (!target || !style) return;
           const parts = getStyleTargetParts(target);
           if (parts.main) {
-            parts.main.style.fontWeight = style.fontWeight || '';
-            parts.main.style.color = style.color || '';
-            if (style.backgroundColor) parts.main.style.backgroundColor = style.backgroundColor;
+            if (style.fontWeight) parts.main.style.setProperty('font-weight', style.fontWeight, 'important');
+            else parts.main.style.removeProperty('font-weight');
+            if (style.color) {
+              parts.main.style.setProperty('color', style.color, 'important');
+              parts.main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
+            } else {
+              parts.main.style.removeProperty('color');
+              parts.main.style.removeProperty('-webkit-text-fill-color');
+            }
+            if (style.backgroundColor) parts.main.style.setProperty('background-color', style.backgroundColor, 'important');
+            else parts.main.style.removeProperty('background-color');
           }
-          if (parts.cell && style.backgroundColor) parts.cell.style.backgroundColor = style.backgroundColor;
+          if (parts.cell && style.backgroundColor) parts.cell.style.setProperty('background-color', style.backgroundColor, 'important');
         });
       }
 
@@ -5057,11 +5102,14 @@ function resizeAllTextareas(root = document) {
         document.querySelectorAll('table.plan > tbody > tr.trip-public-row input.cell-input, table.plan > tbody > tr.trip-public-row textarea.cell-input').forEach(function(el){
           el.style.visibility = 'visible';
           el.style.opacity = '1';
-          if (!el.closest('.trip-mask-cell')) {
-            el.style.color = '';
-            el.style.webkitTextFillColor = '';
-          }
+          /* 저장된 글자색을 지우지 않음: 관리자모드 서식을 회원모드에서도 그대로 표시 */
         });
+        if (typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') {
+          try {
+            var raw = localStorage.getItem('tripSchedule.planCellStyles.v1');
+            if (raw) window.__tripScheduleApplyPlanStylesFromFirebase(JSON.parse(raw));
+          } catch(e) {}
+        }
       } catch(e) {}
     }
     window.addEventListener('load', function(){
