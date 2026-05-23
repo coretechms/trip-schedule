@@ -712,7 +712,7 @@
     }
 
 
-    /* 모바일 수정 방식: 관리자 0.8초 / 회원모드 2초 이상 길게 누른 칸만 입력 가능 */
+    /* 모바일 수정 방식: 1초 이상 길게 누른 칸만 입력 가능 */
     @media (max-width: 768px), (hover: none) and (pointer: coarse) {
       input.cell-input.mobile-longpress-locked,
       textarea.cell-input.mobile-longpress-locked,
@@ -2904,14 +2904,10 @@ function resizeAllTextareas(root = document) {
 
   </script>
 <script>
-  /* 모바일 터치 편집 지연:
-     - 운영진/관리자 모드: 0.8초 동안 움직임이 없을 때만 커서 생성
-     - 회원모드: 2초 동안 움직임이 없을 때만 칸 선택/커서 허용
-     - 지정 시간 전 움직이면 화면 스크롤/드래그로 판단하여 편집을 취소 */ 
-  /* 전화번호 보호 칸도 같은 기준 시간 이후 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
+  /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
+  /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
   (function () {
-    const ADMIN_LONG_PRESS_MS = 800;
-    const MEMBER_LONG_PRESS_MS = 2000;
+    const LONG_PRESS_MS = 1000;
     const MOVE_LIMIT = 12;
     const PHONE_SYNC_KEYS = new Set([
       'field:11',          // 관광버스 행 전화번호
@@ -2937,45 +2933,6 @@ function resizeAllTextareas(root = document) {
 
     function isMobileEditMode() {
       return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
-    }
-
-    function getLongPressMs() {
-      return document.body.classList.contains('trip-read-mode') ? MEMBER_LONG_PRESS_MS : ADMIN_LONG_PRESS_MS;
-    }
-
-    function isMobileReadonlyLock(el) {
-      return !!(el && el.dataset && el.dataset.mobileLongpressReadonly === 'true');
-    }
-
-    function applyMobileReadonlyLock(el) {
-      if (!el || !('readOnly' in el)) return;
-      if (!el.dataset.mobileOriginalReadonly) {
-        el.dataset.mobileOriginalReadonly = el.readOnly ? 'true' : 'false';
-      }
-      el.dataset.mobileLongpressReadonly = 'true';
-      el.readOnly = true;
-    }
-
-    function releaseMobileReadonlyLock(el) {
-      if (!el || !('readOnly' in el)) return;
-      if (isMobileReadonlyLock(el)) {
-        el.readOnly = false;
-      }
-    }
-
-    function restoreMobileReadonlyLock(el) {
-      if (!el || !('readOnly' in el)) return;
-      if (isMobileReadonlyLock(el)) {
-        el.readOnly = true;
-      }
-    }
-
-    function clearMobileReadonlyLock(el) {
-      if (!el || !('readOnly' in el)) return;
-      if (isMobileReadonlyLock(el)) {
-        el.readOnly = el.dataset.mobileOriginalReadonly === 'true';
-        delete el.dataset.mobileLongpressReadonly;
-      }
     }
 
     function normalizeHeaderText(text) {
@@ -3014,11 +2971,8 @@ function resizeAllTextareas(root = document) {
 
     function isEditableTarget(el) {
       if (!el) return false;
-      const field = el.closest && el.closest('input.cell-input:not([disabled]), textarea.cell-input:not([disabled])');
-      if (field && field.id !== 'mountain-name') {
-        if (field.readOnly && !isMobileReadonlyLock(field)) return null;
-        return field;
-      }
+      const field = el.closest && el.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
+      if (field && field.id !== 'mountain-name') return field;
       const infoCell = el.closest && el.closest('.info-section-table th, .info-section-table td');
       if (infoCell && !infoCell.classList.contains('info-select-col') && !infoCell.querySelector('.info-row-select-btn')) return infoCell;
       return null;
@@ -3039,7 +2993,6 @@ function resizeAllTextareas(root = document) {
         if (el === exceptEl) return;
         el.classList.remove('mobile-longpress-editing');
         el.classList.add('mobile-longpress-locked');
-        restoreMobileReadonlyLock(el);
         if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
           el.contentEditable = 'false';
         }
@@ -3053,7 +3006,6 @@ function resizeAllTextareas(root = document) {
       lockAllExcept(el);
       el.classList.remove('mobile-longpress-locked');
       el.classList.add('mobile-longpress-editing');
-      releaseMobileReadonlyLock(el);
 
       if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
         el.contentEditable = 'true';
@@ -3157,12 +3109,10 @@ function resizeAllTextareas(root = document) {
         if (el.id === 'mountain-name') return;
         if (isDirectEditTarget(el)) {
           el.classList.remove('mobile-longpress-locked', 'mobile-longpress-editing');
-          clearMobileReadonlyLock(el);
           return;
         }
         if (!el.classList.contains('mobile-longpress-editing')) {
           el.classList.add('mobile-longpress-locked');
-          applyMobileReadonlyLock(el);
         }
       });
       document.querySelectorAll('.info-section-table th, .info-section-table td').forEach((cell) => {
@@ -3185,6 +3135,11 @@ function resizeAllTextareas(root = document) {
       }
       if (editable.classList.contains('mobile-longpress-editing')) return;
 
+      if (isPhoneChoiceTarget(editable)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
       targetEl = editable;
       startX = event.clientX || 0;
       startY = event.clientY || 0;
@@ -3196,7 +3151,7 @@ function resizeAllTextareas(root = document) {
           enableEditing(targetEl);
         }
         pressTimer = null;
-      }, getLongPressMs());
+      }, LONG_PRESS_MS);
     }, true);
 
     document.addEventListener('pointermove', function (event) {
@@ -3240,7 +3195,6 @@ function resizeAllTextareas(root = document) {
         if (document.activeElement === editable) return;
         editable.classList.remove('mobile-longpress-editing');
         editable.classList.add('mobile-longpress-locked');
-        restoreMobileReadonlyLock(editable);
         if (editable.matches && editable.matches('.info-section-table th, .info-section-table td')) {
           editable.contentEditable = 'false';
         }
