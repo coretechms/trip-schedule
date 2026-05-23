@@ -1724,12 +1724,12 @@
 </tbody></table>
 <input class="cell-input" data-sync-key="id:duration-column-count" id="duration-column-count" type="hidden" value="7"/>
 <div class="info-form-wrap" id="info-form-wrap">
-<div class="info-title">정보모음</div>
+<div class="info-title">정보 모음</div>
 <div class="info-toolbar">
-<button data-info-action="add-row" type="button">행밑추가</button>
-<button data-info-action="delete-row" type="button">선택행삭제</button>
-<button data-info-action="add-col" type="button">칸우측추가</button>
-<button data-info-action="delete-col" type="button">칸열삭제</button>
+<button data-info-action="add-row" type="button">행 아래 추가</button>
+<button data-info-action="delete-row" type="button">선택행 삭제</button>
+<button data-info-action="add-col" type="button">우측 칸 추가</button>
+<button data-info-action="delete-col" type="button">칸 열 삭제</button>
 <button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">글자</button>
 <button data-info-action="toggle-bold-cell" type="button">굵게</button>
 <button data-info-action="text-black-cell" type="button">검정</button>
@@ -3918,12 +3918,13 @@ function resizeAllTextareas(root = document) {
           if (field.dataset && field.dataset.syncKey) return 'field-sync:' + field.dataset.syncKey;
         }
         const cell = parts.cell || target.closest?.('td, th');
-        const table = cell ? cell.closest('table.plan, .gimbap-inner-table') : null;
+        const table = cell ? cell.closest('#durationExpectedTable, table.plan, .gimbap-inner-table') : null;
         const row = cell ? cell.parentElement : null;
         if (!cell || !table || !row) return '';
         const rowIndex = Array.prototype.indexOf.call(table.rows, row);
         const cellIndex = Array.prototype.indexOf.call(row.children, cell);
-        const tableId = table.classList.contains('gimbap-inner-table') ? 'gimbap' : 'plan';
+        if (rowIndex < 0 || cellIndex < 0) return '';
+        const tableId = table.id === 'durationExpectedTable' ? 'durationExpected' : (table.classList.contains('gimbap-inner-table') ? 'gimbap' : 'plan');
         return tableId + ':r' + rowIndex + ':c' + cellIndex;
       }
 
@@ -3967,32 +3968,38 @@ function resizeAllTextareas(root = document) {
         if (!main) return;
         if (action === 'toggle-bold-cell') {
           const current = String(main.style.fontWeight || '').toLowerCase();
-          main.style.fontWeight = (current === '700' || current === 'bold') ? '' : '700';
+          if (current === '700' || current === 'bold') main.style.removeProperty('font-weight');
+          else main.style.setProperty('font-weight', '700', 'important');
         } else if (action === 'text-black-cell') {
-          main.style.color = '#111111';
+          main.style.setProperty('color', '#111111', 'important');
+          main.style.setProperty('-webkit-text-fill-color', '#111111', 'important');
         } else if (action === 'text-gray-cell') {
-          main.style.color = '#777777';
+          main.style.setProperty('color', '#777777', 'important');
+          main.style.setProperty('-webkit-text-fill-color', '#777777', 'important');
         } else if (action === 'text-red-cell') {
-          main.style.color = '#c51616';
+          main.style.setProperty('color', '#c51616', 'important');
+          main.style.setProperty('-webkit-text-fill-color', '#c51616', 'important');
         } else if (action === 'text-blue-cell') {
-          main.style.color = '#203fd8';
+          main.style.setProperty('color', '#203fd8', 'important');
+          main.style.setProperty('-webkit-text-fill-color', '#203fd8', 'important');
         } else if (action === 'bg-white-cell') {
-          if (cell) cell.style.backgroundColor = '#ffffff';
-          main.style.backgroundColor = '#ffffff';
+          if (cell) cell.style.setProperty('background-color', '#ffffff', 'important');
+          main.style.setProperty('background-color', '#ffffff', 'important');
         } else if (action === 'bg-yellow-cell') {
-          if (cell) cell.style.backgroundColor = '#fff200';
-          main.style.backgroundColor = '#fff200';
+          if (cell) cell.style.setProperty('background-color', '#fff200', 'important');
+          main.style.setProperty('background-color', '#fff200', 'important');
         } else if (action === 'bg-sky-cell') {
-          if (cell) cell.style.backgroundColor = '#eaf6ff';
-          main.style.backgroundColor = '#eaf6ff';
+          if (cell) cell.style.setProperty('background-color', '#eaf6ff', 'important');
+          main.style.setProperty('background-color', '#eaf6ff', 'important');
         } else if (action === 'bg-pink-cell') {
-          if (cell) cell.style.backgroundColor = '#ffe4ef';
-          main.style.backgroundColor = '#ffe4ef';
+          if (cell) cell.style.setProperty('background-color', '#ffe4ef', 'important');
+          main.style.setProperty('background-color', '#ffe4ef', 'important');
         } else if (action === 'clear-style-cell') {
-          main.style.fontWeight = '';
-          main.style.color = '';
-          main.style.backgroundColor = '';
-          if (cell) cell.style.backgroundColor = '';
+          main.style.removeProperty('font-weight');
+          main.style.removeProperty('color');
+          main.style.removeProperty('-webkit-text-fill-color');
+          main.style.removeProperty('background-color');
+          if (cell) cell.style.removeProperty('background-color');
         }
       }
 
@@ -4005,9 +4012,9 @@ function resizeAllTextareas(root = document) {
             const syncKey = key.slice('field-sync:'.length).replace(/\"/g, '\\"');
             target = document.querySelector('table.plan [data-sync-key="' + syncKey + '"]');
           }
-          if (!target && /^(plan|gimbap):r\d+:c\d+$/.test(key)) {
-            const partsKey = key.match(/^(plan|gimbap):r(\d+):c(\d+)$/);
-            const table = partsKey[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan');
+          if (!target && /^(plan|gimbap|durationExpected):r\d+:c\d+$/.test(key)) {
+            const partsKey = key.match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
+            const table = partsKey[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (partsKey[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
             const row = table && table.rows[Number(partsKey[2])];
             target = row && row.children[Number(partsKey[3])];
           }
@@ -4031,6 +4038,7 @@ function resizeAllTextareas(root = document) {
       }
 
 
+      window.__tripScheduleApplyPlanStylesNow = applyPlanStyleMap;
       window.__tripScheduleApplyPlanStylesFromFirebase = function (styleMap) {
         if (!styleMap || typeof styleMap !== 'object' || Array.isArray(styleMap)) return;
         try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(styleMap)); } catch (e) {}
