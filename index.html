@@ -1567,6 +1567,73 @@
   }
 </style>
 
+
+<style id="touch-cursor-only-no-border-v34">
+  /* 모바일 터치 편집: 칸 테두리/선택색 변경 없이 커서만 표시 */
+  input.cell-input.mobile-longpress-editing,
+  textarea.cell-input.mobile-longpress-editing,
+  .info-section-table .mobile-longpress-editing {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+
+  input.cell-input.mobile-longpress-editing:focus,
+  textarea.cell-input.mobile-longpress-editing:focus,
+  .info-section-table .mobile-longpress-editing:focus,
+  input.cell-input:focus,
+  textarea.cell-input:focus,
+  .info-section-table th:focus,
+  .info-section-table td:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 터치/클릭으로 생기는 선택 표시도 화면에서는 보이지 않게 처리 */
+  body .style-selected-cell,
+  body input.cell-input.style-selected-cell,
+  body textarea.cell-input.style-selected-cell,
+  body .info-section-table td.info-selected,
+  body .info-section-table th.info-selected,
+  body #expected-bottom-row .readonly-cell.style-selected-cell,
+  body .gimbap-inner-table .gimbap-total-value-cell #gimbap-total.style-selected-cell {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body .info-section-table tr.info-row-selected > td,
+  body .info-section-table tr.info-row-selected > th {
+    background-color: inherit !important;
+  }
+
+  body #duration-values-row .duration-column-selected,
+  body #duration-values-row .duration-column-selected .cell-input,
+  body #durationExpectedTable .duration-column-selected,
+  body #durationExpectedTable .duration-column-selected .cell-input {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body #duration-values-row .duration-column-selected:not(.sky-cell),
+  body #durationExpectedTable .duration-column-selected:not(.sky-cell) {
+    background: inherit !important;
+  }
+
+  body #duration-values-row .duration-column-selected .cell-input,
+  body #durationExpectedTable .duration-column-selected .cell-input {
+    background: inherit !important;
+  }
+
+  body #duration-values-row .duration-column-selected.sky-cell,
+  body #durationExpectedTable .duration-column-selected.sky-cell,
+  body #duration-values-row .duration-column-selected.sky-cell .cell-input,
+  body #durationExpectedTable .duration-column-selected.sky-cell .cell-input {
+    background: #eaf6ff !important;
+  }
+</style>
+
 </head>
 <body style="overflow: auto;">
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
@@ -2907,8 +2974,13 @@ function resizeAllTextareas(root = document) {
   /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
   /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
   (function () {
-    const LONG_PRESS_MS = 1000;
+    const ADMIN_LONG_PRESS_MS = 800;
+    const MEMBER_LONG_PRESS_MS = 2000;
     const MOVE_LIMIT = 12;
+
+    function getLongPressMs() {
+      return document.body && document.body.classList.contains('trip-read-mode') ? MEMBER_LONG_PRESS_MS : ADMIN_LONG_PRESS_MS;
+    }
     const PHONE_SYNC_KEYS = new Set([
       'field:11',          // 관광버스 행 전화번호
       'field:27',          // 식당 행 연락처
@@ -3151,7 +3223,7 @@ function resizeAllTextareas(root = document) {
           enableEditing(targetEl);
         }
         pressTimer = null;
-      }, LONG_PRESS_MS);
+      }, getLongPressMs());
     }, true);
 
     document.addEventListener('pointermove', function (event) {
