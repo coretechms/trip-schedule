@@ -600,8 +600,8 @@
     .info-section-table td { background: #ffffff; }
     .info-section-table td.info-selected,
     .info-section-table th.info-selected {
-      outline: 2px solid #1737c9;
-      outline-offset: -2px;
+      outline: 1px solid #777777 !important;
+      outline-offset: -1px !important;
     }
 
     .info-select-col {
@@ -703,12 +703,18 @@
 
     /* 전체 칸 서식 선택 표시 */
     .style-selected-cell {
-      outline: 2px solid #1737c9 !important;
-      outline-offset: -2px !important;
+      outline: 1px solid #777777 !important;
+      outline-offset: -1px !important;
     }
     input.cell-input.style-selected-cell,
     textarea.cell-input.style-selected-cell {
-      box-shadow: inset 0 0 0 2px #1737c9 !important;
+      box-shadow: inset 0 0 0 1px #777777 !important;
+    }
+    body.trip-read-mode .style-selected-cell,
+    body.trip-read-mode .info-selected,
+    body.trip-read-mode .duration-column-selected {
+      outline: none !important;
+      box-shadow: none !important;
     }
 
 
@@ -727,8 +733,8 @@
         caret-color: auto !important;
         -webkit-user-select: text !important;
         user-select: text !important;
-        outline: 2px solid #1737c9 !important;
-        outline-offset: -2px !important;
+        outline: 1px solid #777777 !important;
+        outline-offset: -1px !important;
       }
     }
 
@@ -1151,8 +1157,8 @@
     body.trip-read-mode .duration-column-btn { display: none !important; }
     #duration-values-row .duration-column-selected,
     #duration-values-row .duration-column-selected .cell-input {
-      outline: 2px solid #b45309 !important;
-      outline-offset: -2px !important;
+      outline: 1px solid #777777 !important;
+      outline-offset: -1px !important;
       background: #fff7ed !important;
     }
 
@@ -1204,8 +1210,8 @@
       cursor: pointer;
     }
     #expected-bottom-row .readonly-cell.style-selected-cell {
-      outline: 2px solid #1737c9 !important;
-      outline-offset: -2px !important;
+      outline: 1px solid #777777 !important;
+      outline-offset: -1px !important;
     }
 
     /* 소요시간/예상시간 안정화: 기본 글자색/굵기 고정 */
@@ -1563,77 +1569,11 @@
   }
   .gimbap-inner-table .gimbap-total-value-cell #gimbap-total.style-selected-cell {
     outline-offset: -2px !important;
-    box-shadow: inset 0 0 0 2px #1737c9 !important;
+    box-shadow: inset 0 0 0 1px #777777 !important;
   }
 </style>
 
-
-<style id="touch-cursor-only-no-border-v34">
-  /* 모바일 터치 편집: 칸 테두리/선택색 변경 없이 커서만 표시 */
-  input.cell-input.mobile-longpress-editing,
-  textarea.cell-input.mobile-longpress-editing,
-  .info-section-table .mobile-longpress-editing {
-    outline: none !important;
-    outline-offset: 0 !important;
-    box-shadow: none !important;
-  }
-
-  input.cell-input.mobile-longpress-editing:focus,
-  textarea.cell-input.mobile-longpress-editing:focus,
-  .info-section-table .mobile-longpress-editing:focus,
-  input.cell-input:focus,
-  textarea.cell-input:focus,
-  .info-section-table th:focus,
-  .info-section-table td:focus {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
-  /* 터치/클릭으로 생기는 선택 표시도 화면에서는 보이지 않게 처리 */
-  body .style-selected-cell,
-  body input.cell-input.style-selected-cell,
-  body textarea.cell-input.style-selected-cell,
-  body .info-section-table td.info-selected,
-  body .info-section-table th.info-selected,
-  body #expected-bottom-row .readonly-cell.style-selected-cell,
-  body .gimbap-inner-table .gimbap-total-value-cell #gimbap-total.style-selected-cell {
-    outline: none !important;
-    outline-offset: 0 !important;
-    box-shadow: none !important;
-  }
-
-  body .info-section-table tr.info-row-selected > td,
-  body .info-section-table tr.info-row-selected > th {
-    background-color: inherit !important;
-  }
-
-  body #duration-values-row .duration-column-selected,
-  body #duration-values-row .duration-column-selected .cell-input,
-  body #durationExpectedTable .duration-column-selected,
-  body #durationExpectedTable .duration-column-selected .cell-input {
-    outline: none !important;
-    outline-offset: 0 !important;
-    box-shadow: none !important;
-  }
-
-  body #duration-values-row .duration-column-selected:not(.sky-cell),
-  body #durationExpectedTable .duration-column-selected:not(.sky-cell) {
-    background: inherit !important;
-  }
-
-  body #duration-values-row .duration-column-selected .cell-input,
-  body #durationExpectedTable .duration-column-selected .cell-input {
-    background: inherit !important;
-  }
-
-  body #duration-values-row .duration-column-selected.sky-cell,
-  body #durationExpectedTable .duration-column-selected.sky-cell,
-  body #duration-values-row .duration-column-selected.sky-cell .cell-input,
-  body #durationExpectedTable .duration-column-selected.sky-cell .cell-input {
-    background: #eaf6ff !important;
-  }
-</style>
-
+<!-- v35-thin-selection-member-block -->
 </head>
 <body style="overflow: auto;">
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
@@ -2974,13 +2914,8 @@ function resizeAllTextareas(root = document) {
   /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
   /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
   (function () {
-    const ADMIN_LONG_PRESS_MS = 800;
-    const MEMBER_LONG_PRESS_MS = 2000;
+    const LONG_PRESS_MS = 1000;
     const MOVE_LIMIT = 12;
-
-    function getLongPressMs() {
-      return document.body && document.body.classList.contains('trip-read-mode') ? MEMBER_LONG_PRESS_MS : ADMIN_LONG_PRESS_MS;
-    }
     const PHONE_SYNC_KEYS = new Set([
       'field:11',          // 관광버스 행 전화번호
       'field:27',          // 식당 행 연락처
@@ -3005,6 +2940,10 @@ function resizeAllTextareas(root = document) {
 
     function isMobileEditMode() {
       return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+    }
+
+    function isTripMemberMode() {
+      return !!(document.body && document.body.classList.contains('trip-read-mode'));
     }
 
     function normalizeHeaderText(text) {
@@ -3176,7 +3115,7 @@ function resizeAllTextareas(root = document) {
     }
 
     function initializeMobileLocks() {
-      if (!isMobileEditMode()) return;
+      if (!isMobileEditMode() || isTripMemberMode()) return;
       document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach((el) => {
         if (el.id === 'mountain-name') return;
         if (isDirectEditTarget(el)) {
@@ -3193,7 +3132,7 @@ function resizeAllTextareas(root = document) {
     }
 
     document.addEventListener('pointerdown', function (event) {
-      if (!isMobileEditMode()) return;
+      if (!isMobileEditMode() || isTripMemberMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) {
         if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
@@ -3223,7 +3162,7 @@ function resizeAllTextareas(root = document) {
           enableEditing(targetEl);
         }
         pressTimer = null;
-      }, getLongPressMs());
+      }, LONG_PRESS_MS);
     }, true);
 
     document.addEventListener('pointermove', function (event) {
@@ -3237,7 +3176,7 @@ function resizeAllTextareas(root = document) {
     document.addEventListener('pointercancel', cancelPressTimer, true);
 
     document.addEventListener('click', function (event) {
-      if (!isMobileEditMode()) return;
+      if (!isMobileEditMode() || isTripMemberMode()) return;
       if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
@@ -3249,7 +3188,7 @@ function resizeAllTextareas(root = document) {
     }, true);
 
     document.addEventListener('focusin', function (event) {
-      if (!isMobileEditMode()) return;
+      if (!isMobileEditMode() || isTripMemberMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
       if (isDirectEditTarget(editable)) return;
@@ -3259,7 +3198,7 @@ function resizeAllTextareas(root = document) {
     }, true);
 
     document.addEventListener('focusout', function (event) {
-      if (!isMobileEditMode()) return;
+      if (!isMobileEditMode() || isTripMemberMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
       if (isDirectEditTarget(editable)) return;
@@ -4005,6 +3944,7 @@ function resizeAllTextareas(root = document) {
       }
 
       function selectCell(cell) {
+        if (document.body && document.body.classList.contains('trip-read-mode')) return;
         if (!cell || !cell.closest('.info-section-table')) return;
         clearSelection();
         selectedCell = cell;
@@ -4042,6 +3982,7 @@ function resizeAllTextareas(root = document) {
       }
 
       function selectPlanCell(target) {
+        if (document.body && document.body.classList.contains('trip-read-mode')) return;
         if (!target) return;
         const cell = target.closest('td, th');
         clearSelection();
@@ -5216,6 +5157,13 @@ function resizeAllTextareas(root = document) {
     markPublicRows();
     document.body.classList.remove('trip-read-mode','trip-admin-mode');
     document.body.classList.add(mode === 'admin' ? 'trip-admin-mode' : 'trip-read-mode');
+    if (mode !== 'admin') {
+      document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected').forEach(function(el){ el.classList.remove('style-selected-cell','info-selected','duration-column-selected'); });
+      document.querySelectorAll('.info-row-selected').forEach(function(el){ el.classList.remove('info-row-selected'); });
+      window.__tripHideExactSelectedCell = null;
+      window.__tripScheduleSelectedStyleCell = null;
+      window.__tripScheduleSelectedStyleTarget = null;
+    }
     var badge = document.getElementById('tripModeBadge');
     if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보/공지 보기';
     var backdrop = document.getElementById('tripAuthBackdrop');
@@ -6162,6 +6110,7 @@ function resizeAllTextareas(root = document) {
   var selectedCell = null;
 
   function closestCell(target){
+    if(document.body && document.body.classList.contains('trip-read-mode')) return null;
     if(!target || !target.closest) return null;
     if(target.closest('.info-toolbar, .action-buttons, .trip-auth-backdrop, .admin-password-modal-backdrop')) return null;
     var cell = target.closest('#durationExpectedTable td, #durationExpectedTable th, table.plan td, table.plan th, .info-section-table td, .info-section-table th');
