@@ -558,7 +558,6 @@
     .info-toolbar button[data-info-action="bg-yellow-cell"] { background: #fff200; }
     .info-toolbar button[data-info-action="bg-sky-cell"] { background: #eaf6ff; }
     .info-toolbar button[data-info-action="bg-pink-cell"] { background: #ffe4ef; }
-    .info-toolbar button[data-info-action="bg-gray-cell"] { background: #e5e7eb; }
     .info-toolbar .info-json-btn{
       display:inline-flex !important;
       align-items:center !important;
@@ -600,8 +599,8 @@
     .info-section-table td { background: #ffffff; }
     .info-section-table td.info-selected,
     .info-section-table th.info-selected {
-      outline: 1px solid #777777 !important;
-      outline-offset: -1px !important;
+      outline: 2px solid #1737c9;
+      outline-offset: -2px;
     }
 
     .info-select-col {
@@ -703,18 +702,12 @@
 
     /* 전체 칸 서식 선택 표시 */
     .style-selected-cell {
-      outline: 1px solid #777777 !important;
-      outline-offset: -1px !important;
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
     }
     input.cell-input.style-selected-cell,
     textarea.cell-input.style-selected-cell {
-      box-shadow: inset 0 0 0 1px #777777 !important;
-    }
-    body.trip-read-mode .style-selected-cell,
-    body.trip-read-mode .info-selected,
-    body.trip-read-mode .duration-column-selected {
-      outline: none !important;
-      box-shadow: none !important;
+      box-shadow: inset 0 0 0 2px #1737c9 !important;
     }
 
 
@@ -733,8 +726,8 @@
         caret-color: auto !important;
         -webkit-user-select: text !important;
         user-select: text !important;
-        outline: 1px solid #777777 !important;
-        outline-offset: -1px !important;
+        outline: 2px solid #1737c9 !important;
+        outline-offset: -2px !important;
       }
     }
 
@@ -1096,6 +1089,17 @@
     .trip-member-notice-body.is-empty {
       color: #777;
     }
+    .trip-member-notice-body .guide-bold { font-weight: 900 !important; }
+    .trip-member-notice-body .guide-blue { color: #1428c8 !important; font-weight: 800 !important; }
+    .trip-member-notice-body .guide-red { color: #d80000 !important; font-weight: 800 !important; }
+    .trip-member-notice-body .guide-blink {
+      animation: tripMemberNoticeBlink 1.3s steps(2, start) infinite;
+      font-weight: 900 !important;
+    }
+    @keyframes tripMemberNoticeBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .25; }
+    }
     @media (max-width: 768px) {
       .trip-member-notice-pad {
         position: fixed !important;
@@ -1157,8 +1161,8 @@
     body.trip-read-mode .duration-column-btn { display: none !important; }
     #duration-values-row .duration-column-selected,
     #duration-values-row .duration-column-selected .cell-input {
-      outline: 1px solid #777777 !important;
-      outline-offset: -1px !important;
+      outline: 2px solid #b45309 !important;
+      outline-offset: -2px !important;
       background: #fff7ed !important;
     }
 
@@ -1210,8 +1214,8 @@
       cursor: pointer;
     }
     #expected-bottom-row .readonly-cell.style-selected-cell {
-      outline: 1px solid #777777 !important;
-      outline-offset: -1px !important;
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
     }
 
     /* 소요시간/예상시간 안정화: 기본 글자색/굵기 고정 */
@@ -1336,12 +1340,14 @@
       ime-mode: active;
     }
 </style>
+
 <style id="info-json-force-visible-style">
   #info-form-wrap .info-toolbar{display:flex!important;gap:6px!important;flex-wrap:wrap!important;align-items:center!important;overflow:visible!important;}
   #info-form-wrap .info-toolbar .info-json-btn{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important;color:#fff!important;font-weight:700!important;min-width:150px!important;height:31px!important;z-index:10!important;position:relative!important;}
   #infoBackupJsonBtn{background:#0b7a28!important;border:1px solid #0b7a28!important;}
   #infoRestoreJsonBtn{background:#1737c9!important;border:1px solid #1737c9!important;}
 </style>
+
 <style id="info-toolbar-grouped-style">
   #info-form-wrap .info-toolbar.info-toolbar-grouped {
     display: flex !important;
@@ -1392,8 +1398,10 @@
     border-color: #cfd8ff !important;
   }
 </style>
+
 <!-- refresh-keeps-mode-exit-clears-login-v2 -->
 <!-- v19-admin-hide-diagonal-thin -->
+
 <style id="member-notice-height-and-read-refresh-fix">
   /* 산행공지 메모장 세로 높이 20% 축소 */
   .trip-member-notice-pad {
@@ -1416,6 +1424,8 @@
     }
   }
 </style>
+
+
 <style id="info-edit-group-transparent-fix">
   /* 정보모음 편집 그룹 박스 배경 투명 처리 */
   #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
@@ -1432,6 +1442,8 @@
     border-color: #999999 !important;
   }
 </style>
+
+
 <style id="info-toolbar-pretty-buttons-style">
   /* 정보모음 편집 그룹 버튼 디자인 개선: 기능/스크립트 변경 없음 */
   #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
@@ -1496,17 +1508,15 @@
   #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-pink-cell"] {
     background: linear-gradient(180deg, #ffe8f1 0%, #ffd6e7 100%) !important;
   }
-  #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="bg-gray-cell"] {
-    background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%) !important;
-    border-color: rgba(107,114,128,0.45) !important;
-    color: #333 !important;
-  }
   #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] button[data-info-action="clear-style-cell"] {
     background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
     border-color: rgba(180,83,9,0.45) !important;
     color: #9a3412 !important;
   }
 </style>
+
+
+
 <style id="trip-hide-cell-admin-member-style">
   /* 가림 설정: 관리자모드에서는 연한 회색 덮개로 표시, 회원모드에서는 내용 완전 가림 */
   .trip-hidden-cell {
@@ -1543,53 +1553,35 @@
   }
 </style>
 
-<style id="gimbap-total-overflow-fixed-v30">
-  /* 김밥/금액 오른쪽 계산칸이 표 외곽선 밖으로 밀려나가지 않도록 고정 */
-  .gimbap-inner-table .gimbap-total-value-cell {
-    width: 82px !important;
-    min-width: 82px !important;
-    max-width: 82px !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    vertical-align: middle !important;
-  }
-  .gimbap-inner-table .gimbap-total-value-cell #gimbap-total {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: 28px !important;
-    display: block !important;
-    box-sizing: border-box !important;
-    padding: 3px 2px !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
-    white-space: nowrap !important;
-    text-align: center !important;
-  }
-  .gimbap-inner-table .gimbap-total-value-cell #gimbap-total.style-selected-cell {
-    outline-offset: -2px !important;
-    box-shadow: inset 0 0 0 1px #777777 !important;
+
+<style id="trip-admin-hide-gray-overlay-override">
+  /* 최종 우선순위: 관리자 모드 가림 표시를 대각선 없이 연한 회색으로 고정 */
+  body.trip-admin-mode .trip-hidden-cell::after,
+  body:not(.trip-read-mode) .trip-hidden-cell::after {
+    background: rgba(180, 180, 180, 0.32) !important;
+    background-image: none !important;
+    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
   }
 </style>
-
-<!-- v35-thin-selection-member-block -->
 </head>
 <body style="overflow: auto;">
+
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
-<div aria-labelledby="tripAuthTitle" aria-modal="true" class="trip-auth-box" role="dialog">
-<div class="trip-auth-title" id="tripAuthTitle">산행 계획</div>
-<button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 모드</button>
-<div class="trip-auth-desc">회원모드 [비밀번호 없음]</div>
-<div class="trip-auth-login-row">
-<input aria-label="비밀번호입력" autocomplete="current-password" class="trip-auth-input" id="tripAdminPasswordInput" placeholder="비밀번호입력" type="password"/>
-<button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
-</div>
-<div class="trip-auth-desc">운 영 진  [비밀번호 입력]</div>
-<div class="trip-auth-message" id="tripAuthMessage"></div>
-</div>
+  <div class="trip-auth-box" role="dialog" aria-modal="true" aria-labelledby="tripAuthTitle">
+    <div class="trip-auth-title" id="tripAuthTitle">산행 계획</div>
+    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 모드</button>
+    <div class="trip-auth-desc">회원모드 [비밀번호 없음]</div>
+    <div class="trip-auth-login-row">
+      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호입력" aria-label="비밀번호입력">
+      <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
+       </div>
+    <div class="trip-auth-desc">운 영 진  [비밀번호 입력]</div>
+    <div class="trip-auth-message" id="tripAuthMessage"></div>
+
+  </div>
 </div>
 <button class="trip-read-exit-btn" id="tripReadExitBtn" type="button">나가기</button>
+
 <!-- free-pan-zoom-enabled -->
 <div class="mobile-fit-wrap" id="mobile-fit-wrap">
 <div class="sheet" id="capture-area" style="transform: none; margin: 0px auto;">
@@ -1626,20 +1618,20 @@
 <tbody><tr class="h30">
 <td class="fixed" rowspan="2">회 비</td>
 <td class="input-cell" colspan="2" rowspan="2"><input class="cell-input bold amount-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:fee-amount" id="fee-amount" value=""/></td>
-<td class="fixed left editable-fixed-cell" colspan="3"><input class="cell-input left plan-label-input" data-realtime-save-bound="true" data-sync-key="id:special-extra-label" id="special-extra-label" value="특별산행 / 추가비용 :"/></td>
+<td class="fixed left editable-fixed-cell" colspan="3"><input class="cell-input left plan-label-input" id="special-extra-label" data-realtime-save-bound="true" data-sync-key="id:special-extra-label" value="특별산행 / 추가비용 :"/></td>
 <td class="fixed blue" rowspan="2">산행날자</td>
 <td class="input-cell" rowspan="2"><input class="cell-input blue key-font-14" data-realtime-save-bound="true" data-sync-key="id:hike-date" id="hike-date" value=" 월  일"/></td>
 </tr>
 <tr class="h30">
-<td class="input-cell" colspan="3"><input autocomplete="off" class="cell-input" data-realtime-save-bound="true" data-sync-key="field:2" inputmode="text" value=""/></td>
+<td class="input-cell" colspan="3"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:2" value="" inputmode="text" autocomplete="off"/></td>
 </tr>
 <tr class="h30" style="height: auto;">
 <td class="fixed" rowspan="2">산행지</td>
 <td class="input-cell mountain-name-cell calc-cell" colspan="2" rowspan="2" style="height: auto;"><textarea class="cell-input red mountain-name-input" id="mountain-name" readonly="" style="height: 47px; padding-top: 6px; padding-bottom: 6px; text-align: center;" tabindex="-1"> </textarea></td>
-<td class="fixed spaced editable-fixed-cell" colspan="2"><input class="cell-input plan-label-input" data-realtime-save-bound="true" data-sync-key="id:address-label" id="address-label" value="주 소"/></td>
-<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" data-realtime-save-bound="true" data-sync-key="id:entry-parking-label" id="entry-parking-label" value="입 장 료 / 주차료"/></td>
-<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" data-realtime-save-bound="true" data-sync-key="id:reservation-label" id="reservation-label" value="예 약 제"/></td>
-<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" data-realtime-save-bound="true" data-sync-key="id:ferry-label" id="ferry-label" value="도 선 료 왕복"/></td>
+<td class="fixed spaced editable-fixed-cell" colspan="2"><input class="cell-input plan-label-input" id="address-label" data-realtime-save-bound="true" data-sync-key="id:address-label" value="주 소"/></td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="entry-parking-label" data-realtime-save-bound="true" data-sync-key="id:entry-parking-label" value="입 장 료 / 주차료"/></td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="reservation-label" data-realtime-save-bound="true" data-sync-key="id:reservation-label" value="예 약 제"/></td>
+<td class="fixed gray editable-fixed-cell"><input class="cell-input plan-label-input" id="ferry-label" data-realtime-save-bound="true" data-sync-key="id:ferry-label" value="도 선 료 왕복"/></td>
 </tr>
 <tr class="h30">
 <td class="input-cell address-cell" colspan="2"><input class="cell-input left address-input" data-realtime-save-bound="true" data-sync-key="field:3" value=""/></td>
@@ -1708,13 +1700,13 @@
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-6" readonly="" value="0:00 -&gt;"/></td>
 </tr>
 <tr class="h20 expected-bottom expected-bottom-bold-line" id="expected-bottom-row">
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-1" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-2" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-3" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-4" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-5" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input key-font-14" data-style-editable-calc="true" id="calc-bottom-6" readonly="" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input blue key-font-14" data-style-editable-calc="true" id="calc-bottom-7" readonly="" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-1" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-2" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-3" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input blue key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -1749,10 +1741,10 @@
 <td class="fixed">추가인원(기사)</td>
 </tr>
 <tr class="h30" style="height: auto;">
-<td class="input-cell"><input class="cell-input" data-direct-edit="true" data-realtime-save-bound="true" data-sync-key="field:32" id="supply-water" value=" "/></td>
-<td class="input-cell"><input class="cell-input" data-direct-edit="true" data-realtime-save-bound="true" data-sync-key="field:33" id="supply-soju-makgeolli" value="  /  "/></td>
-<td class="input-cell"><input class="cell-input" data-direct-edit="true" data-realtime-save-bound="true" data-sync-key="field:34" id="supply-coffee" value="  /  "/></td>
-<td class="input-cell one-line-autogrow-row" colspan="2" style="height: auto;"><textarea class="cell-input" data-direct-edit="true" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:35" id="supply-consumables" rows="1" style="height: 24px;"></textarea></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:32" id="supply-water" data-direct-edit="true" value=" "/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:33" id="supply-soju-makgeolli" data-direct-edit="true" value="  /  "/></td>
+<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:34" id="supply-coffee" data-direct-edit="true" value="  /  "/></td>
+<td class="input-cell one-line-autogrow-row" colspan="2" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="field:35" id="supply-consumables" data-direct-edit="true" rows="1" style="height: 24px;"></textarea></td>
 <td class="input-cell"><input class="cell-input" id="total-people" readonly="" value=" "/></td>
 <td class="input-cell"><input class="cell-input blue" data-realtime-save-bound="true" data-sync-key="id:extra-people" id="extra-people" value=" "/></td>
 </tr>
@@ -1783,7 +1775,7 @@
 <td class="input-cell" style="height: auto;"><textarea class="cell-input" data-min-height="24" data-realtime-save-bound="true" data-sync-key="id:gimbap-account" id="gimbap-account" style="height: 28px;"></textarea></td>
 <td class="input-cell"><input class="cell-input amount-input" data-realtime-save-bound="true" data-sync-key="id:gimbap-price" id="gimbap-price" value=""/></td>
 <td class="fixed bold gimbap-total-label-cell">금 액 :</td>
-<td class="input-cell calc-cell gimbap-total-value-cell" style="width: 82px; min-width: 82px; max-width: 82px; padding: 0; overflow: hidden;"><input class="cell-input bold" id="gimbap-total" readonly="" style="width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;" value="0 원"/></td>
+<td class="input-cell calc-cell gimbap-total-value-cell" style="width: 82px; min-width: 82px;"><input class="cell-input bold" id="gimbap-total" readonly="" style="width: 72px;" value="0 원"/></td>
 </tr>
 </tbody>
 </table>
@@ -1798,21 +1790,21 @@
 <button data-info-action="delete-row" type="button">선택행삭제</button>
 <button data-info-action="add-col" type="button">우측칸추가</button>
 <button data-info-action="delete-col" type="button">칸열삭제</button>
-<button class="info-group-label-btn" disabled="" style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;" type="button">글자</button>
+<button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">글자</button>
 <button data-info-action="toggle-bold-cell" type="button">굵게</button>
 <button data-info-action="text-black-cell" type="button">검정</button>
 <button data-info-action="text-gray-cell" type="button">회색</button>
 <button data-info-action="text-red-cell" type="button">빨강</button>
 <button data-info-action="text-blue-cell" type="button">파랑</button>
 <button data-info-action="hide-cell" type="button">가림</button>
-<button class="info-group-label-btn" disabled="" style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;" type="button">배경</button>
+<button class="info-group-label-btn" type="button" disabled style="background:transparent!important;border:0!important;color:#111!important;font-weight:900!important;cursor:default!important;padding:3px 4px!important;min-width:auto!important;">배경</button>
 <button data-info-action="bg-white-cell" type="button">흰색</button>
 <button data-info-action="bg-yellow-cell" type="button">노랑</button>
 <button data-info-action="bg-sky-cell" type="button">하늘</button>
 <button data-info-action="bg-pink-cell" type="button">분홍</button>
-<button data-info-action="bg-gray-cell" type="button">회색</button>
-<button class="info-json-btn" data-info-action="backup-json" id="infoBackupJsonBtn" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;" type="button">백업(JSON)</button>
-<button class="info-json-btn" data-info-action="restore-json" id="infoRestoreJsonBtn" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;" type="button">복구(JSON)</button>
+<button data-info-action="clear-style-cell" type="button">서식해제</button>
+<button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
+<button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
 <input accept="application/json,.json" id="infoRestoreFile" style="display:none" type="file"/>
 </div>
 <table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
@@ -1839,12 +1831,12 @@
 </div>
 </div>
 </div>
-<div aria-label="산행공지 메모장" class="trip-member-notice-pad" id="tripMemberNoticePad">
-<div class="trip-member-notice-title">
-<span>산행공지 메모장</span>
-<span class="trip-member-notice-state" id="tripMemberNoticeState">실시간 공지</span>
-</div>
-<div class="trip-member-notice-body is-empty" id="tripMemberNoticeBody">등록된 산행공지가 없습니다.</div>
+<div class="trip-member-notice-pad" id="tripMemberNoticePad" aria-label="산행공지 메모장">
+  <div class="trip-member-notice-title">
+    <span>산행공지 메모장</span>
+    <span class="trip-member-notice-state" id="tripMemberNoticeState">실시간 공지</span>
+  </div>
+  <div class="trip-member-notice-body is-empty" id="tripMemberNoticeBody">등록된 산행공지가 없습니다.</div>
 </div>
 <script>
     function parseDuration(text) {
@@ -1881,27 +1873,24 @@
     }
 
     function adjustGimbapTotalWidth() {
-      // 금액 오른쪽 계산칸은 외곽선 안에 고정한다.
-      // 기존 자동 폭 조정은 4,000원처럼 값이 들어갈 때 셀/표 폭을 키워 외곽선 밖으로 밀어내는 원인이었다.
       const totalEl = document.getElementById('gimbap-total');
       if (!totalEl) return;
-      totalEl.style.width = '100%';
-      totalEl.style.minWidth = '0';
-      totalEl.style.maxWidth = '100%';
-      totalEl.style.boxSizing = 'border-box';
-      totalEl.style.display = 'block';
+      const text = String(totalEl.value || '0 원');
+      let visualLength = 0;
+      Array.from(text).forEach((ch) => {
+        visualLength += /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(ch) ? 1.8 : 1;
+      });
+      const nextWidth = Math.max(72, Math.ceil(visualLength * 8.8) + 26);
+      totalEl.style.width = nextWidth + 'px';
       const totalCell = totalEl.closest('td');
       if (totalCell) {
-        totalCell.style.width = '82px';
-        totalCell.style.minWidth = '82px';
-        totalCell.style.maxWidth = '82px';
-        totalCell.style.padding = '0';
-        totalCell.style.overflow = 'hidden';
-        totalCell.style.boxSizing = 'border-box';
+        totalCell.style.width = (nextWidth + 10) + 'px';
+        totalCell.style.minWidth = (nextWidth + 10) + 'px';
       }
       const table = totalEl.closest('table');
       if (table) {
-        table.style.width = '100%';
+        table.style.tableLayout = 'auto';
+        table.style.width = 'auto';
         table.style.minWidth = '100%';
       }
     }
@@ -1953,6 +1942,80 @@
       printEl.textContent = nextText ? nextText : '';
     }
 
+    /* 요청 수정: 회원모드 산행공지 메모장 HTML 코드 원문 표시 방지
+       - bus-seat 산행공지에서 저장된 서식 HTML은 메모장에 서식으로 표시
+       - script/iframe/event 속성 등 위험 코드는 제거 */
+    function decodeTripNoticeHtmlOnce(rawText) {
+      const text = String(rawText || '');
+      if (!/[&]lt;|[&]gt;|[&]amp;|[&]quot;|[&]#39;/.test(text)) return text;
+      const decoder = document.createElement('textarea');
+      decoder.innerHTML = text;
+      return decoder.value;
+    }
+
+    function sanitizeTripNoticeHtml(rawHtml) {
+      const sourceHtml = decodeTripNoticeHtmlOnce(rawHtml);
+      const template = document.createElement('template');
+      template.innerHTML = sourceHtml;
+
+      const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'SPAN', 'DIV', 'P']);
+      const allowedClasses = new Set(['guide-bold', 'guide-blue', 'guide-red', 'guide-blink']);
+      const allowedStyleProps = new Set(['color', 'font-weight', 'font-style', 'text-decoration']);
+
+      const sanitizeNode = (node) => {
+        Array.from(node.childNodes).forEach((child) => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const tagName = child.tagName;
+            if (!allowedTags.has(tagName)) {
+              const textNode = document.createTextNode(child.textContent || '');
+              child.replaceWith(textNode);
+              return;
+            }
+
+            Array.from(child.attributes).forEach((attr) => {
+              const name = attr.name.toLowerCase();
+              if (name.startsWith('on') || name === 'src' || name === 'href') {
+                child.removeAttribute(attr.name);
+                return;
+              }
+              if (name === 'class') {
+                const safeClassName = String(attr.value || '')
+                  .split(/\s+/)
+                  .filter((className) => allowedClasses.has(className))
+                  .join(' ');
+                if (safeClassName) child.setAttribute('class', safeClassName);
+                else child.removeAttribute('class');
+                return;
+              }
+              if (name === 'style') {
+                const safeStyles = [];
+                String(attr.value || '').split(';').forEach((part) => {
+                  const pair = part.split(':');
+                  if (pair.length < 2) return;
+                  const prop = pair.shift().trim().toLowerCase();
+                  const value = pair.join(':').trim();
+                  if (!allowedStyleProps.has(prop)) return;
+                  if (/url\s*\(|expression\s*\(|javascript:/i.test(value)) return;
+                  safeStyles.push(`${prop}: ${value}`);
+                });
+                if (safeStyles.length) child.setAttribute('style', safeStyles.join('; '));
+                else child.removeAttribute('style');
+                return;
+              }
+              child.removeAttribute(attr.name);
+            });
+
+            sanitizeNode(child);
+          } else if (child.nodeType !== Node.TEXT_NODE) {
+            child.remove();
+          }
+        });
+      };
+
+      sanitizeNode(template.content);
+      return template.innerHTML;
+    }
+
     function setTripMemberNoticeText(noticeValue) {
       const bodyEl = document.getElementById('tripMemberNoticeBody');
       const stateEl = document.getElementById('tripMemberNoticeState');
@@ -1968,7 +2031,7 @@
       }
 
       if (text) {
-        bodyEl.textContent = text;
+        bodyEl.innerHTML = sanitizeTripNoticeHtml(text);
         bodyEl.classList.remove('is-empty');
       } else {
         bodyEl.textContent = '등록된 산행공지가 없습니다.';
@@ -2942,10 +3005,6 @@ function resizeAllTextareas(root = document) {
       return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
     }
 
-    function isTripMemberMode() {
-      return !!(document.body && document.body.classList.contains('trip-read-mode'));
-    }
-
     function normalizeHeaderText(text) {
       return String(text || '').replace(/\s+/g, '');
     }
@@ -3115,7 +3174,7 @@ function resizeAllTextareas(root = document) {
     }
 
     function initializeMobileLocks() {
-      if (!isMobileEditMode() || isTripMemberMode()) return;
+      if (!isMobileEditMode()) return;
       document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach((el) => {
         if (el.id === 'mountain-name') return;
         if (isDirectEditTarget(el)) {
@@ -3132,7 +3191,7 @@ function resizeAllTextareas(root = document) {
     }
 
     document.addEventListener('pointerdown', function (event) {
-      if (!isMobileEditMode() || isTripMemberMode()) return;
+      if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) {
         if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
@@ -3176,7 +3235,7 @@ function resizeAllTextareas(root = document) {
     document.addEventListener('pointercancel', cancelPressTimer, true);
 
     document.addEventListener('click', function (event) {
-      if (!isMobileEditMode() || isTripMemberMode()) return;
+      if (!isMobileEditMode()) return;
       if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
@@ -3188,7 +3247,7 @@ function resizeAllTextareas(root = document) {
     }, true);
 
     document.addEventListener('focusin', function (event) {
-      if (!isMobileEditMode() || isTripMemberMode()) return;
+      if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
       if (isDirectEditTarget(editable)) return;
@@ -3198,7 +3257,7 @@ function resizeAllTextareas(root = document) {
     }, true);
 
     document.addEventListener('focusout', function (event) {
-      if (!isMobileEditMode() || isTripMemberMode()) return;
+      if (!isMobileEditMode()) return;
       const editable = isEditableTarget(event.target);
       if (!editable) return;
       if (isDirectEditTarget(editable)) return;
@@ -3944,7 +4003,6 @@ function resizeAllTextareas(root = document) {
       }
 
       function selectCell(cell) {
-        if (document.body && document.body.classList.contains('trip-read-mode')) return;
         if (!cell || !cell.closest('.info-section-table')) return;
         clearSelection();
         selectedCell = cell;
@@ -3982,7 +4040,6 @@ function resizeAllTextareas(root = document) {
       }
 
       function selectPlanCell(target) {
-        if (document.body && document.body.classList.contains('trip-read-mode')) return;
         if (!target) return;
         const cell = target.closest('td, th');
         clearSelection();
@@ -4086,9 +4143,6 @@ function resizeAllTextareas(root = document) {
         } else if (action === 'bg-pink-cell') {
           if (cell) cell.style.setProperty('background-color', '#ffe4ef', 'important');
           main.style.setProperty('background-color', '#ffe4ef', 'important');
-        } else if (action === 'bg-gray-cell') {
-          if (cell) cell.style.setProperty('background-color', '#e5e7eb', 'important');
-          main.style.setProperty('background-color', '#e5e7eb', 'important');
         } else if (action === 'hide-cell') {
           const targetCell = cell || main;
           if (targetCell && targetCell.classList) {
@@ -4812,7 +4866,7 @@ function resizeAllTextareas(root = document) {
         if (action === 'delete-col') deleteColumn();
         if (action === 'save') saveInfoForm(true);
         if (action === 'load') loadInfoForm(true);
-        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'hide-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'bg-pink-cell', 'bg-gray-cell', 'clear-style-cell'].includes(action)) {
+        if (['toggle-bold-cell', 'text-black-cell', 'text-gray-cell', 'text-red-cell', 'text-blue-cell', 'hide-cell', 'bg-white-cell', 'bg-yellow-cell', 'bg-sky-cell', 'bg-pink-cell', 'clear-style-cell'].includes(action)) {
           applySelectedCellStyle(action);
           event.preventDefault();
           return;
@@ -4850,6 +4904,7 @@ function resizeAllTextareas(root = document) {
       window.addEventListener('resize', syncAllInfoTableColumnWidths);
     })();
   </script>
+
 <script id="info-json-direct-preview-fallback">
 (function(){
   function ensureInfoJsonButtons(){
@@ -4935,6 +4990,7 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load', ensureInfoJsonButtons);
 })();
 </script>
+
 <script id="info-toolbar-grouped-script">
 (function(){
   function groupInfoToolbarButtons(){
@@ -5079,6 +5135,9 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load', groupInfoToolbarButtons);
 })();
 </script>
+
+
+
 <script id="trip-standalone-auth-script">
 (function(){
   'use strict';
@@ -5157,13 +5216,6 @@ function resizeAllTextareas(root = document) {
     markPublicRows();
     document.body.classList.remove('trip-read-mode','trip-admin-mode');
     document.body.classList.add(mode === 'admin' ? 'trip-admin-mode' : 'trip-read-mode');
-    if (mode !== 'admin') {
-      document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected').forEach(function(el){ el.classList.remove('style-selected-cell','info-selected','duration-column-selected'); });
-      document.querySelectorAll('.info-row-selected').forEach(function(el){ el.classList.remove('info-row-selected'); });
-      window.__tripHideExactSelectedCell = null;
-      window.__tripScheduleSelectedStyleCell = null;
-      window.__tripScheduleSelectedStyleTarget = null;
-    }
     var badge = document.getElementById('tripModeBadge');
     if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보/공지 보기';
     var backdrop = document.getElementById('tripAuthBackdrop');
@@ -5302,6 +5354,9 @@ function resizeAllTextareas(root = document) {
   };
 })();
 </script>
+
+
+
 <script id="member-refresh-public-rows-safety">
   /* 회원모드 새로고침/원격복원 후 공개행 값이 가려지지 않도록 최종 보정 */
   (function(){
@@ -5334,6 +5389,7 @@ function resizeAllTextareas(root = document) {
     window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(fixMemberPublicRows, 80); });
   })();
 </script>
+
 <script id="supply-row-editable-fix">
   /* 비품 행 편집 가능 보정: 물/소주·막걸리/커피믹스·블랙/소모품 */
   (function(){
@@ -5359,6 +5415,7 @@ function resizeAllTextareas(root = document) {
     setInterval(unlockSupplyRow, 1500);
   })();
 </script>
+
 <script id="expected-bottom-style-edit-fix">
   /* 예상시간 아래행은 자동계산(readonly)을 유지하면서 셀 서식만 편집 가능하게 보강 */
   (function(){
@@ -5395,6 +5452,7 @@ function resizeAllTextareas(root = document) {
     }
   })();
 </script>
+
 <script id="expected-bottom-default-thin-fix">
   /* 예상시간 아래행(calc-bottom)은 기본값을 가는 글자로 유지하고, 추가되는 칸도 동일 적용 */
   (function(){
@@ -5414,6 +5472,7 @@ function resizeAllTextareas(root = document) {
     }
   })();
 </script>
+
 <script id="editable-plan-label-and-supply-auto-width-fix">
   /* 상단 고정 라벨/비품/전화번호 칸: 글자 잘림 방지 자동 폭 조정 + 중앙 정렬 */
   (function(){
@@ -5606,41 +5665,11 @@ function resizeAllTextareas(root = document) {
     });
   })();
 </script>
-<style id="trip-optimized-final-style">
-  /* 통합 가림 표시: 관리자모드 = 연한 회색 덮개, 회원모드 = 완전 가림 */
-  .trip-hidden-cell {
-    position: relative !important;
-  }
-  body.trip-admin-mode .trip-hidden-cell::after,
-  body:not(.trip-read-mode) .trip-hidden-cell::after {
-    content: "" !important;
-    position: absolute !important;
-    inset: 2px !important;
-    pointer-events: none !important;
-    z-index: 5 !important;
-    border-radius: 3px !important;
-    background: rgba(180, 180, 180, 0.32) !important;
-    background-image: none !important;
-    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
-  }
-  body.trip-read-mode .trip-hidden-cell,
-  body.trip-read-mode .trip-hidden-cell * {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-    text-shadow: none !important;
-    caret-color: transparent !important;
-  }
-  body.trip-read-mode .trip-hidden-cell input,
-  body.trip-read-mode .trip-hidden-cell textarea {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-    background-color: inherit !important;
-  }
-</style>
-<script id="trip-optimized-final-script">
+
+
+<script id="full-plan-info-json-backup-fix-v3">
 (function(){
   'use strict';
-
   var PLAN_CACHE_KEY = 'tripSchedule.sharedPlan.formData';
   var INFO_CACHE_KEY = 'tripSchedule.infoForm.tables.v2';
   var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
@@ -5649,131 +5678,101 @@ function resizeAllTextareas(root = document) {
     if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
     return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
   }
-  function readJson(key, fallback){
-    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch(e){ return fallback; }
+  function readJsonStorage(key){
+    try { var raw=localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
   }
-  function writeJson(key, value){
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  function writeJsonStorage(key, value){
+    try { localStorage.setItem(key, JSON.stringify(value || {})); } catch(e){}
+  }
+  function getElementKey(el, index){
+    return el.getAttribute('data-sync-key') || (el.id ? 'id:' + el.id : 'plan-index:' + index);
   }
   function fieldValue(el){
-    if(!el) return '';
+    if(el.tagName === 'SELECT') return el.value;
     if(el.type === 'checkbox' || el.type === 'radio') return !!el.checked;
     return el.value == null ? '' : String(el.value);
   }
   function setFieldValue(el, value){
-    if(!el) return;
     if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!value;
     else el.value = value == null ? '' : String(value);
     try { el.dispatchEvent(new Event('input', {bubbles:true})); } catch(e){}
     try { el.dispatchEvent(new Event('change', {bubbles:true})); } catch(e){}
   }
-  function pathOf(el, root){
+  function makePath(el, root){
     var parts=[];
-    while(el && root && el !== root){
-      var parent = el.parentElement;
-      if(!parent) break;
-      var same = Array.prototype.filter.call(parent.children, function(c){ return c.tagName === el.tagName; });
-      parts.unshift(el.tagName.toLowerCase() + ':' + same.indexOf(el));
-      el = parent;
+    while(el && el!==root){
+      var parent=el.parentElement; if(!parent) break;
+      var same=Array.prototype.filter.call(parent.children,function(c){return c.tagName===el.tagName;});
+      parts.unshift(el.tagName.toLowerCase()+':'+same.indexOf(el));
+      el=parent;
     }
     return parts.join('/');
   }
-  function byPath(root, path){
+  function findByPath(root, path){
     if(!root || !path) return null;
-    var el = root;
+    var el=root;
     path.split('/').forEach(function(part){
       if(!el) return;
-      var sp = part.split(':'), tag = String(sp[0] || '').toUpperCase(), idx = Number(sp[1] || 0);
-      var same = Array.prototype.filter.call(el.children, function(c){ return c.tagName === tag; });
-      el = same[idx] || null;
+      var sp=part.split(':'), tag=sp[0].toUpperCase(), idx=Number(sp[1]||0);
+      var same=Array.prototype.filter.call(el.children,function(c){return c.tagName===tag;});
+      el=same[idx] || null;
     });
     return el;
   }
-  function elementKey(el, idx){
-    return (el && el.getAttribute('data-sync-key')) || (el && el.id ? 'id:' + el.id : 'plan-index:' + idx);
-  }
 
-  function collectPlan(){
-    var table = document.querySelector('table.plan');
-    var fields = {};
-    var fieldList = [];
-    if(table){
-      table.querySelectorAll('input, textarea, select').forEach(function(el, idx){
-        var key = elementKey(el, idx);
-        fields[key] = fieldValue(el);
-        fieldList.push({
-          key: key,
-          id: el.id || '',
-          tag: el.tagName.toLowerCase(),
-          type: el.getAttribute('type') || '',
-          value: fields[key],
-          className: el.className || '',
-          style: el.getAttribute('style') || '',
-          path: pathOf(el, table)
-        });
+  function collectPlanBackup(){
+    var planTable=document.querySelector('table.plan');
+    var fields={};
+    var fieldList=[];
+    var inputs=planTable ? planTable.querySelectorAll('input, textarea, select') : [];
+    inputs.forEach(function(el, i){
+      var key=getElementKey(el, i);
+      var rec={
+        key:key,
+        id:el.id || '',
+        tag:el.tagName.toLowerCase(),
+        type:el.getAttribute('type') || '',
+        value:fieldValue(el),
+        className:el.className || '',
+        style:el.getAttribute('style') || '',
+        path:makePath(el, planTable)
+      };
+      fields[key]=rec.value;
+      fieldList.push(rec);
+    });
+    var durationCount=document.getElementById('duration-column-count');
+    if(durationCount){
+      var count=document.querySelectorAll('#duration-values-row input').length || Number(durationCount.value) || 7;
+      durationCount.value=String(count);
+      fields['id:duration-column-count']=String(count);
+    }
+    var cells=[];
+    if(planTable){
+      planTable.querySelectorAll('td, th').forEach(function(cell){
+        if((cell.className||'') || cell.getAttribute('style')){
+          cells.push({path:makePath(cell, planTable), className:cell.className||'', style:cell.getAttribute('style')||''});
+        }
       });
     }
-    var cells = [];
-    if(table){
-      table.querySelectorAll('td, th').forEach(function(cell){
-        if((cell.className || '') || cell.getAttribute('style')){
-          cells.push({path:pathOf(cell, table), className:cell.className || '', style:cell.getAttribute('style') || ''});
-        }
+    var colgroups=[];
+    if(planTable){
+      planTable.querySelectorAll('colgroup').forEach(function(cg){
+        colgroups.push(Array.from(cg.children).map(function(col){return col.getAttribute('style')||'';}));
       });
     }
     return {
       formData: fields,
       fields: fieldList,
       cells: cells,
-      planCellStyles: readJson(PLAN_STYLE_KEY, {}),
+      colgroups: colgroups,
+      planCellStyles: readJsonStorage(PLAN_STYLE_KEY) || {},
       durationExpectedTableHtml: (document.getElementById('durationExpectedTable') || {}).outerHTML || '',
+      gimbapTableHtml: (document.querySelector('.gimbap-inner-table') || {}).outerHTML || '',
       titleText: (document.getElementById('busSeatInfoTitleMainPrint') || {}).textContent || ''
     };
   }
-  function applyPlan(plan){
-    if(!plan || typeof plan !== 'object') return;
-    var table = document.querySelector('table.plan');
-    var data = plan.formData || {};
-    if(Array.isArray(plan.fields)){
-      plan.fields.forEach(function(rec){ if(rec && rec.key && !Object.prototype.hasOwnProperty.call(data, rec.key)) data[rec.key] = rec.value; });
-    }
-    Object.keys(data).forEach(function(key){
-      var el = null;
-      if(key.indexOf('id:') === 0) el = document.getElementById(key.slice(3));
-      if(!el) el = document.querySelector('[data-sync-key="' + cssEscape(key) + '"]');
-      setFieldValue(el, data[key]);
-    });
-    if(Array.isArray(plan.fields) && table){
-      plan.fields.forEach(function(rec){
-        if(!rec) return;
-        var el = rec.id ? document.getElementById(rec.id) : null;
-        if(!el && rec.key) el = document.querySelector('[data-sync-key="' + cssEscape(rec.key) + '"]');
-        if(!el && rec.path) el = byPath(table, rec.path);
-        if(!el) return;
-        setFieldValue(el, rec.value);
-        if(rec.className) el.className = rec.className;
-        if(rec.style) el.setAttribute('style', rec.style);
-      });
-    }
-    if(Array.isArray(plan.cells) && table){
-      plan.cells.forEach(function(rec){
-        var cell = rec && byPath(table, rec.path);
-        if(!cell) return;
-        cell.className = rec.className || '';
-        if(rec.style) cell.setAttribute('style', rec.style); else cell.removeAttribute('style');
-      });
-    }
-    if(plan.planCellStyles && typeof plan.planCellStyles === 'object') {
-      writeJson(PLAN_STYLE_KEY, plan.planCellStyles);
-      if(typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') window.__tripScheduleApplyPlanStylesFromFirebase(plan.planCellStyles);
-      else if(typeof window.__tripScheduleApplyPlanStylesNow === 'function') window.__tripScheduleApplyPlanStylesNow();
-    }
-    writeJson(PLAN_CACHE_KEY, data);
-    try { window.dispatchEvent(new Event('resize')); } catch(e){}
-    try { window.dispatchEvent(new Event('trip-duration-structure-changed')); } catch(e){}
-  }
 
-  function infoCellData(cell){
+  function cellData(cell){
     return {
       html: cell.querySelector('.info-row-select-btn') ? '' : cell.innerHTML,
       text: cell.querySelector('.info-row-select-btn') ? '' : cell.innerText,
@@ -5782,251 +5781,167 @@ function resizeAllTextareas(root = document) {
       contentEditable: cell.getAttribute('contenteditable') || ''
     };
   }
-  function collectInfoTable(table){
+  function tableToData(table){
     if(!table) return null;
     return {
       id: table.id || '',
       tableStyle: table.getAttribute('style') || '',
-      colWidths: Array.from(table.querySelectorAll('col')).map(function(col){ return col.getAttribute('style') || ''; }),
-      header: Array.from(table.querySelectorAll('thead tr')).map(function(tr){ return Array.from(tr.cells).map(infoCellData); }),
-      body: Array.from(table.querySelectorAll('tbody tr')).map(function(tr){ return Array.from(tr.cells).map(infoCellData); })
+      colWidths: Array.from(table.querySelectorAll('col')).map(function(c){return c.getAttribute('style')||'';}),
+      header: Array.from(table.querySelectorAll('thead tr')).map(function(tr){return Array.from(tr.cells).map(cellData);}),
+      body: Array.from(table.querySelectorAll('tbody tr')).map(function(tr){return Array.from(tr.cells).map(cellData);})
     };
   }
-  function collectInfo(){
+  function collectInfoBackup(){
     return {
       tables: {
-        main: collectInfoTable(document.getElementById('info-main-table')),
-        company: collectInfoTable(document.getElementById('info-company-table'))
+        main: tableToData(document.getElementById('info-main-table')),
+        company: tableToData(document.getElementById('info-company-table'))
       },
-      localStorageTables: readJson(INFO_CACHE_KEY, null)
+      localStorageTables: readJsonStorage(INFO_CACHE_KEY) || null
     };
   }
   function makeSelectCell(){
-    var td = document.createElement('td');
-    td.className = 'info-select-col';
-    td.contentEditable = 'false';
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'info-row-select-btn';
-    b.textContent = '선택';
-    td.appendChild(b);
+    var td=document.createElement('td'); td.className='info-select-col'; td.contentEditable='false';
+    var b=document.createElement('button'); b.className='info-row-select-btn'; b.type='button'; b.textContent='선택'; td.appendChild(b);
     return td;
   }
   function applyInfoTable(table, data){
     if(!table || !data) return;
     if(data.tableStyle) table.setAttribute('style', data.tableStyle);
-    var cols = table.querySelectorAll('col');
-    (data.colWidths || []).forEach(function(style, idx){ if(cols[idx]) cols[idx].setAttribute('style', style); });
-    var thead = table.tHead || table.createTHead();
-    var tbody = table.tBodies[0] || table.createTBody();
-    thead.innerHTML = '';
-    tbody.innerHTML = '';
+    var cols=table.querySelectorAll('col');
+    (data.colWidths || []).forEach(function(style,i){ if(cols[i]) cols[i].setAttribute('style',style); });
+    var thead=table.tHead || table.createTHead();
+    var tbody=table.tBodies[0] || table.createTBody();
+    thead.innerHTML=''; tbody.innerHTML='';
     (data.header || []).forEach(function(row){
-      var tr = document.createElement('tr');
-      row.forEach(function(c, idx){
-        var th = document.createElement('th');
-        if(idx === 0){ th.className = 'info-select-col'; th.contentEditable = 'false'; th.textContent = '선택'; }
-        else { th.contentEditable = 'true'; th.className = c.className || ''; if(c.style) th.setAttribute('style', c.style); th.innerHTML = c.html || ''; }
+      var tr=document.createElement('tr');
+      row.forEach(function(c,idx){
+        var th=document.createElement('th');
+        if(idx===0){ th.className='info-select-col'; th.contentEditable='false'; th.textContent='선택'; }
+        else { th.contentEditable='true'; th.className=c.className||''; if(c.style) th.setAttribute('style',c.style); th.innerHTML=c.html||''; }
         tr.appendChild(th);
       });
       thead.appendChild(tr);
     });
     (data.body || []).forEach(function(row){
-      var tr = document.createElement('tr');
-      row.forEach(function(c, idx){
-        if(idx === 0){ tr.appendChild(makeSelectCell()); return; }
-        var td = document.createElement('td');
-        td.contentEditable = 'true';
-        td.className = c.className || '';
-        if(c.style) td.setAttribute('style', c.style);
-        td.innerHTML = c.html || '';
-        tr.appendChild(td);
+      var tr=document.createElement('tr');
+      row.forEach(function(c,idx){
+        if(idx===0){ tr.appendChild(makeSelectCell()); return; }
+        var td=document.createElement('td'); td.contentEditable='true'; td.className=c.className||''; if(c.style) td.setAttribute('style',c.style); td.innerHTML=c.html||''; tr.appendChild(td);
       });
       tbody.appendChild(tr);
     });
   }
-  function applyInfo(info){
-    if(!info) return;
-    var tables = info.tables || info.data || info;
-    applyInfoTable(document.getElementById('info-main-table'), tables.main || tables.infoMainTable || tables['info-main-table']);
-    applyInfoTable(document.getElementById('info-company-table'), tables.company || tables.infoCompanyTable || tables['info-company-table']);
-    if(info.localStorageTables) writeJson(INFO_CACHE_KEY, info.localStorageTables);
+  function applyPlanBackup(plan){
+    if(!plan || typeof plan !== 'object') return;
+    var planTable=document.querySelector('table.plan');
+    var data=plan.formData || {};
+    if(Array.isArray(plan.fields)){
+      plan.fields.forEach(function(rec){ if(rec && rec.key && !Object.prototype.hasOwnProperty.call(data, rec.key)) data[rec.key]=rec.value; });
+    }
+    Object.keys(data).forEach(function(key){
+      var el=null;
+      if(key.indexOf('id:')===0) el=document.getElementById(key.slice(3));
+      if(!el) el=document.querySelector('[data-sync-key="'+cssEscape(key)+'"]');
+      if(el) setFieldValue(el, data[key]);
+    });
+    if(Array.isArray(plan.fields) && planTable){
+      plan.fields.forEach(function(rec){
+        var el=null;
+        if(rec.id) el=document.getElementById(rec.id);
+        if(!el && rec.key) el=document.querySelector('[data-sync-key="'+cssEscape(rec.key)+'"]');
+        if(!el && rec.path) el=findByPath(planTable, rec.path);
+        if(el){
+          setFieldValue(el, rec.value);
+          if(rec.className) el.className=rec.className;
+          if(rec.style) el.setAttribute('style', rec.style);
+        }
+      });
+    }
+    if(Array.isArray(plan.cells) && planTable){
+      plan.cells.forEach(function(rec){
+        var cell=findByPath(planTable, rec.path);
+        if(cell){ cell.className=rec.className || ''; if(rec.style) cell.setAttribute('style', rec.style); else cell.removeAttribute('style'); }
+      });
+    }
+    if(plan.planCellStyles) writeJsonStorage(PLAN_STYLE_KEY, plan.planCellStyles);
+    writeJsonStorage(PLAN_CACHE_KEY, data);
     try { window.dispatchEvent(new Event('resize')); } catch(e){}
+    try { window.dispatchEvent(new Event('trip-duration-structure-changed')); } catch(e){}
   }
   function downloadFullBackup(){
-    var active = document.activeElement;
-    if(active && active.blur) active.blur();
-    var payload = {
-      type: 'trip-schedule-full-plan-info-backup',
-      version: '4.0-optimized',
-      savedAt: new Date().toISOString(),
-      plan: collectPlan(),
-      info: collectInfo()
+    var active=document.activeElement; if(active && active.blur) active.blur();
+    var payload={
+      type:'trip-schedule-full-plan-info-backup',
+      version:'3.0',
+      savedAt:new Date().toISOString(),
+      plan: collectPlanBackup(),
+      info: collectInfoBackup()
     };
-    writeJson(PLAN_CACHE_KEY, payload.plan.formData || {});
-    if(payload.info.localStorageTables) writeJson(INFO_CACHE_KEY, payload.info.localStorageTables);
-    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json;charset=utf-8'});
-    var a = document.createElement('a');
-    var stamp = new Date().toISOString().slice(0,19).replace(/[-:T]/g,'');
-    a.href = URL.createObjectURL(blob);
-    a.download = '정기산행_계획_정보모음_전체백업_' + stamp + '.json';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    writeJsonStorage(PLAN_CACHE_KEY, payload.plan.formData);
+    if(payload.info.localStorageTables) writeJsonStorage(INFO_CACHE_KEY, payload.info.localStorageTables);
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+    var a=document.createElement('a');
+    var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    a.href=URL.createObjectURL(blob);
+    a.download='정기산행계획_정보모음_전체백업_'+stamp+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},800);
   }
-  function restoreFullBackup(file){
+  function restoreFullBackupFile(file){
     if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){
+    var reader=new FileReader();
+    reader.onload=function(){
       try{
-        var parsed = JSON.parse(String(reader.result || ''));
-        if(parsed.plan) applyPlan(parsed.plan);
-        if(parsed.info) applyInfo(parsed.info);
-        else if(parsed.tables || parsed.data) applyInfo(parsed);
-        alert('정기산행 계획/정보모음 복구 완료');
+        var parsed=JSON.parse(String(reader.result||''));
+        var plan=parsed.plan || parsed.planData || null;
+        var info=parsed.info || null;
+        if(!plan && (parsed.formData || parsed.fields)) plan=parsed;
+        if(plan) applyPlanBackup(plan);
+        var tables=null;
+        if(info && info.tables) tables=info.tables;
+        else if(parsed.tables && (parsed.tables.main || parsed.tables.company)) tables=parsed.tables;
+        if(tables){
+          applyInfoTable(document.getElementById('info-main-table'), tables.main || tables.infoMainTable || tables['info-main-table']);
+          applyInfoTable(document.getElementById('info-company-table'), tables.company || tables.infoCompanyTable || tables['info-company-table']);
+        }
+        alert('정기산행 계획/정보모음 JSON 복구 완료');
       }catch(e){
-        alert('JSON 복구 실패: 백업 파일 형식을 확인하세요.');
+        console.error(e);
+        alert('JSON 파일을 읽지 못했습니다.');
       }
-      var fileInput = document.getElementById('infoRestoreFile');
-      if(fileInput) fileInput.value = '';
+      var input=document.getElementById('infoRestoreFile'); if(input) input.value='';
     };
-    reader.readAsText(file, 'utf-8');
+    reader.readAsText(file,'utf-8');
   }
   function bindFullBackupButtons(){
-    var backup = document.getElementById('infoBackupJsonBtn');
-    var restore = document.getElementById('infoRestoreJsonBtn');
-    var fileInput = document.getElementById('infoRestoreFile');
-    if(!backup || !restore) return;
-    if(!fileInput){
-      fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'application/json,.json';
-      fileInput.id = 'infoRestoreFile';
-      fileInput.style.display = 'none';
-      (restore.parentNode || document.body).appendChild(fileInput);
-    }
-    backup.textContent = '전체 백업(JSON)';
-    restore.textContent = '전체 복구(JSON)';
-    backup.onclick = function(e){ e.preventDefault(); e.stopPropagation(); downloadFullBackup(); };
-    restore.onclick = function(e){ e.preventDefault(); e.stopPropagation(); fileInput.click(); };
-    fileInput.onchange = function(e){ restoreFullBackup(e.target.files && e.target.files[0]); };
-  }
-
-  function styleMap(){
-    return readJson(PLAN_STYLE_KEY, {});
-  }
-  function publishStyleMap(map){
-    writeJson(PLAN_STYLE_KEY, map || {});
-    try {
-      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
-      if(typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') window.__tripScheduleSavePlanStylesToFirebase(map || {});
-    } catch(e){}
-  }
-  function durationCell(target){
-    if(!target || !target.closest) return null;
-    var cell = target.closest('#durationExpectedTable td, #durationExpectedTable th');
-    if(!cell) return null;
-    var rowId = cell.parentElement && cell.parentElement.id;
-    return /^(duration-title-row|duration-values-row|expected-top-row|expected-bottom-row)$/.test(rowId || '') ? cell : null;
-  }
-  function durationKey(cell){
-    var table = document.getElementById('durationExpectedTable');
-    if(!cell || !table || !table.contains(cell)) return '';
-    var row = cell.parentElement;
-    var r = Array.prototype.indexOf.call(table.rows, row);
-    var c = Array.prototype.indexOf.call(row.children, cell);
-    return (r >= 0 && c >= 0) ? ('durationExpected:r' + r + ':c' + c) : '';
-  }
-  function fieldKeys(cell){
-    var out = [];
-    var field = cell && cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input, select.cell-input');
-    if(field){
-      if(field.id) out.push('field-id:' + field.id);
-      if(field.dataset && field.dataset.syncKey) out.push('field-sync:' + field.dataset.syncKey);
-    }
-    return out;
-  }
-  function currentStyle(cell){
-    var field = cell && cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input, select.cell-input');
-    var main = field || cell;
-    return {
-      fontWeight: (main && main.style && main.style.fontWeight) || '',
-      color: (main && main.style && main.style.color) || '',
-      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
-      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
-    };
-  }
-  function emptyStyle(s){ return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden); }
-  function saveDurationStyle(cell){
-    if(!cell) return;
-    var key = durationKey(cell);
-    if(!key) return;
-    var map = styleMap();
-    delete map[key];
-    fieldKeys(cell).forEach(function(k){ delete map[k]; });
-    var style = currentStyle(cell);
-    if(!emptyStyle(style)) map[key] = style;
-    publishStyleMap(map);
-    if(typeof window.__tripScheduleApplyPlanStylesNow === 'function') window.__tripScheduleApplyPlanStylesNow();
-  }
-  function selectDurationCell(cell){
-    if(!cell) return;
-    window.__tripScheduleSelectedStyleCell = cell;
-    window.__tripScheduleSelectedStyleTarget = cell;
-    window.__tripDurationSelectedCell = cell;
-    document.querySelectorAll('#durationExpectedTable .style-selected-cell').forEach(function(el){ el.classList.remove('style-selected-cell'); });
-    cell.classList.add('style-selected-cell');
-    var field = cell.querySelector('input.cell-input, textarea.cell-input');
-    if(field) field.classList.add('style-selected-cell');
-  }
-  function getSelectedDurationCell(){
-    var cell = window.__tripDurationSelectedCell;
-    if(cell && document.contains(cell) && cell.closest('#durationExpectedTable')) return cell;
-    var marked = document.querySelector('#durationExpectedTable td.style-selected-cell, #durationExpectedTable th.style-selected-cell');
-    return marked || null;
-  }
-  function bindDurationHide(){
-    ['pointerdown','mousedown','touchstart','focusin','click'].forEach(function(type){
-      document.addEventListener(type, function(e){
-        var cell = durationCell(e.target);
-        if(cell) selectDurationCell(cell);
+    var backup=document.getElementById('infoBackupJsonBtn');
+    var restore=document.getElementById('infoRestoreJsonBtn');
+    var input=document.getElementById('infoRestoreFile');
+    if(backup){ backup.textContent='전체 백업(JSON)'; backup.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} downloadFullBackup(); return false; }; }
+    if(restore){ restore.textContent='전체 복구(JSON)'; restore.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} if(input) input.click(); return false; }; }
+    if(input && !input.__fullBackupFixBound){
+      input.__fullBackupFixBound=true;
+      input.addEventListener('change',function(e){
+        var f=e.target.files && e.target.files[0];
+        if(f) restoreFullBackupFile(f);
       }, true);
-    });
-    document.addEventListener('click', function(e){
-      var btn = e.target && e.target.closest && e.target.closest('button[data-info-action="hide-cell"],button[data-info-action="clear-style-cell"]');
-      if(!btn) return;
-      var cell = getSelectedDurationCell();
-      if(!cell) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      if(btn.getAttribute('data-info-action') === 'hide-cell') {
-        cell.classList.toggle('trip-hidden-cell');
-      } else {
-        cell.classList.remove('trip-hidden-cell');
-        cell.style.removeProperty('background-color');
-        var field = cell.querySelector('input.cell-input, textarea.cell-input');
-        if(field){
-          field.classList.remove('trip-hidden-cell');
-          field.style.removeProperty('font-weight');
-          field.style.removeProperty('color');
-          field.style.removeProperty('-webkit-text-fill-color');
-          field.style.removeProperty('background-color');
-        }
-      }
-      saveDurationStyle(cell);
-    }, true);
+    }
   }
-
-  function init(){
-    bindFullBackupButtons();
-    // bindDurationHide();  // disabled: previous dedicated duration/expected hide handlers restored below
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('click',function(e){
+    var b=e.target && e.target.closest && e.target.closest('#infoBackupJsonBtn,#infoRestoreJsonBtn');
+    if(!b) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    if(b.id==='infoBackupJsonBtn') downloadFullBackup();
+    else { var input=document.getElementById('infoRestoreFile'); if(input) input.click(); }
+  }, true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindFullBackupButtons); else bindFullBackupButtons();
   window.addEventListener('load', bindFullBackupButtons);
+  setTimeout(bindFullBackupButtons, 500);
 })();
 </script>
-<!-- restored-duration-expected-hide-from-ver24 -->
+
+
 <style id="trip-hide-selected-cell-final-css">
   /* 선택 칸 오작동 방지판: 추가 JS 핸들러 없이 기본 선택 대상에만 가림 적용 */
   body.trip-admin-mode .trip-hidden-cell::after,
@@ -6071,6 +5986,193 @@ function resizeAllTextareas(root = document) {
     background: inherit !important;
   }
 </style>
+
+
+
+<script id="duration-expected-hide-unset-save-final-fix">
+/*
+  소요시간/예상시간 가림 해제 저장 최종 보정
+  - 기존 applyPlanStyleMap은 저장값이 삭제된 칸의 .trip-hidden-cell을 먼저 지우지 않아,
+    가림 해제 후에도 이전 클래스가 화면/Firebase 복원에 남을 수 있었다.
+  - 이 스크립트는 소요시간/예상시간 내부 테이블의 숨김 상태를 row/cell 기준으로 강제 저장하고,
+    적용 전 전체 숨김 클래스를 먼저 정리한 뒤 저장된 칸만 다시 가림 처리한다.
+*/
+(function(){
+  'use strict';
+  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
+
+  function readMap(){
+    try { var raw = localStorage.getItem(PLAN_STYLE_KEY); var obj = raw ? JSON.parse(raw) : {}; return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {}; }
+    catch(e){ return {}; }
+  }
+  function writeMap(map){
+    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
+    try {
+      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+        window.__tripScheduleSavePlanStylesToFirebase(map || {});
+      }
+    } catch(e){}
+  }
+  function styleFromCell(cell){
+    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
+    var main = field || cell;
+    return {
+      fontWeight: (main && main.style && main.style.fontWeight) || '',
+      color: (main && main.style && main.style.color) || '',
+      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
+      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
+    };
+  }
+  function isEmptyStyle(s){
+    return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden);
+  }
+  function cssEscape(value){
+    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
+  }
+  function durationKeyForCell(cell){
+    var table = document.getElementById('durationExpectedTable');
+    if(!cell || !table || !table.contains(cell)) return '';
+    var row = cell.parentElement;
+    var r = Array.prototype.indexOf.call(table.rows, row);
+    var c = Array.prototype.indexOf.call(row.children, cell);
+    if(r < 0 || c < 0) return '';
+    return 'durationExpected:r' + r + ':c' + c;
+  }
+  function fieldKeysForCell(cell){
+    var keys=[];
+    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
+    if(field){
+      if(field.id) keys.push('field-id:' + field.id);
+      if(field.dataset && field.dataset.syncKey) keys.push('field-sync:' + field.dataset.syncKey);
+    }
+    return keys;
+  }
+  function cleanAndApplyPlanStyleMap(map){
+    map = (map && typeof map === 'object' && !Array.isArray(map)) ? map : readMap();
+    var plan = document.querySelector('table.plan');
+    if(plan){
+      plan.querySelectorAll('td.trip-hidden-cell, th.trip-hidden-cell').forEach(function(cell){
+        cell.classList.remove('trip-hidden-cell');
+      });
+    }
+    Object.keys(map).forEach(function(key){
+      var style = map[key];
+      if(!style || typeof style !== 'object') return;
+      var target = null;
+      if(key.indexOf('field-id:') === 0){
+        target = document.getElementById(key.slice('field-id:'.length));
+      } else if(key.indexOf('field-sync:') === 0){
+        target = document.querySelector('table.plan [data-sync-key="' + cssEscape(key.slice('field-sync:'.length)) + '"]');
+      } else {
+        var m = key.match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
+        if(m){
+          var table = m[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (m[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
+          var row = table && table.rows[Number(m[2])];
+          target = row && row.children[Number(m[3])];
+        }
+      }
+      if(!target) return;
+      var cell = target.closest ? target.closest('td,th') : null;
+      var field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : (target.querySelector ? target.querySelector('input.cell-input, textarea.cell-input') : null);
+      var main = field || target;
+      if(main && main.style){
+        if(style.fontWeight) main.style.setProperty('font-weight', style.fontWeight, 'important');
+        else main.style.removeProperty('font-weight');
+        if(style.color){
+          main.style.setProperty('color', style.color, 'important');
+          main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
+        } else {
+          main.style.removeProperty('color');
+          main.style.removeProperty('-webkit-text-fill-color');
+        }
+        if(style.backgroundColor) main.style.setProperty('background-color', style.backgroundColor, 'important');
+        else main.style.removeProperty('background-color');
+      }
+      if(cell && style.backgroundColor) cell.style.setProperty('background-color', style.backgroundColor, 'important');
+      if(cell && style.hidden) cell.classList.add('trip-hidden-cell');
+    });
+  }
+
+  var originalApplyFromFirebase = window.__tripScheduleApplyPlanStylesFromFirebase;
+  window.__tripScheduleApplyPlanStylesFromFirebase = function(styleMap){
+    if(styleMap && typeof styleMap === 'object' && !Array.isArray(styleMap)){
+      try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(styleMap)); } catch(e){}
+      cleanAndApplyPlanStyleMap(styleMap);
+      return;
+    }
+    if(typeof originalApplyFromFirebase === 'function') return originalApplyFromFirebase(styleMap);
+  };
+  window.__tripScheduleApplyPlanStylesNow = function(){ cleanAndApplyPlanStyleMap(readMap()); };
+
+  function selectedCell(){
+    var cell = window.__tripScheduleSelectedStyleCell;
+    if(cell && cell.closest && cell.closest('td,th')) cell = cell.closest('td,th');
+    if(cell && document.contains(cell)) return cell;
+    var marked = document.querySelector('td.style-selected-cell, th.style-selected-cell');
+    if(marked) return marked;
+    var inputMarked = document.querySelector('input.style-selected-cell, textarea.style-selected-cell');
+    return inputMarked && inputMarked.closest ? inputMarked.closest('td,th') : null;
+  }
+
+  function saveCellHiddenState(cell){
+    if(!cell) return;
+    var map = readMap();
+    var dKey = durationKeyForCell(cell);
+    var keys = [];
+    if(dKey) keys.push(dKey);
+    keys = keys.concat(fieldKeysForCell(cell));
+    if(!keys.length) return;
+
+    var style = styleFromCell(cell);
+    // 소요시간/예상시간 내부 테이블은 좌표키를 대표키로 사용한다.
+    // 해제 시 field-id/field-sync에 남은 hidden 값까지 모두 제거한다.
+    keys.forEach(function(k){ delete map[k]; });
+    if(!isEmptyStyle(style)){
+      map[dKey || keys[0]] = style;
+    }
+    writeMap(map);
+    cleanAndApplyPlanStyleMap(map);
+  }
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedCell();
+    if(!cell || !cell.closest('#durationExpectedTable')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    cell.classList.toggle('trip-hidden-cell');
+    saveCellHiddenState(cell);
+  }, true);
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedCell();
+    if(!cell || !cell.closest('#durationExpectedTable')) return;
+    setTimeout(function(){
+      if(cell.classList) cell.classList.remove('trip-hidden-cell');
+      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
+      if(field && field.classList) field.classList.remove('trip-hidden-cell');
+      var map = readMap();
+      var dKey = durationKeyForCell(cell);
+      if(dKey) delete map[dKey];
+      fieldKeysForCell(cell).forEach(function(k){ delete map[k]; });
+      writeMap(map);
+      cleanAndApplyPlanStyleMap(map);
+    }, 0);
+  }, true);
+
+  window.addEventListener('load', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
+  window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
+})();
+</script>
+
+
+
 <style id="duration-last-two-hide-final-css">
   /* 소요시간/예상시간 내부표 마지막 칸까지 회원모드 가림 강제 적용 */
   body.trip-read-mode #durationExpectedTable #duration-values-row > td.trip-hidden-cell,
@@ -6093,94 +6195,54 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
-
-
-
-<script id="trip-hide-selected-cell-single-source-v27">
+<script id="duration-last-two-hide-final-fix">
 /*
-  가림 기능 단일 기준 보정 v27
-  - 마지막으로 실제 클릭한 td/th 1개만 선택 기준으로 사용
-  - 가림/해제 버튼 클릭 시 기존 중복 핸들러로 이벤트가 내려가지 않게 차단
-  - 실시간 동기화 경로(window.__tripScheduleSavePlanStylesToFirebase / __tripScheduleSaveInfoTablesToFirebase)는 그대로 사용
+  소요시간 2번째행 마지막/마지막 이전칸 가림 최종 보정
+  - 기존 핸들러가 선택된 칸 대신 이전 선택값을 사용할 수 있어 window capture 단계에서 먼저 처리한다.
+  - #duration-values-row / #expected-bottom-row 의 모든 칸, 특히 마지막 2칸도 좌표키(durationExpected:r:c)로 저장한다.
 */
 (function(){
   'use strict';
   var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
-  var INFO_CACHE_KEY = 'tripSchedule.infoForm.tables.v2';
-  var selectedCell = null;
 
-  function closestCell(target){
-    if(document.body && document.body.classList.contains('trip-read-mode')) return null;
+  function readMap(){
+    try { var raw = localStorage.getItem(PLAN_STYLE_KEY); var obj = raw ? JSON.parse(raw) : {}; return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {}; }
+    catch(e){ return {}; }
+  }
+  function writeMap(map){
+    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
+    try {
+      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+        window.__tripScheduleSavePlanStylesToFirebase(map || {});
+      }
+    } catch(e){}
+  }
+  function durationCellFromTarget(target){
     if(!target || !target.closest) return null;
-    if(target.closest('.info-toolbar, .action-buttons, .trip-auth-backdrop, .admin-password-modal-backdrop')) return null;
-    var cell = target.closest('#durationExpectedTable td, #durationExpectedTable th, table.plan td, table.plan th, .info-section-table td, .info-section-table th');
+    var cell = target.closest('#durationExpectedTable td, #durationExpectedTable th');
     if(!cell) return null;
-    if(cell.closest('.info-section-table') && (cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn'))) return null;
+    var row = cell.parentElement;
+    if(!row || !/^(duration-values-row|expected-bottom-row|expected-top-row|duration-title-row)$/.test(row.id || '')) return null;
     return cell;
   }
-  function markSelected(cell){
-    if(!cell || !document.contains(cell)) return;
-    selectedCell = cell;
-    window.__tripHideExactSelectedCell = cell;
-    window.__tripScheduleSelectedStyleCell = cell;
-    var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-    window.__tripScheduleSelectedStyleTarget = field || cell;
-    document.querySelectorAll('.style-selected-cell').forEach(function(el){ el.classList.remove('style-selected-cell'); });
-    if(cell.closest('.info-section-table')){
-      document.querySelectorAll('.info-selected').forEach(function(el){ el.classList.remove('info-selected'); });
-      document.querySelectorAll('.info-row-selected').forEach(function(el){ el.classList.remove('info-row-selected'); });
-      cell.classList.add('info-selected');
-      var row = cell.closest('tr');
-      if(row) row.classList.add('info-row-selected');
-    }
-    cell.classList.add('style-selected-cell');
-    if(field) field.classList.add('style-selected-cell');
-  }
-  ['pointerdown','mousedown','touchstart','focusin','click'].forEach(function(type){
-    window.addEventListener(type, function(e){
-      var cell = closestCell(e.target);
-      if(cell) markSelected(cell);
-    }, true);
-  });
-  function getSelectedCell(){
-    var cell = selectedCell || window.__tripHideExactSelectedCell || window.__tripScheduleSelectedStyleCell;
-    if(cell && cell.closest) cell = cell.closest('td,th');
-    if(cell && document.contains(cell)) return cell;
-    var marked = document.querySelector('td.style-selected-cell, th.style-selected-cell');
-    if(marked && document.contains(marked)) return marked;
-    var field = document.querySelector('input.style-selected-cell, textarea.style-selected-cell');
-    return field && field.closest ? field.closest('td,th') : null;
-  }
-  function readPlanMap(){
-    try{ var raw=localStorage.getItem(PLAN_STYLE_KEY); var obj=raw?JSON.parse(raw):{}; return obj && typeof obj==='object' && !Array.isArray(obj) ? obj : {}; }catch(e){ return {}; }
-  }
-  function writePlanMap(map){
-    try{ localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); }catch(e){}
-    try{
-      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
-      if(typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') window.__tripScheduleSavePlanStylesToFirebase(map || {});
-    }catch(e){}
-  }
   function coordKey(cell){
-    if(!cell) return '';
-    var table = cell.closest('#durationExpectedTable, table.plan, .gimbap-inner-table');
-    if(!table) return '';
+    var table = document.getElementById('durationExpectedTable');
+    if(!cell || !table || !table.contains(cell)) return '';
     var row = cell.parentElement;
     var r = Array.prototype.indexOf.call(table.rows, row);
     var c = Array.prototype.indexOf.call(row.children, cell);
     if(r < 0 || c < 0) return '';
-    var tableId = table.id === 'durationExpectedTable' ? 'durationExpected' : (table.classList.contains('gimbap-inner-table') ? 'gimbap' : 'plan');
-    return tableId + ':r' + r + ':c' + c;
+    return 'durationExpected:r' + r + ':c' + c;
   }
-  function possibleKeys(cell){
+  function fieldKeys(cell){
     var keys=[];
-    var k=coordKey(cell); if(k) keys.push(k);
     var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
     if(field){
       if(field.id) keys.push('field-id:' + field.id);
       if(field.dataset && field.dataset.syncKey) keys.push('field-sync:' + field.dataset.syncKey);
     }
-    return keys.filter(function(v,i,a){ return v && a.indexOf(v) === i; });
+    return keys;
   }
   function styleFromCell(cell){
     var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
@@ -6193,50 +6255,61 @@ function resizeAllTextareas(root = document) {
     };
   }
   function emptyStyle(s){ return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden); }
-  function savePlanCell(cell){
-    var keys=possibleKeys(cell); if(!keys.length) return;
-    var map=readPlanMap();
-    keys.forEach(function(k){ delete map[k]; });
-    var style=styleFromCell(cell);
-    if(!emptyStyle(style)) map[coordKey(cell) || keys[0]] = style;
-    writePlanMap(map);
-    try{ if(typeof window.__tripScheduleApplyPlanStylesNow === 'function') window.__tripScheduleApplyPlanStylesNow(); }catch(e){}
+  function saveCell(cell){
+    if(!cell) return;
+    var key = coordKey(cell);
+    if(!key) return;
+    var map = readMap();
+    delete map[key];
+    fieldKeys(cell).forEach(function(k){ delete map[k]; });
+    var style = styleFromCell(cell);
+    if(!emptyStyle(style)) map[key] = style;
+    writeMap(map);
+    try {
+      if (typeof window.__tripScheduleApplyPlanStylesNow === 'function') window.__tripScheduleApplyPlanStylesNow();
+    } catch(e){}
   }
-  function serializeInfoCell(cell){
-    var style={};
-    if(cell.style.fontWeight) style.fontWeight = cell.style.fontWeight;
-    if(cell.style.color) style.color = cell.style.color;
-    if(cell.style.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
-    var hidden = cell.classList.contains('trip-hidden-cell');
-    if(!Object.keys(style).length && !hidden) return cell.innerHTML;
-    var result={ html: cell.innerHTML };
-    if(Object.keys(style).length) result.style = style;
-    if(hidden) result.hidden = true;
-    return result;
+  function markSelected(cell){
+    if(!cell) return;
+    window.__tripDurationExactSelectedCell = cell;
+    window.__tripScheduleSelectedStyleCell = cell;
+    window.__tripScheduleSelectedStyleTarget = cell;
+    try {
+      document.querySelectorAll('#durationExpectedTable .style-selected-cell').forEach(function(el){ el.classList.remove('style-selected-cell'); });
+      cell.classList.add('style-selected-cell');
+      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
+      if(field) field.classList.add('style-selected-cell');
+    } catch(e){}
   }
-  function serializeInfoTable(table){
-    return Array.from(table.rows).map(function(row){
-      return Array.from(row.children).map(function(cell, idx){
-        if(idx === 0 && cell.classList.contains('info-select-col')) return '';
-        return serializeInfoCell(cell);
-      });
-    });
-  }
-  function saveInfoTables(){
-    var tables = Array.from(document.querySelectorAll('.info-section-table'));
-    var data = tables.map(serializeInfoTable);
-    try{ localStorage.setItem(INFO_CACHE_KEY, JSON.stringify(data)); }catch(e){}
-    try{
-      window.__tripScheduleInfoLocalSavingUntil = Date.now() + 5000;
-      if(typeof window.__tripScheduleSaveInfoTablesToFirebase === 'function') window.__tripScheduleSaveInfoTablesToFirebase(data);
-    }catch(e){}
-  }
-  function applyClear(cell){
+
+  ['pointerdown','mousedown','touchstart','focusin','click'].forEach(function(type){
+    window.addEventListener(type, function(event){
+      var cell = durationCellFromTarget(event.target);
+      if(cell) markSelected(cell);
+    }, true);
+  });
+
+  window.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
+    if(!btn) return;
+    var cell = window.__tripDurationExactSelectedCell;
+    if(!cell || !document.contains(cell) || !cell.closest('#durationExpectedTable')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    cell.classList.toggle('trip-hidden-cell');
+    saveCell(cell);
+  }, true);
+
+  window.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
+    if(!btn) return;
+    var cell = window.__tripDurationExactSelectedCell;
+    if(!cell || !document.contains(cell) || !cell.closest('#durationExpectedTable')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
     cell.classList.remove('trip-hidden-cell');
-    cell.style.removeProperty('font-weight');
-    cell.style.removeProperty('color');
-    cell.style.removeProperty('-webkit-text-fill-color');
-    cell.style.removeProperty('background-color');
     var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
     if(field){
       field.classList.remove('trip-hidden-cell');
@@ -6245,26 +6318,10 @@ function resizeAllTextareas(root = document) {
       field.style.removeProperty('-webkit-text-fill-color');
       field.style.removeProperty('background-color');
     }
-  }
-  window.addEventListener('click', function(e){
-    var btn = e.target && e.target.closest ? e.target.closest('button[data-info-action="hide-cell"], button[data-info-action="clear-style-cell"]') : null;
-    if(!btn) return;
-    var cell = getSelectedCell();
-    if(!cell || !document.contains(cell)){
-      alert('먼저 가림을 설정하거나 해제할 칸을 클릭하세요.');
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    var action = btn.getAttribute('data-info-action');
-    if(action === 'hide-cell') cell.classList.toggle('trip-hidden-cell');
-    else applyClear(cell);
-    markSelected(cell);
-    if(cell.closest('.info-section-table')) saveInfoTables();
-    else savePlanCell(cell);
+    cell.style.removeProperty('background-color');
+    saveCell(cell);
   }, true);
 })();
 </script>
+
 </body></html>
