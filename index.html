@@ -5884,7 +5884,7 @@ function resizeAllTextareas(root = document) {
     var a=document.createElement('a');
     var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
     a.href=URL.createObjectURL(blob);
-    a.download='정기산행계획_정보모음_전체백업_'+stamp+'.json';
+    a.download='Trip-Schedule_백업_'+stamp+'.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){URL.revokeObjectURL(a.href);},800);
   }
