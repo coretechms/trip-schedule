@@ -6324,4 +6324,43 @@ function resizeAllTextareas(root = document) {
 })();
 </script>
 
+
+<script>
+/* 모바일: 식당 행 연락처 입력칸 편집 허용 */
+(function allowMobileMealPhoneEdit() {
+  function apply() {
+    const mealRow = document.querySelector("tr.meal-row");
+    if (!mealRow) return;
+
+    /* 식당 행의 2번째 입력칸 = 연락처 */
+    const mealInputs = mealRow.querySelectorAll("input.cell-input, textarea.cell-input");
+    const phoneInput = mealInputs[1];
+
+    if (!phoneInput) return;
+
+    phoneInput.removeAttribute("readonly");
+    phoneInput.readOnly = false;
+    phoneInput.disabled = false;
+    phoneInput.tabIndex = 0;
+
+    phoneInput.classList.remove("mobile-longpress-locked");
+    phoneInput.classList.add("mobile-longpress-editing");
+
+    phoneInput.style.pointerEvents = "auto";
+    phoneInput.style.userSelect = "text";
+    phoneInput.style.webkitUserSelect = "text";
+    phoneInput.style.caretColor = "auto";
+    phoneInput.style.touchAction = "manipulation";
+
+    phoneInput.addEventListener("touchstart", function () {
+      this.focus();
+    }, { passive: true });
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  window.addEventListener("load", apply);
+  setTimeout(apply, 300);
+})();
+</script>
+
 </body></html>
