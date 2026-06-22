@@ -3229,18 +3229,13 @@ function resizeAllTextareas(root = document) {
         event.stopPropagation();
       }
 
+      /* 모바일 편집 방식 변경: 길게 누름으로는 편집을 열지 않는다.
+         편집은 아래 dblclick / 더블탭 핸들러에서만 활성화한다. */
       targetEl = editable;
       startX = event.clientX || 0;
       startY = event.clientY || 0;
       clearTimeout(pressTimer);
-      pressTimer = setTimeout(() => {
-        if (isPhoneChoiceTarget(targetEl)) {
-          showPhoneChoiceBox(targetEl);
-        } else {
-          enableEditing(targetEl);
-        }
-        pressTimer = null;
-      }, LONG_PRESS_MS);
+      pressTimer = null;
     }, true);
 
     document.addEventListener('pointermove', function (event) {
@@ -3252,6 +3247,60 @@ function resizeAllTextareas(root = document) {
 
     document.addEventListener('pointerup', cancelPressTimer, true);
     document.addEventListener('pointercancel', cancelPressTimer, true);
+
+    /* 모바일 편집 방식 변경: 더블클릭/더블탭으로 편집 활성화 */
+    let mobileDoubleTapLastEl = null;
+    let mobileDoubleTapLastTime = 0;
+    let mobileDoubleTapLastX = 0;
+    let mobileDoubleTapLastY = 0;
+
+    function enableMobileDoubleClickEdit(target) {
+      if (!isMobileEditMode()) return false;
+      const editable = isEditableTarget(target);
+      if (!editable) return false;
+      if (isDirectEditTarget(editable)) return false;
+      if (editable.classList.contains('mobile-longpress-editing')) return true;
+      enableEditing(editable);
+      return true;
+    }
+
+    document.addEventListener('dblclick', function(event) {
+      if (!isMobileEditMode()) return;
+      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
+      if (enableMobileDoubleClickEdit(event.target)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener('pointerup', function(event) {
+      if (!isMobileEditMode()) return;
+      if (event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
+      const editable = isEditableTarget(event.target);
+      if (!editable || isDirectEditTarget(editable)) return;
+
+      const now = Date.now();
+      const x = event.clientX || 0;
+      const y = event.clientY || 0;
+      const sameTarget = mobileDoubleTapLastEl === editable;
+      const closeEnough = Math.abs(x - mobileDoubleTapLastX) <= 22 && Math.abs(y - mobileDoubleTapLastY) <= 22;
+
+      if (sameTarget && closeEnough && now - mobileDoubleTapLastTime <= 420) {
+        mobileDoubleTapLastEl = null;
+        mobileDoubleTapLastTime = 0;
+        if (enableMobileDoubleClickEdit(editable)) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        return;
+      }
+
+      mobileDoubleTapLastEl = editable;
+      mobileDoubleTapLastTime = now;
+      mobileDoubleTapLastX = x;
+      mobileDoubleTapLastY = y;
+    }, true);
 
     document.addEventListener('click', function (event) {
       if (!isMobileEditMode()) return;
