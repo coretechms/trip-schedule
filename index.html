@@ -1220,7 +1220,7 @@
 
     /* 소요시간/예상시간 안정화: 기본 글자색/굵기 고정 */
     #expected-top-row #base-time {
-      color: #c51616 !important;
+      color: #111111 !important;
     }
     #expected-top-row input[id^="calc-top-"] {
       color: #111111 !important;
@@ -1691,7 +1691,7 @@
 </tr>
 <tr class="h20 expected-top" id="expected-top-row">
 <td class="fixed expected-label-bold-bottom" rowspan="2">예상 시간</td>
-<td class="input-cell"><input class="cell-input red key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"/></td>
+<td class="input-cell"><input class="cell-input key-font-14" data-realtime-save-bound="true" data-sync-key="id:base-time" id="base-time" value="06:30"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-1" readonly="" value="0:00 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-2" readonly="" value="0:00 -&gt;"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input bold key-font-14" id="calc-top-3" readonly="" value="0:00 -&gt;"/></td>
@@ -1706,7 +1706,7 @@
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-4" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-5" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 <td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-6" readonly="" data-style-editable-calc="true" value="0:00"/></td>
-<td class="input-cell readonly-cell"><input class="cell-input blue key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
+<td class="input-cell readonly-cell"><input class="cell-input key-font-14" id="calc-bottom-7" readonly="" data-style-editable-calc="true" value="0:00"/></td>
 </tr>
 </tbody>
 </table>
@@ -2458,7 +2458,7 @@
       }
 
       while (expectedTopRow.children.length > 1) expectedTopRow.removeChild(expectedTopRow.lastElementChild);
-      expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'red key-font-14', 'id:base-time'));
+      expectedTopRow.appendChild(makeInputCell('base-time', oldBaseValue, 'key-font-14', 'id:base-time'));
       for (let i = 1; i <= count - 1; i += 1) {
         const cls = 'bold';
         expectedTopRow.appendChild(makeReadonlyCalcCell('calc-top-' + i, cls));
@@ -2466,7 +2466,7 @@
 
       while (expectedBottomRow.firstChild) expectedBottomRow.removeChild(expectedBottomRow.firstChild);
       for (let i = 1; i <= count; i += 1) {
-        const cls = i === count ? 'blue' : '';
+        const cls = '';
         expectedBottomRow.appendChild(makeReadonlyCalcCell('calc-bottom-' + i, cls));
       }
 
@@ -2521,14 +2521,30 @@
       titles.splice(selected, 1);
       const nextSelected = Math.min(selected, values.length - 1);
       rebuildDurationColumns(values, titles, nextSelected);
+
+      /* 소요열삭제 패치: 삭제 직후 hidden/local/Firebase 저장을 즉시 재확정 */
+      const hidden = getDurationColumnCountInput();
+      if (hidden) hidden.value = String(values.length);
+      saveDurationStructureLocally();
+      if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
+      if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
     }
 
     function inferDurationColumnCountFromData(data) {
-      let maxCount = 0;
+      /* 소요열삭제 패치:
+         기존 코드는 max(..., 7) 방식이라 삭제 후에도 동기화/복원 과정에서
+         항상 7열 이상으로 되살아나는 문제가 있었다.
+         저장된 hidden count(id:duration-column-count)가 있으면 그 값을 최우선으로 신뢰한다. */
       if (data && typeof data === 'object') {
         const rawHidden = data['id:duration-column-count'];
         const hiddenCount = Number(rawHidden);
-        if (Number.isFinite(hiddenCount) && hiddenCount > 0) maxCount = Math.max(maxCount, hiddenCount);
+        if (Number.isFinite(hiddenCount) && hiddenCount > 0) {
+          return Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Math.floor(hiddenCount)));
+        }
+      }
+
+      let maxCount = 0;
+      if (data && typeof data === 'object') {
         Object.keys(data).forEach((key) => {
           const matchExtra = key.match(/^id:duration-extra-(\d+)$/);
           if (matchExtra) maxCount = Math.max(maxCount, Number(matchExtra[1]));
@@ -2536,11 +2552,15 @@
           if (matchLabel) maxCount = Math.max(maxCount, Number(matchLabel[1]) + 1);
         });
       }
-      const localInputs = typeof getDurationInputs === 'function' ? getDurationInputs().length : 0;
+      if (maxCount > 0) {
+        return Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Math.floor(maxCount)));
+      }
+
       const hidden = getDurationColumnCountInput();
       const hiddenDomCount = hidden ? Number(hidden.value || 0) : 0;
-      maxCount = Math.max(maxCount, localInputs || 0, hiddenDomCount || 0, 7);
-      return Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Math.floor(maxCount)));
+      const localInputs = typeof getDurationInputs === 'function' ? getDurationInputs().length : 0;
+      const fallbackCount = hiddenDomCount || localInputs || 7;
+      return Math.max(DURATION_COLUMN_MIN, Math.min(DURATION_COLUMN_MAX, Math.floor(fallbackCount)));
     }
 
     function syncDurationColumnStructureFromStorage(data) {
@@ -2563,14 +2583,13 @@
     function normalizeExpectedTopDefaultColors() {
       const baseEl = document.getElementById('base-time');
       if (baseEl && !baseEl.dataset.userStyledColor) {
-        baseEl.classList.add('red');
-        baseEl.classList.remove('blue');
-        baseEl.style.color = baseEl.style.color || '';
+        baseEl.classList.remove('red', 'blue');
+        baseEl.style.color = '#111111';
       }
-      document.querySelectorAll('#expected-top-row input[id^="calc-top-"]').forEach(function(input) {
+      document.querySelectorAll('#expected-top-row input[id^="calc-top-"], #expected-bottom-row input[id^="calc-bottom-"]').forEach(function(input) {
         if (!input.dataset.userStyledColor && !input.style.color) {
           input.classList.remove('red', 'blue');
-          input.style.color = '';
+          input.style.color = '#111111';
         }
       });
     }
@@ -6360,6 +6379,480 @@ function resizeAllTextareas(root = document) {
   document.addEventListener("DOMContentLoaded", apply);
   window.addEventListener("load", apply);
   setTimeout(apply, 300);
+})();
+</script>
+
+
+
+<style id="single-click-selection-border-fix-style">
+  /* 단일 선택 테두리: 입력칸(input/textarea)과 부모칸(td/th)에 동시에 생기는 이중 테두리 방지 */
+  input.cell-input.style-selected-cell,
+  textarea.cell-input.style-selected-cell {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+</style>
+<script id="single-click-selection-border-fix">
+(function(){
+  'use strict';
+
+  var SELECT_CLASSES = [
+    'style-selected-cell',
+    'info-selected',
+    'duration-column-selected'
+  ];
+
+  function closestSelectableCell(target){
+    if(!target || !target.closest) return null;
+    if(target.closest('.action-buttons, .info-toolbar, .trip-auth-backdrop, .phone-longpress-choice-box, button')) return null;
+    var cell = target.closest('td, th');
+    if(!cell) return null;
+    if(!cell.closest('table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table')) return null;
+    return cell;
+  }
+
+  function clearAllSelectionBorders(){
+    SELECT_CLASSES.forEach(function(cls){
+      document.querySelectorAll('.' + cls).forEach(function(el){
+        el.classList.remove(cls);
+      });
+    });
+    document.querySelectorAll('.info-row-selected').forEach(function(row){
+      row.classList.remove('info-row-selected');
+    });
+  }
+
+  function markOnlyOneCell(cell){
+    if(!cell) return;
+    clearAllSelectionBorders();
+
+    /* 시각 테두리는 항상 실제 TD/TH 한 곳에만 표시 */
+    cell.classList.add('style-selected-cell');
+
+    /* 기존 서식 버튼/가림 버튼이 선택한 칸을 정확히 사용하도록 전역 선택값 보정 */
+    window.__tripScheduleSelectedStyleCell = cell;
+    window.__tripScheduleSelectedStyleTarget = cell;
+    if(cell.closest('#durationExpectedTable')) {
+      window.__tripDurationExactSelectedCell = cell;
+    } else {
+      window.__tripDurationExactSelectedCell = null;
+    }
+  }
+
+  function enforceFromEvent(event){
+    var cell = closestSelectableCell(event.target);
+    if(!cell) return;
+    /* 기존 여러 선택 스크립트가 실행된 뒤 마지막에 한 번 더 정리 */
+    setTimeout(function(){ markOnlyOneCell(cell); }, 0);
+  }
+
+  ['pointerdown','mousedown','touchstart','focusin','click'].forEach(function(type){
+    document.addEventListener(type, enforceFromEvent, true);
+  });
+
+  /* 화면 복원/동기화 후 남아있는 중복 선택 테두리도 자동 정리 */
+  var observer = new MutationObserver(function(){
+    var marked = Array.from(document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected'));
+    if(marked.length <= 1) return;
+    var cell = window.__tripScheduleSelectedStyleCell;
+    if(!(cell && document.contains(cell))) {
+      var last = marked[marked.length - 1];
+      cell = last && last.closest ? (last.matches('td,th') ? last : last.closest('td,th')) : null;
+    }
+    if(cell) markOnlyOneCell(cell);
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    observer.observe(document.body, { subtree:true, attributes:true, attributeFilter:['class'] });
+  });
+})();
+</script>
+
+
+
+<script id="expected-time-default-black-patch">
+/* 예상시간 행 기본 글자색 검정 고정 패치
+   - 기본 빨강/파랑 클래스 제거
+   - 사용자가 직접 색상 스타일을 지정한 칸(data-user-styled-color 또는 inline color)은 보존 */
+(function(){
+  function markManualColorOnStyleButtons(){
+    document.addEventListener('click', function(event){
+      var btn = event.target && event.target.closest ? event.target.closest('[data-info-action]') : null;
+      if(!btn) return;
+      var action = btn.getAttribute('data-info-action') || '';
+      if(action !== 'text-red-cell' && action !== 'text-blue-cell' && action !== 'text-black-cell') return;
+      document.querySelectorAll('#expected-top-row .style-selected-cell, #expected-bottom-row .style-selected-cell, #expected-top-row .duration-column-selected, #expected-bottom-row .duration-column-selected').forEach(function(el){
+        var input = el.matches && el.matches('input,textarea') ? el : el.querySelector && el.querySelector('input,textarea');
+        if(input) input.dataset.userStyledColor = '1';
+      });
+    }, true);
+  }
+
+  function applyExpectedTimeDefaultBlack(){
+    document.querySelectorAll('#expected-top-row input, #expected-bottom-row input').forEach(function(input){
+      if(!input) return;
+      if(input.dataset.userStyledColor === '1') return;
+      if(input.style && input.style.color && input.style.color !== 'rgb(17, 17, 17)' && input.style.color !== '#111111') return;
+      input.classList.remove('red', 'blue');
+      input.style.color = '#111111';
+      input.style.webkitTextFillColor = '#111111';
+    });
+  }
+
+  markManualColorOnStyleButtons();
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyExpectedTimeDefaultBlack);
+  else applyExpectedTimeDefaultBlack();
+  window.addEventListener('load', applyExpectedTimeDefaultBlack);
+  window.addEventListener('trip-duration-structure-changed', applyExpectedTimeDefaultBlack);
+  var table = document.getElementById('durationExpectedTable');
+  if(table && window.MutationObserver){
+    new MutationObserver(function(){ setTimeout(applyExpectedTimeDefaultBlack, 0); }).observe(table, { childList:true, subtree:true });
+  }
+})();
+</script>
+
+
+
+<style id="trip-hide-any-cell-member-mode-patch">
+  /* 전체 칸 가림 보강: 관리자모드에서는 표시, 회원모드에서는 어떤 칸이든 내용 완전 가림 */
+  body.trip-read-mode table.plan td.trip-hidden-cell,
+  body.trip-read-mode table.plan th.trip-hidden-cell,
+  body.trip-read-mode table.plan td.trip-hidden-cell *,
+  body.trip-read-mode table.plan th.trip-hidden-cell *,
+  body.trip-read-mode .duration-expected-table td.trip-hidden-cell,
+  body.trip-read-mode .duration-expected-table th.trip-hidden-cell,
+  body.trip-read-mode .duration-expected-table td.trip-hidden-cell *,
+  body.trip-read-mode .duration-expected-table th.trip-hidden-cell *,
+  body.trip-read-mode .gimbap-inner-table td.trip-hidden-cell,
+  body.trip-read-mode .gimbap-inner-table th.trip-hidden-cell,
+  body.trip-read-mode .gimbap-inner-table td.trip-hidden-cell *,
+  body.trip-read-mode .gimbap-inner-table th.trip-hidden-cell * {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    caret-color: transparent !important;
+    user-select: none !important;
+  }
+  body.trip-read-mode table.plan td.trip-hidden-cell input,
+  body.trip-read-mode table.plan th.trip-hidden-cell input,
+  body.trip-read-mode table.plan td.trip-hidden-cell textarea,
+  body.trip-read-mode table.plan th.trip-hidden-cell textarea {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    caret-color: transparent !important;
+  }
+</style>
+
+<script id="trip-hide-any-cell-member-mode-patch">
+/*
+  전체 칸 가림 패치
+  - 기존: 일부 소요/예상시간 칸 또는 입력칸 중심으로만 저장/복원되는 경우가 있음
+  - 수정: table.plan / durationExpectedTable / gimbap-inner-table 안의 td, th 어느 칸이든
+          선택 후 [가림]을 누르면 칸 자체에 trip-hidden-cell 저장
+  - 회원모드: CSS로 해당 칸의 입력값/텍스트를 완전히 투명 처리
+*/
+(function(){
+  'use strict';
+  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
+
+  function readMap(){
+    try {
+      var raw = localStorage.getItem(PLAN_STYLE_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+    } catch(e){ return {}; }
+  }
+  function writeMap(map){
+    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
+    try {
+      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
+      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
+        window.__tripScheduleSavePlanStylesToFirebase(map || {});
+      }
+      if (typeof window.scheduleRealtimeSave === 'function') window.scheduleRealtimeSave();
+    } catch(e){}
+  }
+  function cssEscape(value){
+    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
+  }
+  function managedTableForCell(cell){
+    if(!cell || !cell.closest) return null;
+    return cell.closest('#durationExpectedTable') || cell.closest('.gimbap-inner-table') || cell.closest('table.plan');
+  }
+  function tableName(table){
+    if(!table) return '';
+    if(table.id === 'durationExpectedTable') return 'durationExpected';
+    if(table.classList && table.classList.contains('gimbap-inner-table')) return 'gimbap';
+    if(table.matches && table.matches('table.plan')) return 'plan';
+    return '';
+  }
+  function cellKey(cell){
+    var table = managedTableForCell(cell);
+    var name = tableName(table);
+    if(!name || !cell || !cell.parentElement) return '';
+    var row = cell.parentElement;
+    var r = Array.prototype.indexOf.call(table.rows, row);
+    var c = Array.prototype.indexOf.call(row.children, cell);
+    if(r < 0 || c < 0) return '';
+    return name + ':r' + r + ':c' + c;
+  }
+  function cellStyle(cell){
+    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
+    var main = field || cell;
+    return {
+      fontWeight: (main && main.style && main.style.fontWeight) || '',
+      color: (main && main.style && main.style.color) || '',
+      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
+      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
+    };
+  }
+  function emptyStyle(style){
+    return !style || (!style.fontWeight && !style.color && !style.backgroundColor && !style.hidden);
+  }
+  function targetFromKey(key){
+    var target = null;
+    if(key.indexOf('field-id:') === 0){
+      target = document.getElementById(key.slice('field-id:'.length));
+    } else if(key.indexOf('field-sync:') === 0){
+      target = document.querySelector('table.plan [data-sync-key="' + cssEscape(key.slice('field-sync:'.length)) + '"]');
+    } else {
+      var m = String(key).match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
+      if(m){
+        var table = m[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (m[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
+        var row = table && table.rows[Number(m[2])];
+        target = row && row.children[Number(m[3])];
+      }
+    }
+    return target;
+  }
+  function clearHiddenInManagedTables(){
+    document.querySelectorAll('table.plan td.trip-hidden-cell, table.plan th.trip-hidden-cell, .duration-expected-table td.trip-hidden-cell, .duration-expected-table th.trip-hidden-cell, .gimbap-inner-table td.trip-hidden-cell, .gimbap-inner-table th.trip-hidden-cell').forEach(function(cell){
+      cell.classList.remove('trip-hidden-cell');
+    });
+  }
+  function applyMap(map){
+    map = (map && typeof map === 'object' && !Array.isArray(map)) ? map : readMap();
+    clearHiddenInManagedTables();
+    Object.keys(map).forEach(function(key){
+      var style = map[key];
+      if(!style || typeof style !== 'object') return;
+      var target = targetFromKey(key);
+      if(!target) return;
+      var cell = target.closest ? target.closest('td,th') : null;
+      var field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : (target.querySelector ? target.querySelector('input.cell-input, textarea.cell-input') : null);
+      var main = field || target;
+      if(main && main.style){
+        if(style.fontWeight) main.style.setProperty('font-weight', style.fontWeight, 'important');
+        if(style.color){
+          main.style.setProperty('color', style.color, 'important');
+          main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
+        }
+        if(style.backgroundColor) main.style.setProperty('background-color', style.backgroundColor, 'important');
+      }
+      if(cell && style.backgroundColor) cell.style.setProperty('background-color', style.backgroundColor, 'important');
+      if(cell && style.hidden) cell.classList.add('trip-hidden-cell');
+    });
+  }
+  function selectedManagedCell(){
+    var cell = window.__tripScheduleSelectedStyleCell;
+    if(cell && cell.closest) cell = cell.closest('td,th');
+    if(cell && document.contains(cell) && managedTableForCell(cell)) return cell;
+
+    var marked = document.querySelector('table.plan td.style-selected-cell, table.plan th.style-selected-cell, .duration-expected-table td.style-selected-cell, .duration-expected-table th.style-selected-cell, .gimbap-inner-table td.style-selected-cell, .gimbap-inner-table th.style-selected-cell');
+    if(marked && managedTableForCell(marked)) return marked;
+
+    var inputMarked = document.querySelector('table.plan input.style-selected-cell, table.plan textarea.style-selected-cell, .duration-expected-table input.style-selected-cell, .duration-expected-table textarea.style-selected-cell, .gimbap-inner-table input.style-selected-cell, .gimbap-inner-table textarea.style-selected-cell');
+    cell = inputMarked && inputMarked.closest ? inputMarked.closest('td,th') : null;
+    return (cell && managedTableForCell(cell)) ? cell : null;
+  }
+  function saveCell(cell){
+    var key = cellKey(cell);
+    if(!key) return;
+    var map = readMap();
+    var style = cellStyle(cell);
+    delete map[key];
+    var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
+    if(field){
+      if(field.id) delete map['field-id:' + field.id];
+      if(field.dataset && field.dataset.syncKey) delete map['field-sync:' + field.dataset.syncKey];
+    }
+    if(!emptyStyle(style)) map[key] = style;
+    writeMap(map);
+    applyMap(map);
+  }
+  function markSingleSelection(cell){
+    if(!cell || !managedTableForCell(cell)) return;
+    try {
+      document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected').forEach(function(el){
+        el.classList.remove('style-selected-cell','info-selected','duration-column-selected');
+      });
+      cell.classList.add('style-selected-cell');
+      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
+      if(field) field.classList.add('style-selected-cell');
+      window.__tripScheduleSelectedStyleCell = cell;
+      window.__tripScheduleSelectedStyleTarget = field || cell;
+    } catch(e){}
+  }
+
+  document.addEventListener('click', function(event){
+    var src = event.target;
+    if(!src || !src.closest) return;
+    if(src.closest('button, .info-toolbar, .action-buttons, .trip-auth-backdrop')) return;
+    var cell = src.closest('td,th');
+    if(cell && managedTableForCell(cell)) markSingleSelection(cell);
+  }, true);
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedManagedCell();
+    if(!cell) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    cell.classList.toggle('trip-hidden-cell');
+    saveCell(cell);
+  }, true);
+
+  document.addEventListener('click', function(event){
+    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
+    if(!btn) return;
+    var cell = selectedManagedCell();
+    if(!cell) return;
+    setTimeout(function(){
+      cell.classList.remove('trip-hidden-cell');
+      saveCell(cell);
+    }, 0);
+  }, true);
+
+  var previousApply = window.__tripScheduleApplyPlanStylesFromFirebase;
+  window.__tripScheduleApplyPlanStylesFromFirebase = function(styleMap){
+    if(styleMap && typeof styleMap === 'object' && !Array.isArray(styleMap)){
+      try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(styleMap)); } catch(e){}
+      applyMap(styleMap);
+      return;
+    }
+    if(typeof previousApply === 'function') return previousApply(styleMap);
+  };
+  window.__tripScheduleApplyPlanStylesNow = function(){ applyMap(readMap()); };
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ applyMap(readMap()); }, 80); });
+  else setTimeout(function(){ applyMap(readMap()); }, 80);
+  window.addEventListener('load', function(){ setTimeout(function(){ applyMap(readMap()); }, 120); });
+  window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(function(){ applyMap(readMap()); }, 120); });
+})();
+</script>
+
+
+
+<style id="hike-row-right-cell-hide-priority-fix">
+  /* 산행지 아래행 우측 끝칸(field:6) 포함: 회원모드 공개행보다 가림 설정을 최우선 적용 */
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row th.trip-hidden-cell,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell *,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row th.trip-hidden-cell *,
+  body.trip-read-mode table.plan td.trip-hidden-cell,
+  body.trip-read-mode table.plan th.trip-hidden-cell,
+  body.trip-read-mode table.plan td.trip-hidden-cell *,
+  body.trip-read-mode table.plan th.trip-hidden-cell * {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    caret-color: transparent !important;
+  }
+
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell input.cell-input,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell textarea.cell-input,
+  body.trip-read-mode table.plan input.cell-input.trip-hidden-cell,
+  body.trip-read-mode table.plan textarea.cell-input.trip-hidden-cell,
+  body.trip-read-mode table.plan [data-sync-key="field:6"].trip-hidden-cell,
+  body.trip-read-mode table.plan td.trip-hidden-cell [data-sync-key="field:6"] {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    caret-color: transparent !important;
+    opacity: 0 !important;
+  }
+
+  body.trip-read-mode table.plan td.trip-hidden-cell,
+  body.trip-read-mode table.plan th.trip-hidden-cell {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  body.trip-read-mode table.plan td.trip-hidden-cell::before,
+  body.trip-read-mode table.plan th.trip-hidden-cell::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 10050 !important;
+    pointer-events: none !important;
+    background: inherit !important;
+  }
+</style>
+
+<script id="hike-row-right-cell-hide-priority-fix">
+/*
+  산행지 아래행 우측 끝칸 가림 보정
+  - 회원모드 공개행 보정 스크립트가 visibility/opacity를 다시 켜면서 field:6 값이 보이는 경우를 차단한다.
+  - .trip-hidden-cell이 붙은 모든 plan 칸의 내부 입력값을 회원모드에서 다시 투명/opacity 0으로 고정한다.
+*/
+(function(){
+  'use strict';
+
+  function forceHideCell(cell){
+    if(!cell || !cell.classList || !cell.classList.contains('trip-hidden-cell')) return;
+    cell.style.setProperty('position', 'relative', 'important');
+    cell.style.setProperty('overflow', 'hidden', 'important');
+    cell.querySelectorAll('input.cell-input, textarea.cell-input, [contenteditable="true"]').forEach(function(el){
+      el.style.setProperty('color', 'transparent', 'important');
+      el.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+      el.style.setProperty('text-shadow', 'none', 'important');
+      el.style.setProperty('caret-color', 'transparent', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+    });
+  }
+
+  function clearForcedHideCell(cell){
+    if(!cell) return;
+    cell.querySelectorAll('input.cell-input, textarea.cell-input, [contenteditable="true"]').forEach(function(el){
+      if(!el.closest('td,th') || !el.closest('td,th').classList.contains('trip-hidden-cell')){
+        el.style.removeProperty('opacity');
+      }
+    });
+  }
+
+  function applyHiddenPriority(){
+    try {
+      var plan = document.querySelector('table.plan');
+      if(!plan) return;
+      if(!document.body.classList.contains('trip-read-mode')){
+        plan.querySelectorAll('td,th').forEach(clearForcedHideCell);
+        return;
+      }
+      plan.querySelectorAll('td.trip-hidden-cell, th.trip-hidden-cell').forEach(forceHideCell);
+
+      /* 산행지 아래행 우측 끝칸(field:6)은 공개행이라 재표시될 수 있어 한 번 더 직접 보정 */
+      var field6 = plan.querySelector('[data-sync-key="field:6"]');
+      var field6Cell = field6 && field6.closest ? field6.closest('td,th') : null;
+      if(field6Cell && field6Cell.classList.contains('trip-hidden-cell')) forceHideCell(field6Cell);
+    } catch(e) {}
+  }
+
+  ['load','pageshow','trip-duration-structure-changed'].forEach(function(type){
+    window.addEventListener(type, function(){
+      setTimeout(applyHiddenPriority, 60);
+      setTimeout(applyHiddenPriority, 350);
+      setTimeout(applyHiddenPriority, 1300);
+    });
+  });
+  document.addEventListener('click', function(){ setTimeout(applyHiddenPriority, 80); }, true);
+  var oldApply = window.__tripScheduleApplyPlanStylesNow;
+  window.__tripScheduleApplyPlanStylesNow = function(){
+    if(typeof oldApply === 'function') oldApply();
+    setTimeout(applyHiddenPriority, 50);
+  };
+  setTimeout(applyHiddenPriority, 100);
 })();
 </script>
 
