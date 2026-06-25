@@ -2993,8 +2993,8 @@ function resizeAllTextareas(root = document) {
 
   </script>
 <script>
-  /* 모바일에서는 일반 탭으로 바로 수정되지 않고, 1초 이상 길게 누른 칸만 수정 가능 */
-  /* 전화번호 보호 칸은 1초 이상 누르면 [편집/전화연결] 선택 후에만 키보드가 열립니다. */
+  /* 모바일: 일반 탭/길게누름 편집 금지, 더블클릭/더블탭한 칸만 수정 가능 */
+  /* PC: 아래 보강 스크립트에서 원클릭으로 입력칸 포커스 처리 */
   (function () {
     const LONG_PRESS_MS = 1000;
     const MOVE_LIMIT = 12;
@@ -3006,12 +3006,7 @@ function resizeAllTextareas(root = document) {
     ]);
 
     // 비품 행은 모바일에서도 일반 입력칸처럼 바로 편집 가능해야 함
-    const DIRECT_EDIT_SYNC_KEYS = new Set([
-      'field:32',          // 비품: 물
-      'field:33',          // 비품: 소주 / 막걸리
-      'field:34',          // 비품: 커피믹스 / 블랙
-      'field:35'           // 비품: 소모품
-    ]);
+    const DIRECT_EDIT_SYNC_KEYS = new Set([]); // 모바일은 모든 칸을 더블클릭으로만 편집
 
     let pressTimer = null;
     let startX = 0;
@@ -3098,21 +3093,11 @@ function resizeAllTextareas(root = document) {
 
       if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
         el.contentEditable = 'true';
-        el.focus();
-        try {
-          const range = document.createRange();
-          range.selectNodeContents(el);
-          range.collapse(false);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-        } catch (error) {}
+        // 커서를 글자 끝으로 강제 이동하지 않고, 사용자가 클릭/더블탭한 위치를 유지한다.
+        try { el.focus({ preventScroll: true }); } catch (error) { el.focus(); }
       } else if (typeof el.focus === 'function') {
-        el.focus();
-        try {
-          const len = String(el.value || '').length;
-          if (typeof el.setSelectionRange === 'function') el.setSelectionRange(len, len);
-        } catch (error) {}
+        // setSelectionRange(len, len) 제거: 커서가 항상 글자 뒤로 가는 현상 방지
+        try { el.focus({ preventScroll: true }); } catch (error) { el.focus(); }
       }
     }
 
@@ -6902,6 +6887,181 @@ function resizeAllTextareas(root = document) {
     setTimeout(applyHiddenPriority, 50);
   };
   setTimeout(applyHiddenPriority, 100);
+})();
+</script>
+
+
+
+<script id="pc-oneclick-mobile-doubleclick-edit-patch">
+/*
+  편집 방식 최종 패치
+  - PC/마우스 환경: 칸을 한 번 클릭하면 내부 입력칸으로 즉시 포커스
+  - 모바일/터치 환경: 한 번 터치는 선택만, 같은 칸 더블클릭/더블탭 시에만 편집
+  - 기존 저장/자동계산/readonly 계산칸 구조는 변경하지 않음
+*/
+(function(){
+  'use strict';
+
+  var DOUBLE_TAP_MS = 430;
+  var DOUBLE_TAP_MOVE = 24;
+  var lastTapEl = null;
+  var lastTapTime = 0;
+  var lastTapX = 0;
+  var lastTapY = 0;
+
+  function isMobileEditMode(){
+    return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+  }
+
+  function isBlockedArea(target){
+    return !!(target && target.closest && target.closest('button, .action-buttons, .info-toolbar, .trip-auth-backdrop, .phone-longpress-choice-box, input[type="file"]'));
+  }
+
+  function getEditableField(target){
+    if(!target || !target.closest) return null;
+    var field = target.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
+    if(field && field.id !== 'mountain-name') return field;
+    var cell = target.closest('td, th');
+    if(cell){
+      var inner = cell.querySelector && cell.querySelector('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
+      if(inner && inner.id !== 'mountain-name') return inner;
+    }
+    return null;
+  }
+
+  function getEditableInfoCell(target){
+    if(!target || !target.closest) return null;
+    var cell = target.closest('.info-section-table th, .info-section-table td');
+    if(!cell) return null;
+    if(cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return null;
+    return cell;
+  }
+
+  function getEditableTarget(target){
+    return getEditableField(target) || getEditableInfoCell(target);
+  }
+
+  function focusEnd(el){
+    if(!el) return;
+    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
+      el.contentEditable = 'true';
+      // 커서를 글자 끝으로 보내지 않고 클릭/더블탭 위치 유지
+      try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
+      return;
+    }
+    // setSelectionRange(len, len) 제거: 마우스 커서가 글자 뒤로 가는 현상 방지
+    if(typeof el.focus === 'function') {
+      try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
+    }
+  }
+
+  function lockMobileTarget(el){
+    if(!el) return;
+    el.classList.remove('mobile-longpress-editing');
+    el.classList.add('mobile-longpress-locked');
+    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
+      el.contentEditable = 'false';
+    }
+  }
+
+  function unlockMobileTarget(el){
+    if(!el) return;
+    document.querySelectorAll('.mobile-longpress-editing').forEach(function(openEl){
+      if(openEl !== el) lockMobileTarget(openEl);
+    });
+    el.classList.remove('mobile-longpress-locked');
+    el.classList.add('mobile-longpress-editing');
+    focusEnd(el);
+  }
+
+  function normalizeMobileLocks(){
+    if(!isMobileEditMode()) return;
+    document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach(function(el){
+      if(el.id === 'mountain-name') return;
+      /* 기존 예외 패치가 부여한 바로편집 플래그 제거 */
+      if(el.dataset && el.dataset.directEdit === 'true') delete el.dataset.directEdit;
+      if(!el.classList.contains('mobile-longpress-editing')) el.classList.add('mobile-longpress-locked');
+    });
+    document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(function(cell){
+      if(cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return;
+      if(!cell.classList.contains('mobile-longpress-editing')){
+        cell.contentEditable = 'false';
+        cell.classList.add('mobile-longpress-locked');
+      }
+    });
+  }
+
+  /* PC: 원클릭으로 편집 포커스 */
+  document.addEventListener('click', function(event){
+    if(isMobileEditMode()) return;
+    if(isBlockedArea(event.target)) return;
+    var editable = getEditableTarget(event.target);
+    if(!editable) return;
+    focusEnd(editable);
+  }, true);
+
+  /* 모바일: 한 번 터치는 포커스/키보드 차단 */
+  document.addEventListener('pointerdown', function(event){
+    if(!isMobileEditMode()) return;
+    if(isBlockedArea(event.target)) return;
+    normalizeMobileLocks();
+    var editable = getEditableTarget(event.target);
+    if(!editable) return;
+    if(editable.classList.contains('mobile-longpress-editing')) return;
+    event.preventDefault();
+  }, true);
+
+  /* 모바일: 같은 칸 더블탭이면 편집 허용 */
+  document.addEventListener('pointerup', function(event){
+    if(!isMobileEditMode()) return;
+    if(event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    if(isBlockedArea(event.target)) return;
+    var editable = getEditableTarget(event.target);
+    if(!editable) return;
+
+    var now = Date.now();
+    var x = event.clientX || 0;
+    var y = event.clientY || 0;
+    var same = lastTapEl === editable;
+    var close = Math.abs(x - lastTapX) <= DOUBLE_TAP_MOVE && Math.abs(y - lastTapY) <= DOUBLE_TAP_MOVE;
+
+    if(same && close && now - lastTapTime <= DOUBLE_TAP_MS){
+      lastTapEl = null;
+      lastTapTime = 0;
+      event.preventDefault();
+      unlockMobileTarget(editable);
+      return;
+    }
+
+    lastTapEl = editable;
+    lastTapTime = now;
+    lastTapX = x;
+    lastTapY = y;
+  }, true);
+
+  document.addEventListener('dblclick', function(event){
+    if(!isMobileEditMode()) return;
+    if(isBlockedArea(event.target)) return;
+    var editable = getEditableTarget(event.target);
+    if(!editable) return;
+    event.preventDefault();
+    unlockMobileTarget(editable);
+  }, true);
+
+  /* 모바일: 잠금 상태에서 우발 포커스가 들어오면 즉시 해제 */
+  document.addEventListener('focusin', function(event){
+    if(!isMobileEditMode()) return;
+    var editable = getEditableTarget(event.target);
+    if(!editable) return;
+    if(editable.classList.contains('mobile-longpress-editing')) return;
+    if(event.target && typeof event.target.blur === 'function') event.target.blur();
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', normalizeMobileLocks);
+  window.addEventListener('load', normalizeMobileLocks);
+  window.addEventListener('resize', normalizeMobileLocks);
+  window.addEventListener('orientationchange', function(){ setTimeout(normalizeMobileLocks, 200); });
+  setInterval(normalizeMobileLocks, 1200);
 })();
 </script>
 
