@@ -1563,19 +1563,33 @@
     box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
   }
 </style>
+
+
+<style id="meal-supply-autowidth-precision-fix">
+  /* 요청 수정: 식당 연락처는 과도 확장 방지, 식당 주소/메뉴/비품 소모품은 글자 폭 기준 자동폭 대상 */
+  textarea[data-sync-key="field:27"],
+  textarea[data-sync-key="field:28"],
+  textarea[data-sync-key="field:29"],
+  #supply-consumables {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+  }
+</style>
 </head>
 <body style="overflow: auto;">
 
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
   <div class="trip-auth-box" role="dialog" aria-modal="true" aria-labelledby="tripAuthTitle">
-    <div class="trip-auth-title" id="tripAuthTitle">산행 계획</div>
-    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 모드</button>
-    <div class="trip-auth-desc">회원모드 [비밀번호 없음]</div>
+    <div class="trip-auth-title" id="tripAuthTitle">산행 운영계획</div>
+    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 보기</button>
+    <div class="trip-auth-desc">[ 회원은 위 버튼을 클릭 하세요 ]</div>
     <div class="trip-auth-login-row">
-      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호입력" aria-label="비밀번호입력">
+      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="운영진 비번 입력" aria-label="비밀번호입력">
       <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
        </div>
-    <div class="trip-auth-desc">운 영 진  [비밀번호 입력]</div>
     <div class="trip-auth-message" id="tripAuthMessage"></div>
 
   </div>
@@ -5527,7 +5541,7 @@ function resizeAllTextareas(root = document) {
 </script>
 
 <script id="editable-plan-label-and-supply-auto-width-fix">
-  /* 상단 고정 라벨/비품/전화번호 칸: 글자 잘림 방지 자동 폭 조정 + 중앙 정렬 */
+  /* 상단 고정 라벨/비품/식당 연락처·주소·메뉴/소모품 칸: 글자 폭 기준 자동 폭 조정 + 중앙 정렬 */
   (function(){
     var labelIds = ['special-extra-label','entry-parking-label','reservation-label','ferry-label'];
     var supplyIds = ['supply-label-water','supply-label-alcohol','supply-label-coffee','supply-label-consumables'];
@@ -5623,9 +5637,20 @@ function resizeAllTextareas(root = document) {
       addNeed(widths, 5, '전화번호', 1.35, 12.5);
       var busPhone = document.querySelector('input[data-sync-key="field:11"]');
       addNeed(widths, 5, busPhone && busPhone.value, 0.95, 12.5);
-      addNeed(widths, 2, '연락처', 1.35, 10.5);
+      addNeed(widths, 2, '연락처', 1.10, 8.8);
       var restaurantPhone = document.querySelector('textarea[data-sync-key="field:27"]');
-      addNeed(widths, 2, restaurantPhone && restaurantPhone.value, 0.95, 10.5);
+      addNeed(widths, 2, restaurantPhone && restaurantPhone.value, 0.68, 8.8);
+
+      var restaurantAddress = document.querySelector('textarea[data-sync-key="field:28"]');
+      addNeed(widths, 3, '주 소', 1.05, 8.8);
+      addNeed(widths, 3, restaurantAddress && restaurantAddress.value, 0.86, 8.8);
+
+      var restaurantMenu = document.querySelector('textarea[data-sync-key="field:29"]');
+      addNeed(widths, 4, '메 뉴', 1.05, 8.8);
+      addNeed(widths, 4, restaurantMenu && restaurantMenu.value, 0.92, 8.8);
+
+      var supplyConsumables = document.getElementById('supply-consumables');
+      distributeSpanNeed(widths, [4,5], supplyConsumables && supplyConsumables.value, 0.92);
 
       widths = normalize(widths);
       for(var i=0;i<8;i++) setColWidth(colgroup.children[i], widths[i]);
@@ -5656,7 +5681,7 @@ function resizeAllTextareas(root = document) {
       var selectors = [
         '#special-extra-label','#entry-parking-label','#reservation-label','#ferry-label',
         '#supply-label-water','#supply-label-alcohol','#supply-label-coffee','#supply-label-consumables',
-        'input[data-sync-key="field:11"]','textarea[data-sync-key="field:27"]',
+        'input[data-sync-key="field:11"]','textarea[data-sync-key="field:27"]','textarea[data-sync-key="field:28"]','textarea[data-sync-key="field:29"]','#supply-consumables',
         '#gimbap-phone','#gimbap-mobile'
       ];
       selectors.forEach(function(sel){
@@ -5689,7 +5714,7 @@ function resizeAllTextareas(root = document) {
         el.addEventListener('input', scheduleFit);
         el.addEventListener('change', scheduleFit);
       });
-      ['field:11','field:27'].forEach(function(key){
+      ['field:11','field:27','field:28','field:29','field:35'].forEach(function(key){
         document.querySelectorAll('[data-sync-key="' + key + '"]').forEach(function(el){
           if(el.__autoWidthBound) return;
           el.__autoWidthBound = true;
