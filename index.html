@@ -711,7 +711,7 @@
     }
 
 
-    /* 모바일 수정 방식: 1초 이상 길게 누른 칸만 입력 가능 */
+    /* 모바일 수정 방식: 5초 이상 길게 누른 칸만 선택/편집 가능, 5초 이내는 화면 스크롤 허용 */
     @media (max-width: 768px), (hover: none) and (pointer: coarse) {
       input.cell-input.mobile-longpress-locked,
       textarea.cell-input.mobile-longpress-locked,
@@ -1563,33 +1563,19 @@
     box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.16) !important;
   }
 </style>
-
-
-<style id="meal-supply-autowidth-precision-fix">
-  /* 요청 수정: 식당 연락처는 과도 확장 방지, 식당 주소/메뉴/비품 소모품은 글자 폭 기준 자동폭 대상 */
-  textarea[data-sync-key="field:27"],
-  textarea[data-sync-key="field:28"],
-  textarea[data-sync-key="field:29"],
-  #supply-consumables {
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-  }
-</style>
 </head>
 <body style="overflow: auto;">
 
 <div class="trip-auth-backdrop" id="tripAuthBackdrop">
   <div class="trip-auth-box" role="dialog" aria-modal="true" aria-labelledby="tripAuthTitle">
-    <div class="trip-auth-title" id="tripAuthTitle">산행 운영계획</div>
-    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 보기</button>
-    <div class="trip-auth-desc">[ 회원은 위 버튼을 클릭 하세요 ]</div>
+    <div class="trip-auth-title" id="tripAuthTitle">산행 계획</div>
+    <button class="trip-auth-read-btn trip-auth-member-main" id="tripReadModeBtn" type="button">회원 모드</button>
+    <div class="trip-auth-desc">회원모드 [비밀번호 없음]</div>
     <div class="trip-auth-login-row">
-      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="운영진 비번 입력" aria-label="비밀번호입력">
+      <input class="trip-auth-input" id="tripAdminPasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호입력" aria-label="비밀번호입력">
       <button class="trip-auth-admin-btn" id="tripAdminLoginBtn" type="button">로그인</button>
        </div>
+    <div class="trip-auth-desc">운 영 진  [비밀번호 입력]</div>
     <div class="trip-auth-message" id="tripAuthMessage"></div>
 
   </div>
@@ -3223,18 +3209,23 @@ function resizeAllTextareas(root = document) {
       }
       if (editable.classList.contains('mobile-longpress-editing')) return;
 
-      if (isPhoneChoiceTarget(editable)) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-
-      /* 모바일 편집 방식 변경: 길게 누름으로는 편집을 열지 않는다.
-         편집은 아래 dblclick / 더블탭 핸들러에서만 활성화한다. */
+      /* 모바일: 5초 동안 움직이지 않고 누른 경우에만 칸 선택/편집.
+         5초 이내의 짧은 터치/드래그는 preventDefault 하지 않아 화면 스크롤을 허용한다. */
       targetEl = editable;
       startX = event.clientX || 0;
       startY = event.clientY || 0;
       clearTimeout(pressTimer);
-      pressTimer = null;
+      pressTimer = setTimeout(function () {
+        const target = targetEl;
+        pressTimer = null;
+        targetEl = null;
+        if (!target || !isMobileEditMode()) return;
+        if (isPhoneChoiceTarget(target)) {
+          showPhoneChoiceBox(target);
+        } else {
+          enableEditing(target);
+        }
+      }, 5000);
     }, true);
 
     document.addEventListener('pointermove', function (event) {
@@ -3246,60 +3237,6 @@ function resizeAllTextareas(root = document) {
 
     document.addEventListener('pointerup', cancelPressTimer, true);
     document.addEventListener('pointercancel', cancelPressTimer, true);
-
-    /* 모바일 편집 방식 변경: 더블클릭/더블탭으로 편집 활성화 */
-    let mobileDoubleTapLastEl = null;
-    let mobileDoubleTapLastTime = 0;
-    let mobileDoubleTapLastX = 0;
-    let mobileDoubleTapLastY = 0;
-
-    function enableMobileDoubleClickEdit(target) {
-      if (!isMobileEditMode()) return false;
-      const editable = isEditableTarget(target);
-      if (!editable) return false;
-      if (isDirectEditTarget(editable)) return false;
-      if (editable.classList.contains('mobile-longpress-editing')) return true;
-      enableEditing(editable);
-      return true;
-    }
-
-    document.addEventListener('dblclick', function(event) {
-      if (!isMobileEditMode()) return;
-      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
-      if (enableMobileDoubleClickEdit(event.target)) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    }, true);
-
-    document.addEventListener('pointerup', function(event) {
-      if (!isMobileEditMode()) return;
-      if (event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
-      const editable = isEditableTarget(event.target);
-      if (!editable || isDirectEditTarget(editable)) return;
-
-      const now = Date.now();
-      const x = event.clientX || 0;
-      const y = event.clientY || 0;
-      const sameTarget = mobileDoubleTapLastEl === editable;
-      const closeEnough = Math.abs(x - mobileDoubleTapLastX) <= 22 && Math.abs(y - mobileDoubleTapLastY) <= 22;
-
-      if (sameTarget && closeEnough && now - mobileDoubleTapLastTime <= 420) {
-        mobileDoubleTapLastEl = null;
-        mobileDoubleTapLastTime = 0;
-        if (enableMobileDoubleClickEdit(editable)) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        return;
-      }
-
-      mobileDoubleTapLastEl = editable;
-      mobileDoubleTapLastTime = now;
-      mobileDoubleTapLastX = x;
-      mobileDoubleTapLastY = y;
-    }, true);
 
     document.addEventListener('click', function (event) {
       if (!isMobileEditMode()) return;
@@ -5541,7 +5478,7 @@ function resizeAllTextareas(root = document) {
 </script>
 
 <script id="editable-plan-label-and-supply-auto-width-fix">
-  /* 상단 고정 라벨/비품/식당 연락처·주소·메뉴/소모품 칸: 글자 폭 기준 자동 폭 조정 + 중앙 정렬 */
+  /* 상단 고정 라벨/비품/전화번호 칸: 글자 잘림 방지 자동 폭 조정 + 중앙 정렬 */
   (function(){
     var labelIds = ['special-extra-label','entry-parking-label','reservation-label','ferry-label'];
     var supplyIds = ['supply-label-water','supply-label-alcohol','supply-label-coffee','supply-label-consumables'];
@@ -5637,20 +5574,9 @@ function resizeAllTextareas(root = document) {
       addNeed(widths, 5, '전화번호', 1.35, 12.5);
       var busPhone = document.querySelector('input[data-sync-key="field:11"]');
       addNeed(widths, 5, busPhone && busPhone.value, 0.95, 12.5);
-      addNeed(widths, 2, '연락처', 1.10, 8.8);
+      addNeed(widths, 2, '연락처', 1.35, 10.5);
       var restaurantPhone = document.querySelector('textarea[data-sync-key="field:27"]');
-      addNeed(widths, 2, restaurantPhone && restaurantPhone.value, 0.68, 8.8);
-
-      var restaurantAddress = document.querySelector('textarea[data-sync-key="field:28"]');
-      addNeed(widths, 3, '주 소', 1.05, 8.8);
-      addNeed(widths, 3, restaurantAddress && restaurantAddress.value, 0.86, 8.8);
-
-      var restaurantMenu = document.querySelector('textarea[data-sync-key="field:29"]');
-      addNeed(widths, 4, '메 뉴', 1.05, 8.8);
-      addNeed(widths, 4, restaurantMenu && restaurantMenu.value, 0.92, 8.8);
-
-      var supplyConsumables = document.getElementById('supply-consumables');
-      distributeSpanNeed(widths, [4,5], supplyConsumables && supplyConsumables.value, 0.92);
+      addNeed(widths, 2, restaurantPhone && restaurantPhone.value, 0.95, 10.5);
 
       widths = normalize(widths);
       for(var i=0;i<8;i++) setColWidth(colgroup.children[i], widths[i]);
@@ -5681,7 +5607,7 @@ function resizeAllTextareas(root = document) {
       var selectors = [
         '#special-extra-label','#entry-parking-label','#reservation-label','#ferry-label',
         '#supply-label-water','#supply-label-alcohol','#supply-label-coffee','#supply-label-consumables',
-        'input[data-sync-key="field:11"]','textarea[data-sync-key="field:27"]','textarea[data-sync-key="field:28"]','textarea[data-sync-key="field:29"]','#supply-consumables',
+        'input[data-sync-key="field:11"]','textarea[data-sync-key="field:27"]',
         '#gimbap-phone','#gimbap-mobile'
       ];
       selectors.forEach(function(sel){
@@ -5714,7 +5640,7 @@ function resizeAllTextareas(root = document) {
         el.addEventListener('input', scheduleFit);
         el.addEventListener('change', scheduleFit);
       });
-      ['field:11','field:27','field:28','field:29','field:35'].forEach(function(key){
+      ['field:11','field:27'].forEach(function(key){
         document.querySelectorAll('[data-sync-key="' + key + '"]').forEach(function(el){
           if(el.__autoWidthBound) return;
           el.__autoWidthBound = true;
