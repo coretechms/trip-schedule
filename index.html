@@ -7016,4 +7016,62 @@ function resizeAllTextareas(root = document) {
 })();
 </script>
 
+
+<style id="edit-context-menu-style">
+  #tripEditContextMenu{position:fixed;display:none;z-index:300000;min-width:150px;max-height:70vh;overflow-y:auto;padding:4px;background:#fff;border:1px solid #999;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.22);font-family:"Malgun Gothic",sans-serif;}
+  #tripEditContextMenu.is-open{display:block;}
+  #tripEditContextMenu button{display:block;width:100%;height:28px;margin:0;padding:3px 9px;border:0;border-bottom:1px solid #eee;background:#fff;color:#111;text-align:left;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;}
+  #tripEditContextMenu button:last-child{border-bottom:0;}
+  #tripEditContextMenu button:hover{background:#eef3ff;}
+</style>
+<script id="edit-context-menu-script">
+(function(){
+  function initEditContextMenu(){
+    var toolbar=document.querySelector('#info-form-wrap .info-toolbar');
+    if(!toolbar || document.getElementById('tripEditContextMenu')) return;
+    var editToggle=Array.from(toolbar.querySelectorAll('.info-toolbar-toggle-btn')).find(function(b){return (b.textContent||'').trim()==='편집';});
+    var editPanel=toolbar.querySelector('.info-toolbar-group-panel[data-info-group="edit"]');
+    if(!editToggle || !editPanel) return;
+    var menu=document.createElement('div'); menu.id='tripEditContextMenu'; document.body.appendChild(menu);
+    function close(){menu.classList.remove('is-open');}
+    function build(){
+      menu.innerHTML='';
+      Array.from(editPanel.querySelectorAll('button')).forEach(function(src){
+        if(src.classList.contains('info-group-label-btn')) return;
+        var b=document.createElement('button'); b.type='button'; b.textContent=(src.textContent||'').trim()||src.getAttribute('data-info-action')||'실행';
+        b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();close();src.click();});
+        menu.appendChild(b);
+      });
+    }
+    function openAt(x,y){build(); if(!menu.children.length)return; menu.classList.add('is-open'); menu.style.left='0px';menu.style.top='0px'; var r=menu.getBoundingClientRect(); menu.style.left=Math.max(4,Math.min(x,innerWidth-r.width-4))+'px'; menu.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+'px';}
+    editToggle.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY);});
+    editPanel.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY);});
+
+    /* 편집 모드: 모든 표 셀에서 마우스 우클릭 시 해당 셀을 선택하고 편집 풀다운 메뉴 표시 */
+    document.addEventListener('contextmenu',function(e){
+      if(!document.body.classList.contains('trip-admin-mode')) return;
+      var cell=e.target && e.target.closest ? e.target.closest('td,th') : null;
+      if(!cell) return;
+      if(!cell.closest('table')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        cell.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,clientX:e.clientX,clientY:e.clientY,button:0}));
+        cell.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:e.clientX,clientY:e.clientY,button:0}));
+      } catch(err) {}
+      if(typeof window.__tripScheduleSelectedStyleCell !== 'undefined') window.__tripScheduleSelectedStyleCell=cell;
+      if(typeof window.__tripScheduleSelectedStyleTarget !== 'undefined') window.__tripScheduleSelectedStyleTarget=cell;
+      document.querySelectorAll('.style-selected-cell,.info-selected,.duration-column-selected').forEach(function(el){
+        if(el!==cell){el.classList.remove('style-selected-cell','info-selected','duration-column-selected');}
+      });
+      cell.classList.add('style-selected-cell');
+      openAt(e.clientX,e.clientY);
+    },true);
+    document.addEventListener('mousedown',function(e){if(!menu.contains(e.target))close();});
+    window.addEventListener('blur',close); window.addEventListener('resize',close); window.addEventListener('scroll',close,true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(initEditContextMenu,0);});else setTimeout(initEditContextMenu,0);
+  window.addEventListener('load',function(){setTimeout(initEditContextMenu,0);});
+})();
+</script>
 </body></html>
