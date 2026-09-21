@@ -2064,6 +2064,25 @@
     function extractBusSeatAttendeeCount(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== 'object') return '';
 
+      // bus-seat의 현재 차량 구조를 우선 계산합니다.
+      // 1호차는 busSeatApp/seats, 2호차는 busSeatApp/vehicles/2/seats이며
+      // 2호차는 관리자가 실제 운행으로 설정한 경우에만 전체 인원에 포함합니다.
+      const vehicle1Seats = snapshotValue?.seats;
+      const secondVehicleEnabled = snapshotValue?.fleet?.secondVehicleEnabled === true;
+      const vehicle2Seats = secondVehicleEnabled
+        ? snapshotValue?.vehicles?.['2']?.seats
+        : null;
+      const hasVehicleSeatData = Boolean(
+        (vehicle1Seats && typeof vehicle1Seats === 'object') ||
+        (vehicle2Seats && typeof vehicle2Seats === 'object')
+      );
+
+      if (hasVehicleSeatData) {
+        const totalCount = countNamedSeats(vehicle1Seats) + countNamedSeats(vehicle2Seats);
+        return totalCount > 0 ? totalCount : '';
+      }
+
+      // 이전 bus-seat 버전의 요약값 및 좌석 구조도 계속 지원합니다.
       const numericCandidates = [
         snapshotValue?.occupiedCount,
         snapshotValue?.['occupied-count'],
@@ -3939,13 +3958,6 @@ function resizeAllTextareas(root = document) {
           }
         }, (error) => {
           console.error('bus-seat busInfo/infoTitleMain 실시간 수신 실패:', error);
-        });
-
-        onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/seats`), (snapshot) => {
-          const seatCount = countNamedSeats(snapshot.val());
-          setBusSeatSummaryFilled(seatCount > 0 ? seatCount : '');
-        }, (error) => {
-          console.error('bus-seat seats 참석인원 실시간 수신 실패:', error);
         });
 
         onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/hikingNotice`), (snapshot) => {
