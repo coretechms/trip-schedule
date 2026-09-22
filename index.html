@@ -3215,6 +3215,9 @@ function resizeAllTextareas(root = document) {
 
     document.addEventListener('pointerdown', function (event) {
       if (!isMobileEditMode()) return;
+      /* 모바일 편집은 최종 더블탭 처리에서만 허용한다.
+         기존 5초 길게 누르기 편집 타이머는 실행하지 않는다. */
+      return;
       const editable = isEditableTarget(event.target);
       if (!editable) {
         if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
@@ -6439,6 +6442,11 @@ function resizeAllTextareas(root = document) {
   function enforceFromEvent(event){
     var cell = closestSelectableCell(event.target);
     if(!cell) return;
+    if(window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches){
+      /* 모바일 한 번 터치는 선택 동작이 아니라 스크롤 시작 동작이다. */
+      setTimeout(clearAllSelectionBorders, 0);
+      return;
+    }
     /* 기존 여러 선택 스크립트가 실행된 뒤 마지막에 한 번 더 정리 */
     setTimeout(function(){ markOnlyOneCell(cell); }, 0);
   }
@@ -6450,6 +6458,10 @@ function resizeAllTextareas(root = document) {
   /* 화면 복원/동기화 후 남아있는 중복 선택 테두리도 자동 정리 */
   var observer = new MutationObserver(function(){
     var marked = Array.from(document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected'));
+    if(window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches){
+      if(marked.length) clearAllSelectionBorders();
+      return;
+    }
     if(marked.length <= 1) return;
     var cell = window.__tripScheduleSelectedStyleCell;
     if(!(cell && document.contains(cell))) {
@@ -6963,7 +6975,7 @@ function resizeAllTextareas(root = document) {
     focusEnd(editable);
   }, true);
 
-  /* 모바일: 한 번 터치는 포커스/키보드 차단 */
+  /* 모바일: 한 번 터치는 포커스/키보드를 열지 않고 스크롤에 사용 */
   document.addEventListener('pointerdown', function(event){
     if(!isMobileEditMode()) return;
     if(isBlockedArea(event.target)) return;
@@ -6971,7 +6983,7 @@ function resizeAllTextareas(root = document) {
     var editable = getEditableTarget(event.target);
     if(!editable) return;
     if(editable.classList.contains('mobile-longpress-editing')) return;
-    event.preventDefault();
+    /* preventDefault 금지: 손가락 드래그가 정상적으로 화면 스크롤을 시작해야 한다. */
   }, true);
 
   /* 모바일: 같은 칸 더블탭이면 편집 허용 */
@@ -7086,4 +7098,38 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load',function(){setTimeout(initEditContextMenu,0);});
 })();
 </script>
+<style id="mobile-scroll-doubletap-edit-final-style">
+  @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    /* 잠긴 입력칸은 첫 터치로 포커스되지 않고 부모 셀에서 스크롤 제스처를 받는다. */
+    input.cell-input.mobile-longpress-locked,
+    textarea.cell-input.mobile-longpress-locked {
+      pointer-events: none !important;
+      touch-action: pan-x pan-y !important;
+    }
+
+    .info-section-table .mobile-longpress-locked {
+      touch-action: pan-x pan-y !important;
+    }
+
+    /* 일반 터치에서 기존 선택 코드가 잠깐 실행되더라도 파란 테두리는 표시하지 않는다. */
+    td.style-selected-cell,
+    th.style-selected-cell,
+    input.style-selected-cell,
+    textarea.style-selected-cell,
+    .info-selected,
+    .duration-column-selected {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* 더블탭으로 실제 편집이 열린 입력칸만 편집 표시를 보여준다. */
+    input.cell-input.mobile-longpress-editing,
+    textarea.cell-input.mobile-longpress-editing,
+    .info-section-table .mobile-longpress-editing {
+      pointer-events: auto !important;
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
+    }
+  }
+</style>
 </body></html>
