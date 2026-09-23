@@ -1616,8 +1616,8 @@
 <tr class="h30">
 <td class="fixed" rowspan="2">식 당</td>
 <td class="fixed">식 당</td>
-<td class="fixed">연락처</td>
 <td class="fixed">주 소</td>
+<td class="fixed">연락처</td>
 <td class="fixed">메 뉴</td>
 <td class="fixed">비 고</td>
 <td class="fixed">주류 반입 :</td>
@@ -2080,7 +2080,9 @@
         if (count <= 0) return false;
         while (values.length < count) values.push(DURATION_DEFAULT_VALUES[values.length] || '0:00');
         while (titles.length < count) titles.push(' ');
-        rebuildDurationColumns(values.slice(0, count), titles.slice(0, count), selectedDurationColumnIndex);
+        window.__tripScheduleRestoringDuration = true;
+        try { rebuildDurationColumns(values.slice(0, count), titles.slice(0, count), selectedDurationColumnIndex); }
+        finally { window.__tripScheduleRestoringDuration = false; }
         return true;
       } catch (error) {
         console.warn('소요시간 열 구조 로컬 복원 실패:', error);
@@ -2227,9 +2229,15 @@
 
     function bindDurationColumnSelection() {
       const valuesRow = document.getElementById('duration-values-row');
+      const titleRow = document.getElementById('duration-title-row');
+      const expectedTopRow = document.getElementById('expected-top-row');
+      const expectedBottomRow = document.getElementById('expected-bottom-row');
       const count = getDurationInputs().length || 7;
       for (let i = 0; i < count; i += 1) {
         if (valuesRow) markDurationCell(valuesRow.children[i], i);
+        if (titleRow) markDurationCell(titleRow.children[i + 1], i);
+        if (expectedTopRow) markDurationCell(expectedTopRow.children[i + 1], i);
+        if (expectedBottomRow) markDurationCell(expectedBottomRow.children[i], i);
       }
       refreshDurationColumnSelection();
     }
@@ -2294,10 +2302,11 @@
       if (typeof bindMobileLongPressEditing === 'function') bindMobileLongPressEditing();
       updateExpectedTimes();
       normalizeExpectedTopDefaultColors();
-      saveDurationStructureLocally();
       if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
-      try { window.dispatchEvent(new CustomEvent('trip-duration-structure-changed')); } catch (error) {}
-      if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
+      if (!window.__tripScheduleRestoringDuration) {
+        saveDurationStructureLocally();
+        try { window.dispatchEvent(new CustomEvent('trip-duration-structure-changed')); } catch (error) {}
+      }
     }
 
     function setDurationColumnCount(nextCount) {
@@ -2307,7 +2316,7 @@
       rebuildDurationColumns(currentValues.slice(0, count), currentTitles.slice(0, count), selectedDurationColumnIndex);
     }
 
-    function insertDurationColumnRightOfSelection() {
+    function insertDurationColumnLeftOfSelection() {
       const values = getDurationColumnValues();
       const titles = getDurationTitleValues();
       const current = values.length || 7;
@@ -2315,9 +2324,12 @@
         alert('소요시간 열은 최대 ' + DURATION_COLUMN_MAX + '개까지 가능합니다.');
         return;
       }
+      if (selectedDurationColumnIndex === null) {
+        alert('열을 추가할 위치의 소요시간 칸을 먼저 클릭하세요.');
+        return;
+      }
       const selected = normalizeDurationIndex(selectedDurationColumnIndex, current);
-      /* 귀가 칸은 항상 마지막에 유지하기 위해 마지막 칸 선택 시 귀가 바로 앞에 추가 */
-      const insertAt = selected >= current - 1 ? current - 1 : selected + 1;
+      const insertAt = selected;
       values.splice(insertAt, 0, '0:00');
       titles.splice(insertAt, 0, ' ');
       rebuildDurationColumns(values, titles, insertAt);
@@ -2331,18 +2343,15 @@
         alert('소요시간 열은 최소 2개 이상 필요합니다.');
         return;
       }
+      if (selectedDurationColumnIndex === null) {
+        alert('삭제할 소요시간 칸을 먼저 클릭하세요.');
+        return;
+      }
       const selected = normalizeDurationIndex(selectedDurationColumnIndex, current);
       values.splice(selected, 1);
       titles.splice(selected, 1);
       const nextSelected = Math.min(selected, values.length - 1);
       rebuildDurationColumns(values, titles, nextSelected);
-
-      /* 소요열삭제 패치: 삭제 직후 hidden/local/Firebase 저장을 즉시 재확정 */
-      const hidden = getDurationColumnCountInput();
-      if (hidden) hidden.value = String(values.length);
-      saveDurationStructureLocally();
-      if (typeof ensureSyncKeys === 'function') ensureSyncKeys();
-      if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
     }
 
     function inferDurationColumnCountFromData(data) {
@@ -2390,7 +2399,9 @@
       while (nextValues.length < target) nextValues.push(DURATION_DEFAULT_VALUES[nextValues.length] || '0:00');
       while (nextTitles.length < target) nextTitles.push(' ');
 
-      rebuildDurationColumns(nextValues, nextTitles, selectedDurationColumnIndex);
+      window.__tripScheduleRestoringDuration = true;
+      try { rebuildDurationColumns(nextValues, nextTitles, selectedDurationColumnIndex); }
+      finally { window.__tripScheduleRestoringDuration = false; }
     }
 
 
@@ -2438,7 +2449,6 @@
         el.addEventListener('input', function () {
           updateExpectedTimes();
           saveDurationStructureLocally();
-          if (typeof scheduleRealtimeSave === 'function') scheduleRealtimeSave();
         });
       });
     }
@@ -2450,7 +2460,7 @@
         addBtn.__durationColumnBound = true;
         addBtn.addEventListener('click', function () {
           if (document.body.classList.contains('trip-read-mode')) return;
-          insertDurationColumnRightOfSelection();
+          insertDurationColumnLeftOfSelection();
         });
       }
       if (delBtn && !delBtn.__durationColumnBound) {
@@ -2519,53 +2529,6 @@
       const minHeight = Number(el.dataset.minHeight || 30);
       el.style.height = 'auto';
       el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
-      const td = el.closest('td');
-      if (td) {
-        td.style.height = 'auto';
-      }
-      const tr = el.closest('tr');
-      if (tr) {
-        tr.style.height = 'auto';
-      }
-    }
-
-    function expandCellsForCapture(target) {
-      const changed = [];
-      const textareas = Array.from(target.querySelectorAll('textarea.cell-input'));
-      textareas.forEach((el) => {
-        changed.push([el, el.style.height, el.style.overflow]);
-        el.style.overflow = 'hidden';
-        autoResizeTextarea(el);
-      });
-
-      const rows = Array.from(target.querySelectorAll('tr'));
-      rows.forEach((row) => {
-        const inputs = Array.from(row.querySelectorAll('input.cell-input, textarea.cell-input'));
-        if (!inputs.length) return;
-
-        let needed = 0;
-        inputs.forEach((el) => {
-          const h = Math.max(el.scrollHeight || 0, el.offsetHeight || 0, 28);
-          needed = Math.max(needed, h + 8);
-        });
-
-        if (needed > row.offsetHeight) {
-          changed.push([row, row.style.height, null]);
-          row.style.height = needed + 'px';
-        }
-      });
-
-      return function restore() {
-        changed.forEach((item) => {
-          const el = item[0]
-          if (el.tagName === 'TEXTAREA') {
-            el.style.height = item[1];
-            el.style.overflow = item[2];
-          } else {
-            el.style.height = item[1];
-          }
-        });
-      };
     }
 
     function alignMountainNameCenter() {
@@ -2807,305 +2770,6 @@ function resizeAllTextareas(root = document) {
     if (memberCaptureButton) memberCaptureButton.addEventListener('click', captureMemberImage);
 
   </script>
-<script>
-  /* 모바일: 일반 탭/길게누름 편집 금지, 더블클릭/더블탭한 칸만 수정 가능 */
-  /* PC: 아래 보강 스크립트에서 원클릭으로 입력칸 포커스 처리 */
-  (function () {
-    const LONG_PRESS_MS = 1000;
-    const MOVE_LIMIT = 12;
-    const PHONE_SYNC_KEYS = new Set([
-      'field:11',          // 관광버스 행 전화번호
-      'field:27',          // 식당 행 연락처
-      'id:gimbap-phone',   // 위치/상호 행 전화번호
-      'id:gimbap-mobile'   // 위치/상호 행 휴대폰
-    ]);
-
-    // 비품 행은 모바일에서도 일반 입력칸처럼 바로 편집 가능해야 함
-    const DIRECT_EDIT_SYNC_KEYS = new Set([]); // 모바일은 모든 칸을 더블클릭으로만 편집
-
-    let pressTimer = null;
-    let startX = 0;
-    let startY = 0;
-    let targetEl = null;
-    let phoneChoiceEl = null;
-    let phoneChoiceTarget = null;
-
-    function isMobileEditMode() {
-      return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
-    }
-
-    function normalizeHeaderText(text) {
-      return String(text || '').replace(/\s+/g, '');
-    }
-
-    function getInfoColumnHeader(cell) {
-      const table = cell && cell.closest ? cell.closest('.info-section-table') : null;
-      if (!table || !cell.parentElement) return '';
-      const index = Array.prototype.indexOf.call(cell.parentElement.children, cell);
-      if (index < 0) return '';
-      const headerRow = table.querySelector('thead tr');
-      const headerCell = headerRow && headerRow.children[index];
-      return normalizeHeaderText(headerCell ? headerCell.textContent : '');
-    }
-
-    function isInfoPhoneValueCell(el) {
-      const cell = el && el.closest ? el.closest('.info-section-table tbody td') : null;
-      if (!cell || cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return false;
-      const header = getInfoColumnHeader(cell);
-      return header === '전화번호' || header === '전화번호' || header === '휴대폰' || header === '연락처';
-    }
-
-    function isDirectEditTarget(el) {
-      if (!el) return false;
-      const field = el.matches && el.matches('input.cell-input, textarea.cell-input') ? el : (el.closest && el.closest('input.cell-input, textarea.cell-input'));
-      return !!(field && (field.dataset.directEdit === 'true' || DIRECT_EDIT_SYNC_KEYS.has(String(field.dataset.syncKey || ''))));
-    }
-
-    function isPhoneChoiceTarget(el) {
-      if (!el) return false;
-      const field = el.matches && el.matches('input.cell-input, textarea.cell-input') ? el : (el.closest && el.closest('input.cell-input, textarea.cell-input'));
-      if (field && PHONE_SYNC_KEYS.has(String(field.dataset.syncKey || ''))) return true;
-      return isInfoPhoneValueCell(el);
-    }
-
-    function isEditableTarget(el) {
-      if (!el) return false;
-      const field = el.closest && el.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
-      if (field && field.id !== 'mountain-name') return field;
-      const infoCell = el.closest && el.closest('.info-section-table th, .info-section-table td');
-      if (infoCell && !infoCell.classList.contains('info-select-col') && !infoCell.querySelector('.info-row-select-btn')) return infoCell;
-      return null;
-    }
-
-    function lockInfoCell(cell) {
-      if (!cell || !cell.matches('.info-section-table th, .info-section-table td')) return;
-      if (cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return;
-      cell.dataset.mobileOriginalEditable = 'true';
-      cell.contentEditable = 'false';
-      cell.classList.add('mobile-longpress-locked');
-      cell.classList.remove('mobile-longpress-editing');
-    }
-
-    function lockAllExcept(exceptEl) {
-      if (!isMobileEditMode()) return;
-      document.querySelectorAll('.mobile-longpress-editing').forEach((el) => {
-        if (el === exceptEl) return;
-        el.classList.remove('mobile-longpress-editing');
-        el.classList.add('mobile-longpress-locked');
-        if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
-          el.contentEditable = 'false';
-        }
-      });
-      document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(lockInfoCell);
-    }
-
-    function enableEditing(el) {
-      if (!el) return;
-      closePhoneChoiceBox();
-      lockAllExcept(el);
-      el.classList.remove('mobile-longpress-locked');
-      el.classList.add('mobile-longpress-editing');
-
-      if (el.matches && el.matches('.info-section-table th, .info-section-table td')) {
-        el.contentEditable = 'true';
-        // 커서를 글자 끝으로 강제 이동하지 않고, 사용자가 클릭/더블탭한 위치를 유지한다.
-        try { el.focus({ preventScroll: true }); } catch (error) { el.focus(); }
-      } else if (typeof el.focus === 'function') {
-        // setSelectionRange(len, len) 제거: 커서가 항상 글자 뒤로 가는 현상 방지
-        try { el.focus({ preventScroll: true }); } catch (error) { el.focus(); }
-      }
-    }
-
-    function getPhoneText(el) {
-      if (!el) return '';
-      if ('value' in el) return String(el.value || '').trim();
-      return String(el.textContent || '').trim();
-    }
-
-    function buildTelHref(text) {
-      const raw = String(text || '').trim();
-      const compact = raw.replace(/[^0-9+]/g, '');
-      const digits = compact.replace(/\D/g, '');
-      if (digits.length < 8 || digits.length > 11) return '';
-      if (!/^(0\d{7,10}|\+82\d{8,10})$/.test(compact)) return '';
-      return 'tel:' + compact;
-    }
-
-    function ensurePhoneChoiceBox() {
-      if (phoneChoiceEl) return phoneChoiceEl;
-      phoneChoiceEl = document.createElement('div');
-      phoneChoiceEl.className = 'phone-longpress-choice-box';
-      phoneChoiceEl.innerHTML = '<button type="button" data-phone-choice="edit">편집</button><button type="button" data-phone-choice="call">전화연결</button><button type="button" data-phone-choice="cancel">취소</button>';
-      phoneChoiceEl.addEventListener('pointerdown', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }, true);
-      phoneChoiceEl.addEventListener('click', function (event) {
-        const btn = event.target.closest('button[data-phone-choice]');
-        if (!btn) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const action = btn.dataset.phoneChoice;
-        const target = phoneChoiceTarget;
-        if (action === 'edit') {
-          enableEditing(target);
-          return;
-        }
-        if (action === 'call') {
-          const href = buildTelHref(getPhoneText(target));
-          closePhoneChoiceBox();
-          if (href) {
-            window.location.href = href;
-          } else {
-            alert('전화번호 형식이 아닙니다. 편집을 선택해서 내용을 확인하세요.');
-          }
-          return;
-        }
-        closePhoneChoiceBox();
-      }, true);
-      document.body.appendChild(phoneChoiceEl);
-      return phoneChoiceEl;
-    }
-
-    function closePhoneChoiceBox() {
-      if (phoneChoiceEl) phoneChoiceEl.classList.remove('is-open');
-      phoneChoiceTarget = null;
-    }
-
-    function showPhoneChoiceBox(el) {
-      if (!el) return;
-      phoneChoiceTarget = el;
-      lockAllExcept(el);
-      const box = ensurePhoneChoiceBox();
-      box.classList.add('is-open');
-      const rect = el.getBoundingClientRect();
-      const boxWidth = Math.max(box.offsetWidth || 230, 230);
-      const left = Math.min(Math.max(8, rect.left + rect.width / 2 - boxWidth / 2), window.innerWidth - boxWidth - 8);
-      const top = Math.min(Math.max(8, rect.bottom + 8), window.innerHeight - 62);
-      box.style.left = left + 'px';
-      box.style.top = top + 'px';
-    }
-
-    function cancelPressTimer() {
-      clearTimeout(pressTimer);
-      pressTimer = null;
-      targetEl = null;
-    }
-
-    function initializeMobileLocks() {
-      if (!isMobileEditMode()) return;
-      document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach((el) => {
-        if (el.id === 'mountain-name') return;
-        if (isDirectEditTarget(el)) {
-          el.classList.remove('mobile-longpress-locked', 'mobile-longpress-editing');
-          return;
-        }
-        if (!el.classList.contains('mobile-longpress-editing')) {
-          el.classList.add('mobile-longpress-locked');
-        }
-      });
-      document.querySelectorAll('.info-section-table th, .info-section-table td').forEach((cell) => {
-        if (!cell.classList.contains('mobile-longpress-editing')) lockInfoCell(cell);
-      });
-    }
-
-    document.addEventListener('pointerdown', function (event) {
-      if (!isMobileEditMode()) return;
-      /* 모바일 편집은 최종 더블탭 처리에서만 허용한다.
-         기존 5초 길게 누르기 편집 타이머는 실행하지 않는다. */
-      return;
-      const editable = isEditableTarget(event.target);
-      if (!editable) {
-        if (phoneChoiceEl && phoneChoiceEl.classList.contains('is-open') && !(event.target.closest && event.target.closest('.phone-longpress-choice-box'))) {
-          closePhoneChoiceBox();
-        }
-        return;
-      }
-      if (isDirectEditTarget(editable)) {
-        closePhoneChoiceBox();
-        return;
-      }
-      if (editable.classList.contains('mobile-longpress-editing')) return;
-
-      /* 모바일: 5초 동안 움직이지 않고 누른 경우에만 칸 선택/편집.
-         5초 이내의 짧은 터치/드래그는 preventDefault 하지 않아 화면 스크롤을 허용한다. */
-      targetEl = editable;
-      startX = event.clientX || 0;
-      startY = event.clientY || 0;
-      clearTimeout(pressTimer);
-      pressTimer = setTimeout(function () {
-        const target = targetEl;
-        pressTimer = null;
-        targetEl = null;
-        if (!target || !isMobileEditMode()) return;
-        if (isPhoneChoiceTarget(target)) {
-          showPhoneChoiceBox(target);
-        } else {
-          enableEditing(target);
-        }
-      }, 5000);
-    }, true);
-
-    document.addEventListener('pointermove', function (event) {
-      if (!pressTimer) return;
-      const dx = Math.abs((event.clientX || 0) - startX);
-      const dy = Math.abs((event.clientY || 0) - startY);
-      if (dx > MOVE_LIMIT || dy > MOVE_LIMIT) cancelPressTimer();
-    }, true);
-
-    document.addEventListener('pointerup', cancelPressTimer, true);
-    document.addEventListener('pointercancel', cancelPressTimer, true);
-
-    document.addEventListener('click', function (event) {
-      if (!isMobileEditMode()) return;
-      if (event.target.closest && event.target.closest('.phone-longpress-choice-box')) return;
-      const editable = isEditableTarget(event.target);
-      if (!editable) return;
-      if (isDirectEditTarget(editable)) return;
-      if (!editable.classList.contains('mobile-longpress-editing')) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    }, true);
-
-    document.addEventListener('focusin', function (event) {
-      if (!isMobileEditMode()) return;
-      const editable = isEditableTarget(event.target);
-      if (!editable) return;
-      if (isDirectEditTarget(editable)) return;
-      if (!editable.classList.contains('mobile-longpress-editing')) {
-        event.target.blur && event.target.blur();
-      }
-    }, true);
-
-    document.addEventListener('focusout', function (event) {
-      if (!isMobileEditMode()) return;
-      const editable = isEditableTarget(event.target);
-      if (!editable) return;
-      if (isDirectEditTarget(editable)) return;
-      setTimeout(() => {
-        if (document.activeElement === editable) return;
-        editable.classList.remove('mobile-longpress-editing');
-        editable.classList.add('mobile-longpress-locked');
-        if (editable.matches && editable.matches('.info-section-table th, .info-section-table td')) {
-          editable.contentEditable = 'false';
-        }
-      }, 120);
-    }, true);
-
-    document.addEventListener('scroll', closePhoneChoiceBox, true);
-    window.addEventListener('resize', closePhoneChoiceBox);
-    window.addEventListener('orientationchange', closePhoneChoiceBox);
-
-    const observer = new MutationObserver(() => initializeMobileLocks());
-    window.addEventListener('DOMContentLoaded', () => {
-      initializeMobileLocks();
-      observer.observe(document.body, { childList: true, subtree: true });
-    });
-    window.addEventListener('resize', initializeMobileLocks);
-    window.addEventListener('orientationchange', () => setTimeout(initializeMobileLocks, 250));
-  })();
-</script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -3438,12 +3102,12 @@ function resizeAllTextareas(root = document) {
               el.value = data[key];
             }
           });
-          if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
           if (typeof bindRealtimeInputHandlers === 'function') bindRealtimeInputHandlers();
         }
       } finally {
         applyingRemote = false;
       }
+      saveDurationStructureLocally();
       if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
       if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
       if (typeof resizeAllTextareas === 'function') resizeAllTextareas(document);
@@ -3500,7 +3164,6 @@ function resizeAllTextareas(root = document) {
 
     async function saveFormData(showSuccessMessage = true) {
       if (!db || applyingRemote) return;
-      if (typeof saveDurationStructureLocally === 'function') saveDurationStructureLocally();
       ensureSyncKeys();
       const formData = collectFormData();
       const hiddenDurationCount = document.getElementById('duration-column-count');
@@ -3604,6 +3267,7 @@ function resizeAllTextareas(root = document) {
     }
 
     window.addEventListener('trip-duration-structure-changed', () => {
+      if (window.__tripScheduleRestoringBackup) return;
       try {
         ensureSyncKeys();
         bindRealtimeInputHandlers();
@@ -3867,6 +3531,13 @@ function resizeAllTextareas(root = document) {
       function getPlanStyleKey(target) {
         const parts = getStyleTargetParts(target);
         const field = parts.field;
+        const durationCell = target.closest && target.closest('#durationExpectedTable td, #durationExpectedTable th');
+        if (durationCell) {
+          const durationTable = document.getElementById('durationExpectedTable');
+          const rowIndex = Array.prototype.indexOf.call(durationTable.rows, durationCell.parentElement);
+          const cellIndex = Array.prototype.indexOf.call(durationCell.parentElement.children, durationCell);
+          if (rowIndex >= 0 && cellIndex >= 0) return 'durationExpected:r' + rowIndex + ':c' + cellIndex;
+        }
         if (field) {
           if (field.id) return 'field-id:' + field.id;
           if (field.dataset && field.dataset.syncKey) return 'field-sync:' + field.dataset.syncKey;
@@ -3886,7 +3557,25 @@ function resizeAllTextareas(root = document) {
         try {
           const raw = localStorage.getItem(PLAN_STYLE_STORAGE_KEY);
           const parsed = raw ? JSON.parse(raw) : {};
-          return parsed && typeof parsed === 'object' ? parsed : {};
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+          let migrated = false;
+          Object.keys(parsed).forEach((key) => {
+            let field = null;
+            if (key.startsWith('field-id:')) field = document.getElementById(key.slice(9));
+            else if (key.startsWith('field-sync:')) {
+              const syncKey = key.slice(11);
+              field = Array.from(document.querySelectorAll('#durationExpectedTable [data-sync-key]'))
+                .find((el) => el.dataset.syncKey === syncKey);
+            }
+            if (!field || !field.closest('#durationExpectedTable')) return;
+            const cellKey = getPlanStyleKey(field);
+            if (!cellKey || cellKey === key) return;
+            if (!Object.prototype.hasOwnProperty.call(parsed, cellKey)) parsed[cellKey] = parsed[key];
+            delete parsed[key];
+            migrated = true;
+          });
+          if (migrated) localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(parsed));
+          return parsed;
         } catch (e) {
           return {};
         }
@@ -3910,9 +3599,14 @@ function resizeAllTextareas(root = document) {
           hidden: !!((parts.cell && parts.cell.classList.contains('trip-hidden-cell')) || (parts.main && parts.main.classList && parts.main.classList.contains('trip-hidden-cell')))
         };
         const map = loadPlanStyleMap();
+        if (key.startsWith('durationExpected:') && parts.field) {
+          if (parts.field.id) delete map['field-id:' + parts.field.id];
+          if (parts.field.dataset.syncKey) delete map['field-sync:' + parts.field.dataset.syncKey];
+        }
         if (!style.fontWeight && !style.color && !style.backgroundColor && !style.hidden) delete map[key];
         else map[key] = style;
         try { localStorage.setItem(PLAN_STYLE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        applyPlanStyleMap();
         publishPlanStyleMap(map);
       }
 
@@ -3969,6 +3663,14 @@ function resizeAllTextareas(root = document) {
 
       function applyPlanStyleMap() {
         const map = loadPlanStyleMap();
+        document.querySelectorAll('[data-trip-style-applied="1"]').forEach((node) => {
+          node.style.removeProperty('font-weight');
+          node.style.removeProperty('color');
+          node.style.removeProperty('-webkit-text-fill-color');
+          node.style.removeProperty('background-color');
+          node.classList.remove('trip-hidden-cell');
+          delete node.dataset.tripStyleApplied;
+        });
         Object.entries(map).forEach(([key, style]) => {
           let target = null;
           if (key.startsWith('field-id:')) target = document.getElementById(key.slice('field-id:'.length));
@@ -3985,6 +3687,7 @@ function resizeAllTextareas(root = document) {
           if (!target || !style) return;
           const parts = getStyleTargetParts(target);
           if (parts.main) {
+            parts.main.dataset.tripStyleApplied = '1';
             if (style.fontWeight) parts.main.style.setProperty('font-weight', style.fontWeight, 'important');
             else parts.main.style.removeProperty('font-weight');
             if (style.color) {
@@ -3997,8 +3700,11 @@ function resizeAllTextareas(root = document) {
             if (style.backgroundColor) parts.main.style.setProperty('background-color', style.backgroundColor, 'important');
             else parts.main.style.removeProperty('background-color');
           }
-          if (parts.cell && style.backgroundColor) parts.cell.style.setProperty('background-color', style.backgroundColor, 'important');
-          if (parts.cell) parts.cell.classList.toggle('trip-hidden-cell', !!style.hidden);
+          if (parts.cell) {
+            parts.cell.dataset.tripStyleApplied = '1';
+            if (style.backgroundColor) parts.cell.style.setProperty('background-color', style.backgroundColor, 'important');
+            parts.cell.classList.toggle('trip-hidden-cell', !!style.hidden);
+          }
           else if (parts.main && parts.main.classList) parts.main.classList.toggle('trip-hidden-cell', !!style.hidden);
         });
       }
@@ -4020,7 +3726,7 @@ function resizeAllTextareas(root = document) {
           alert('먼저 서식을 바꿀 칸을 클릭하세요.');
           return;
         }
-        const isInfoTarget = selectedCell && selectedCell.closest('.info-section-table') && !globalPlanTarget;
+        const isInfoTarget = !!(target.closest && target.closest('.info-section-table'));
         if (isInfoTarget && isInfoSelectCell(selectedCell)) {
           alert('선택 버튼 칸은 서식을 바꿀 수 없습니다.');
           return;
@@ -4088,6 +3794,7 @@ function resizeAllTextareas(root = document) {
         }
       }
 
+      window.__tripScheduleRestoreLegacyInfoTables = applyInfoTablesData;
       window.__tripScheduleApplyInfoTablesFromFirebase = function (data, showAlert) {
         const localData = readLocalInfoTablesData();
         if (countInfoTablesDataText(localData) > countInfoTablesDataText(data)) {
@@ -4304,8 +4011,7 @@ function resizeAllTextareas(root = document) {
         } else {
           field.textContent = nextValue;
         }
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.dispatchEvent(new Event('change', { bubbles: true }));
+        if (!window.__tripScheduleBatchEditing) field.dispatchEvent(new Event('input', { bubbles: true }));
         if (field.tagName === 'TEXTAREA' && typeof autoResizeTextarea === 'function') {
           autoResizeTextarea(field);
         }
@@ -4351,13 +4057,9 @@ function resizeAllTextareas(root = document) {
       }
 
       function persistSyncedPlanFields() {
+        if (typeof updateExpectedTimes === 'function') updateExpectedTimes();
         if (typeof updateGimbapTotals === 'function') updateGimbapTotals();
         freezeCurrentFormValues(document);
-        document.querySelectorAll('table.plan input.cell-input, table.plan textarea.cell-input').forEach((field) => {
-          if (field.readOnly || field.disabled || field.id === 'mountain-name') return;
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-          field.dispatchEvent(new Event('change', { bubbles: true }));
-        });
       }
 
       async function forceSaveSyncedPlanFields() {
@@ -4416,10 +4118,12 @@ function resizeAllTextareas(root = document) {
         window.__tripScheduleLocalSelectionSavingUntil = Date.now() + 15000;
         const table = row ? row.closest('.info-section-table') : null;
         if (!table || !row || row.parentElement.tagName !== 'TBODY') return;
-        if (table.id === 'info-main-table') {
-          syncGimbapInfoToPlan(row);
-        } else if (table.id === 'info-company-table') {
-          syncCompanyInfoToPlan(row);
+        window.__tripScheduleBatchEditing = true;
+        try {
+          if (table.id === 'info-main-table') syncGimbapInfoToPlan(row);
+          else if (table.id === 'info-company-table') syncCompanyInfoToPlan(row);
+        } finally {
+          window.__tripScheduleBatchEditing = false;
         }
         await forceSaveSyncedPlanFields();
         saveInfoForm(false);
@@ -4684,13 +4388,6 @@ function resizeAllTextareas(root = document) {
         }
       });
 
-      const infoRestoreFileInput = document.getElementById('infoRestoreFile');
-      if (infoRestoreFileInput) {
-        infoRestoreFileInput.addEventListener('change', function (event) {
-          const file = event.target.files && event.target.files[0];
-          restoreInfoFormJsonFile(file);
-        });
-      }
 
       window.addEventListener('DOMContentLoaded', function () {
         loadInfoForm(false);
@@ -4711,91 +4408,7 @@ function resizeAllTextareas(root = document) {
     })();
   </script>
 
-<script id="info-json-direct-preview-fallback">
-(function(){
-  function ensureInfoJsonButtons(){
-    var toolbar=document.querySelector('#info-form-wrap .info-toolbar');
-    if(!toolbar) return;
-    var restoreFile=document.getElementById('infoRestoreFile');
-    if(!restoreFile){
-      restoreFile=document.createElement('input');
-      restoreFile.type='file'; restoreFile.accept='application/json,.json'; restoreFile.id='infoRestoreFile'; restoreFile.style.display='none';
-      toolbar.appendChild(restoreFile);
-    }
-    var backup=document.getElementById('infoBackupJsonBtn') || toolbar.querySelector('[data-info-action="backup-json"]');
-    if(!backup){
-      backup=document.createElement('button'); backup.type='button'; backup.id='infoBackupJsonBtn'; backup.className='info-json-btn'; backup.dataset.infoAction='backup-json'; backup.textContent='정보모음 백업(JSON)'; toolbar.appendChild(backup);
-    }
-    var restore=document.getElementById('infoRestoreJsonBtn') || toolbar.querySelector('[data-info-action="restore-json"]');
-    if(!restore){
-      restore=document.createElement('button'); restore.type='button'; restore.id='infoRestoreJsonBtn'; restore.className='info-json-btn'; restore.dataset.infoAction='restore-json'; restore.textContent='정보모음 복구(JSON)'; toolbar.appendChild(restore);
-    }
-    backup.id='infoBackupJsonBtn'; restore.id='infoRestoreJsonBtn';
-    backup.setAttribute('data-info-action','backup-json'); restore.setAttribute('data-info-action','restore-json');
-    backup.style.cssText='display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;position:relative!important;z-index:999!important;';
-    restore.style.cssText='display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;position:relative!important;z-index:999!important;';
 
-    function tableToData(table){
-      if(!table) return null;
-      return {
-        id: table.id || '',
-        colWidths: Array.from(table.querySelectorAll('col')).map(function(c){return c.getAttribute('style')||'';}),
-        header: Array.from(table.querySelectorAll('thead tr')).map(function(tr){return Array.from(tr.cells).map(function(cell){return {html:cell.innerHTML, text:cell.innerText, className:cell.className||'', style:cell.getAttribute('style')||'', contentEditable:cell.getAttribute('contenteditable')||''};});}),
-        body: Array.from(table.querySelectorAll('tbody tr')).map(function(tr){return Array.from(tr.cells).map(function(cell){
-          var btn=cell.querySelector('.info-row-select-btn');
-          return {html: btn ? '' : cell.innerHTML, text: btn ? '' : cell.innerText, className:cell.className||'', style:cell.getAttribute('style')||'', contentEditable:cell.getAttribute('contenteditable')||''};
-        });})
-      };
-    }
-    function makeSelectCell(){
-      var td=document.createElement('td'); td.className='info-select-col'; td.contentEditable='false';
-      var b=document.createElement('button'); b.className='info-row-select-btn'; b.type='button'; b.textContent='선택'; td.appendChild(b);
-      return td;
-    }
-    function applyTableData(table, data){
-      if(!table||!data) return;
-      var tbody=table.querySelector('tbody'); if(!tbody) return;
-      tbody.innerHTML='';
-      var rows=Array.isArray(data.body)?data.body:[];
-      if(!rows.length){ rows=[Array.from(table.querySelectorAll('thead th')).map(function(){return {html:''};})]; }
-      rows.forEach(function(row){
-        var tr=document.createElement('tr');
-        row.forEach(function(cell,idx){
-          if(idx===0){ tr.appendChild(makeSelectCell()); return; }
-          var td=document.createElement('td'); td.contentEditable='true'; td.className=cell.className||''; if(cell.style)td.setAttribute('style',cell.style); td.innerHTML=cell.html||''; tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-    }
-    function backupJson(){
-      var payload={type:'trip-schedule-info-form-backup',version:'1.0',savedAt:new Date().toISOString(),tables:{main:tableToData(document.getElementById('info-main-table')),company:tableToData(document.getElementById('info-company-table'))}};
-      var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
-      var a=document.createElement('a'); var stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
-      a.href=URL.createObjectURL(blob); a.download='정보모음_데이터백업_'+stamp+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
-    }
-    function restoreJsonFile(file){
-      if(!file) return;
-      var reader=new FileReader();
-      reader.onload=function(){
-        try{
-          var parsed=JSON.parse(String(reader.result||'')); var tables=parsed.tables||parsed.data||parsed;
-          applyTableData(document.getElementById('info-main-table'), tables.main||tables.infoMainTable||tables['info-main-table']);
-          applyTableData(document.getElementById('info-company-table'), tables.company||tables.infoCompanyTable||tables['info-company-table']);
-          if(typeof window.dispatchEvent==='function') window.dispatchEvent(new Event('resize'));
-          alert('정보 모음 데이터 복구 완료');
-        }catch(e){ alert('JSON 파일을 읽지 못했습니다.'); }
-        restoreFile.value='';
-      };
-      reader.readAsText(file,'utf-8');
-    }
-    backup.onclick=function(e){e.preventDefault();e.stopPropagation();backupJson();};
-    restore.onclick=function(e){e.preventDefault();e.stopPropagation();restoreFile.click();};
-    restoreFile.onchange=function(e){restoreJsonFile(e.target.files&&e.target.files[0]);};
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ensureInfoJsonButtons); else ensureInfoJsonButtons();
-  window.addEventListener('load', ensureInfoJsonButtons);
-})();
-</script>
 
 <script id="info-toolbar-grouped-script">
 (function(){
@@ -5216,88 +4829,11 @@ function resizeAllTextareas(root = document) {
   })();
 </script>
 
-<script id="supply-row-editable-fix">
-  /* 비품 행 편집 가능 보정: 물/소주·막걸리/커피믹스·블랙/소모품 */
-  (function(){
-    function unlockSupplyRow(){
-      ['field:32','field:33','field:34','field:35'].forEach(function(key){
-        var el = document.querySelector('[data-sync-key="' + key + '"]');
-        if(!el) return;
-        el.dataset.directEdit = 'true';
-        el.removeAttribute('readonly');
-        el.removeAttribute('disabled');
-        el.removeAttribute('tabindex');
-        el.classList.remove('mobile-longpress-locked','mobile-longpress-editing');
-        el.style.pointerEvents = 'auto';
-        el.style.userSelect = 'text';
-      });
-    }
-    window.addEventListener('DOMContentLoaded', unlockSupplyRow);
-    window.addEventListener('load', unlockSupplyRow);
-    document.addEventListener('click', function(event){
-      var el = event.target && event.target.closest ? event.target.closest('[data-sync-key="field:32"],[data-sync-key="field:33"],[data-sync-key="field:34"],[data-sync-key="field:35"]') : null;
-      if(el) unlockSupplyRow();
-    }, true);
-    setInterval(unlockSupplyRow, 1500);
-  })();
-</script>
 
-<script id="expected-bottom-style-edit-fix">
-  /* 예상시간 아래행은 자동계산(readonly)을 유지하면서 셀 서식만 편집 가능하게 보강 */
-  (function(){
-    var PLAN_STYLE_STORAGE_KEY = 'tripSchedule.planCellStyles.v1';
-    function loadMap(){
-      try { var raw = localStorage.getItem(PLAN_STYLE_STORAGE_KEY); return raw ? (JSON.parse(raw) || {}) : {}; }
-      catch(e){ return {}; }
-    }
-    function applyCalcBottomSavedStyles(){
-      var map = loadMap();
-      document.querySelectorAll('#expected-bottom-row input[id^="calc-bottom-"]').forEach(function(input){
-        input.dataset.styleEditableCalc = 'true';
-        var style = map['field-id:' + input.id];
-        if(!style) return;
-        input.style.fontWeight = style.fontWeight || '';
-        input.style.color = style.color || '';
-        input.style.backgroundColor = style.backgroundColor || '';
-        var cell = input.closest('td,th');
-        if(cell && style.backgroundColor) cell.style.backgroundColor = style.backgroundColor;
-      });
-    }
-    function markCells(){
-      document.querySelectorAll('#expected-bottom-row .readonly-cell').forEach(function(cell){
-        cell.title = '클릭 후 정보모음 편집 그룹의 굵게/글자색/배경색 버튼으로 서식 변경';
-      });
-      applyCalcBottomSavedStyles();
-    }
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', markCells);
-    else markCells();
-    window.addEventListener('load', markCells);
-    var target = document.getElementById('expected-bottom-row');
-    if(target && window.MutationObserver){
-      new MutationObserver(markCells).observe(target, { childList: true, subtree: true });
-    }
-  })();
-</script>
 
-<script id="expected-bottom-default-thin-fix">
-  /* 예상시간 아래행(calc-bottom)은 기본값을 가는 글자로 유지하고, 추가되는 칸도 동일 적용 */
-  (function(){
-    function makeDefaultThin(){
-      document.querySelectorAll('#expected-bottom-row input[id^="calc-bottom-"]').forEach(function(input){
-        input.classList.remove('bold');
-        if (!input.style.fontWeight) input.style.fontWeight = '400';
-      });
-    }
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', makeDefaultThin);
-    else makeDefaultThin();
-    window.addEventListener('load', makeDefaultThin);
-    window.addEventListener('trip-duration-structure-changed', makeDefaultThin);
-    var row = document.getElementById('expected-bottom-row');
-    if(row && window.MutationObserver){
-      new MutationObserver(makeDefaultThin).observe(row, { childList:true, subtree:true });
-    }
-  })();
-</script>
+
+
+
 
 <script id="editable-plan-label-and-supply-auto-width-fix">
   /* 상단 고정 라벨/비품/전화번호 칸: 글자 잘림 방지 자동 폭 조정 + 중앙 정렬 */
@@ -5521,8 +5057,6 @@ function resizeAllTextareas(root = document) {
   function setFieldValue(el, value){
     if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!value;
     else el.value = value == null ? '' : String(value);
-    try { el.dispatchEvent(new Event('input', {bubbles:true})); } catch(e){}
-    try { el.dispatchEvent(new Event('change', {bubbles:true})); } catch(e){}
   }
   function makePath(el, root){
     var parts=[];
@@ -5665,6 +5199,9 @@ function resizeAllTextareas(root = document) {
     if(Array.isArray(plan.fields)){
       plan.fields.forEach(function(rec){ if(rec && rec.key && !Object.prototype.hasOwnProperty.call(data, rec.key)) data[rec.key]=rec.value; });
     }
+    if(typeof syncDurationColumnStructureFromStorage === 'function') {
+      syncDurationColumnStructureFromStorage(data);
+    }
     Object.keys(data).forEach(function(key){
       var el=null;
       if(key.indexOf('id:')===0) el=document.getElementById(key.slice(3));
@@ -5692,6 +5229,9 @@ function resizeAllTextareas(root = document) {
     }
     if(plan.planCellStyles) writeJsonStorage(PLAN_STYLE_KEY, plan.planCellStyles);
     writeJsonStorage(PLAN_CACHE_KEY, data);
+    if(typeof updateExpectedTimes==='function') updateExpectedTimes();
+    if(typeof updateGimbapTotals==='function') updateGimbapTotals();
+    if(typeof resizeAllTextareas==='function') resizeAllTextareas(document);
     try { window.dispatchEvent(new Event('resize')); } catch(e){}
     try { window.dispatchEvent(new Event('trip-duration-structure-changed')); } catch(e){}
   }
@@ -5717,26 +5257,70 @@ function resizeAllTextareas(root = document) {
   function restoreFullBackupFile(file){
     if(!file) return;
     var reader=new FileReader();
-    reader.onload=function(){
+    reader.onload=async function(){
       try{
+        var pendingSaves=[];
         var parsed=JSON.parse(String(reader.result||''));
-        var plan=parsed.plan || parsed.planData || null;
-        var info=parsed.info || null;
-        if(!plan && (parsed.formData || parsed.fields)) plan=parsed;
-        if(plan) applyPlanBackup(plan);
-        var tables=null;
-        if(info && info.tables) tables=info.tables;
-        else if(parsed.tables && (parsed.tables.main || parsed.tables.company)) tables=parsed.tables;
-        if(tables){
-          applyInfoTable(document.getElementById('info-main-table'), tables.main || tables.infoMainTable || tables['info-main-table']);
-          applyInfoTable(document.getElementById('info-company-table'), tables.company || tables.infoCompanyTable || tables['info-company-table']);
+        var plan=parsed && (parsed.plan || parsed.planData ||
+          ((parsed.formData || parsed.fields) ? parsed : null));
+        var info=parsed && parsed.info;
+        var tables=(info && info.tables) || (parsed && parsed.tables);
+        var legacy=Array.isArray(parsed) ? parsed :
+          (Array.isArray(tables) ? tables :
+          (Array.isArray(parsed && parsed.data) ? parsed.data :
+          (Array.isArray(parsed && parsed.infoTables) ? parsed.infoTables : null)));
+        var restored=false;
+        if(plan && typeof plan==='object'){
+          window.__tripScheduleRestoringBackup=true;
+          try { applyPlanBackup(plan); }
+          finally { window.__tripScheduleRestoringBackup=false; }
+          if(plan.planCellStyles && typeof window.__tripScheduleSavePlanStylesToFirebase==='function') {
+            window.__tripSchedulePlanStyleLocalSavingUntil=Date.now()+5000;
+            pendingSaves.push(window.__tripScheduleSavePlanStylesToFirebase(plan.planCellStyles));
+          }
+          restored=true;
         }
-        alert('정기산행 계획/정보모음 JSON 복구 완료');
+        if(tables && !Array.isArray(tables) && typeof tables==='object' &&
+           (tables.main || tables.company || tables.infoMainTable || tables.infoCompanyTable)){
+          applyInfoTable(document.getElementById('info-main-table'),
+            tables.main || tables.infoMainTable || tables['info-main-table']);
+          applyInfoTable(document.getElementById('info-company-table'),
+            tables.company || tables.infoCompanyTable || tables['info-company-table']);
+          restored=true;
+        } else if(legacy && typeof window.__tripScheduleRestoreLegacyInfoTables==='function'){
+          window.__tripScheduleRestoreLegacyInfoTables(legacy, false);
+          restored=true;
+        }
+        if(!restored) throw new Error('지원하지 않는 백업 형식');
+        if(typeof window.__tripScheduleApplyPlanStylesNow==='function')
+          window.__tripScheduleApplyPlanStylesNow();
+        if(typeof window.__tripScheduleSaveInfoTablesToFirebase==='function' &&
+           (tables || legacy)){
+          var savedInfo=Array.from(document.querySelectorAll('.info-section-table')).map(function(table){
+            return Array.from(table.rows).map(function(row){
+              return Array.from(row.cells).map(function(cell){
+                return {html:cell.querySelector('.info-row-select-btn') ? '' : cell.innerHTML,
+                  style:cell.getAttribute('style')||'', hidden:cell.classList.contains('trip-hidden-cell')};
+              });
+            });
+          });
+          try { localStorage.setItem('tripSchedule.infoForm.tables.v2', JSON.stringify(savedInfo)); } catch(e){}
+          window.__tripScheduleInfoLocalSavingUntil=Date.now()+5000;
+          pendingSaves.push(window.__tripScheduleSaveInfoTablesToFirebase(savedInfo));
+        }
+        if(plan && typeof window.__tripScheduleForceSaveNow==='function')
+          pendingSaves.push(window.__tripScheduleForceSaveNow());
+        var saveResults=await Promise.all(pendingSaves);
+        alert(saveResults.some(function(ok){ return ok === false; })
+          ? '로컬 복구는 완료되었지만 원격 저장을 확인하지 못했습니다. 연결 상태를 확인하세요.'
+          : '백업 복구가 완료되었습니다.');
       }catch(e){
-        console.error(e);
-        alert('JSON 파일을 읽지 못했습니다.');
+        console.error('백업 복구 실패:',e);
+        alert('복구를 완료하지 못했습니다. 백업 형식과 연결 상태를 확인하세요.');
+      }finally{
+        var input=document.getElementById('infoRestoreFile');
+        if(input) input.value='';
       }
-      var input=document.getElementById('infoRestoreFile'); if(input) input.value='';
     };
     reader.readAsText(file,'utf-8');
   }
@@ -5746,21 +5330,14 @@ function resizeAllTextareas(root = document) {
     var input=document.getElementById('infoRestoreFile');
     if(backup){ backup.textContent='전체 백업(JSON)'; backup.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} downloadFullBackup(); return false; }; }
     if(restore){ restore.textContent='전체 복구(JSON)'; restore.onclick=function(e){ if(e){e.preventDefault(); e.stopPropagation();} if(input) input.click(); return false; }; }
-    if(input && !input.__fullBackupFixBound){
-      input.__fullBackupFixBound=true;
+    if(input && !input.__unifiedRestoreBound){
+      input.__unifiedRestoreBound=true;
       input.addEventListener('change',function(e){
         var f=e.target.files && e.target.files[0];
         if(f) restoreFullBackupFile(f);
-      }, true);
+      });
     }
   }
-  document.addEventListener('click',function(e){
-    var b=e.target && e.target.closest && e.target.closest('#infoBackupJsonBtn,#infoRestoreJsonBtn');
-    if(!b) return;
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    if(b.id==='infoBackupJsonBtn') downloadFullBackup();
-    else { var input=document.getElementById('infoRestoreFile'); if(input) input.click(); }
-  }, true);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindFullBackupButtons); else bindFullBackupButtons();
   window.addEventListener('load', bindFullBackupButtons);
   setTimeout(bindFullBackupButtons, 500);
@@ -5815,187 +5392,7 @@ function resizeAllTextareas(root = document) {
 
 
 
-<script id="duration-expected-hide-unset-save-final-fix">
-/*
-  소요시간/예상시간 가림 해제 저장 최종 보정
-  - 기존 applyPlanStyleMap은 저장값이 삭제된 칸의 .trip-hidden-cell을 먼저 지우지 않아,
-    가림 해제 후에도 이전 클래스가 화면/Firebase 복원에 남을 수 있었다.
-  - 이 스크립트는 소요시간/예상시간 내부 테이블의 숨김 상태를 row/cell 기준으로 강제 저장하고,
-    적용 전 전체 숨김 클래스를 먼저 정리한 뒤 저장된 칸만 다시 가림 처리한다.
-*/
-(function(){
-  'use strict';
-  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
 
-  function readMap(){
-    try { var raw = localStorage.getItem(PLAN_STYLE_KEY); var obj = raw ? JSON.parse(raw) : {}; return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {}; }
-    catch(e){ return {}; }
-  }
-  function writeMap(map){
-    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
-    try {
-      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
-      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
-        window.__tripScheduleSavePlanStylesToFirebase(map || {});
-      }
-    } catch(e){}
-  }
-  function styleFromCell(cell){
-    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
-    var main = field || cell;
-    return {
-      fontWeight: (main && main.style && main.style.fontWeight) || '',
-      color: (main && main.style && main.style.color) || '',
-      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
-      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
-    };
-  }
-  function isEmptyStyle(s){
-    return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden);
-  }
-  function cssEscape(value){
-    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
-    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
-  }
-  function durationKeyForCell(cell){
-    var table = document.getElementById('durationExpectedTable');
-    if(!cell || !table || !table.contains(cell)) return '';
-    var row = cell.parentElement;
-    var r = Array.prototype.indexOf.call(table.rows, row);
-    var c = Array.prototype.indexOf.call(row.children, cell);
-    if(r < 0 || c < 0) return '';
-    return 'durationExpected:r' + r + ':c' + c;
-  }
-  function fieldKeysForCell(cell){
-    var keys=[];
-    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
-    if(field){
-      if(field.id) keys.push('field-id:' + field.id);
-      if(field.dataset && field.dataset.syncKey) keys.push('field-sync:' + field.dataset.syncKey);
-    }
-    return keys;
-  }
-  function cleanAndApplyPlanStyleMap(map){
-    map = (map && typeof map === 'object' && !Array.isArray(map)) ? map : readMap();
-    var plan = document.querySelector('table.plan');
-    if(plan){
-      plan.querySelectorAll('td.trip-hidden-cell, th.trip-hidden-cell').forEach(function(cell){
-        cell.classList.remove('trip-hidden-cell');
-      });
-    }
-    Object.keys(map).forEach(function(key){
-      var style = map[key];
-      if(!style || typeof style !== 'object') return;
-      var target = null;
-      if(key.indexOf('field-id:') === 0){
-        target = document.getElementById(key.slice('field-id:'.length));
-      } else if(key.indexOf('field-sync:') === 0){
-        target = document.querySelector('table.plan [data-sync-key="' + cssEscape(key.slice('field-sync:'.length)) + '"]');
-      } else {
-        var m = key.match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
-        if(m){
-          var table = m[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (m[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
-          var row = table && table.rows[Number(m[2])];
-          target = row && row.children[Number(m[3])];
-        }
-      }
-      if(!target) return;
-      var cell = target.closest ? target.closest('td,th') : null;
-      var field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : (target.querySelector ? target.querySelector('input.cell-input, textarea.cell-input') : null);
-      var main = field || target;
-      if(main && main.style){
-        if(style.fontWeight) main.style.setProperty('font-weight', style.fontWeight, 'important');
-        else main.style.removeProperty('font-weight');
-        if(style.color){
-          main.style.setProperty('color', style.color, 'important');
-          main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
-        } else {
-          main.style.removeProperty('color');
-          main.style.removeProperty('-webkit-text-fill-color');
-        }
-        if(style.backgroundColor) main.style.setProperty('background-color', style.backgroundColor, 'important');
-        else main.style.removeProperty('background-color');
-      }
-      if(cell && style.backgroundColor) cell.style.setProperty('background-color', style.backgroundColor, 'important');
-      if(cell && style.hidden) cell.classList.add('trip-hidden-cell');
-    });
-  }
-
-  var originalApplyFromFirebase = window.__tripScheduleApplyPlanStylesFromFirebase;
-  window.__tripScheduleApplyPlanStylesFromFirebase = function(styleMap){
-    if(styleMap && typeof styleMap === 'object' && !Array.isArray(styleMap)){
-      try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(styleMap)); } catch(e){}
-      cleanAndApplyPlanStyleMap(styleMap);
-      return;
-    }
-    if(typeof originalApplyFromFirebase === 'function') return originalApplyFromFirebase(styleMap);
-  };
-  window.__tripScheduleApplyPlanStylesNow = function(){ cleanAndApplyPlanStyleMap(readMap()); };
-
-  function selectedCell(){
-    var cell = window.__tripScheduleSelectedStyleCell;
-    if(cell && cell.closest && cell.closest('td,th')) cell = cell.closest('td,th');
-    if(cell && document.contains(cell)) return cell;
-    var marked = document.querySelector('td.style-selected-cell, th.style-selected-cell');
-    if(marked) return marked;
-    var inputMarked = document.querySelector('input.style-selected-cell, textarea.style-selected-cell');
-    return inputMarked && inputMarked.closest ? inputMarked.closest('td,th') : null;
-  }
-
-  function saveCellHiddenState(cell){
-    if(!cell) return;
-    var map = readMap();
-    var dKey = durationKeyForCell(cell);
-    var keys = [];
-    if(dKey) keys.push(dKey);
-    keys = keys.concat(fieldKeysForCell(cell));
-    if(!keys.length) return;
-
-    var style = styleFromCell(cell);
-    // 소요시간/예상시간 내부 테이블은 좌표키를 대표키로 사용한다.
-    // 해제 시 field-id/field-sync에 남은 hidden 값까지 모두 제거한다.
-    keys.forEach(function(k){ delete map[k]; });
-    if(!isEmptyStyle(style)){
-      map[dKey || keys[0]] = style;
-    }
-    writeMap(map);
-    cleanAndApplyPlanStyleMap(map);
-  }
-
-  document.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
-    if(!btn) return;
-    var cell = selectedCell();
-    if(!cell || !cell.closest('#durationExpectedTable')) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    cell.classList.toggle('trip-hidden-cell');
-    saveCellHiddenState(cell);
-  }, true);
-
-  document.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
-    if(!btn) return;
-    var cell = selectedCell();
-    if(!cell || !cell.closest('#durationExpectedTable')) return;
-    setTimeout(function(){
-      if(cell.classList) cell.classList.remove('trip-hidden-cell');
-      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-      if(field && field.classList) field.classList.remove('trip-hidden-cell');
-      var map = readMap();
-      var dKey = durationKeyForCell(cell);
-      if(dKey) delete map[dKey];
-      fieldKeysForCell(cell).forEach(function(k){ delete map[k]; });
-      writeMap(map);
-      cleanAndApplyPlanStyleMap(map);
-    }, 0);
-  }, true);
-
-  window.addEventListener('load', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
-  window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(function(){ cleanAndApplyPlanStyleMap(readMap()); }, 80); });
-})();
-</script>
 
 
 
@@ -6021,173 +5418,10 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
-<script id="duration-last-two-hide-final-fix">
-/*
-  소요시간 2번째행 마지막/마지막 이전칸 가림 최종 보정
-  - 기존 핸들러가 선택된 칸 대신 이전 선택값을 사용할 수 있어 window capture 단계에서 먼저 처리한다.
-  - #duration-values-row / #expected-bottom-row 의 모든 칸, 특히 마지막 2칸도 좌표키(durationExpected:r:c)로 저장한다.
-*/
-(function(){
-  'use strict';
-  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
-
-  function readMap(){
-    try { var raw = localStorage.getItem(PLAN_STYLE_KEY); var obj = raw ? JSON.parse(raw) : {}; return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {}; }
-    catch(e){ return {}; }
-  }
-  function writeMap(map){
-    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
-    try {
-      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
-      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
-        window.__tripScheduleSavePlanStylesToFirebase(map || {});
-      }
-    } catch(e){}
-  }
-  function durationCellFromTarget(target){
-    if(!target || !target.closest) return null;
-    var cell = target.closest('#durationExpectedTable td, #durationExpectedTable th');
-    if(!cell) return null;
-    var row = cell.parentElement;
-    if(!row || !/^(duration-values-row|expected-bottom-row|expected-top-row|duration-title-row)$/.test(row.id || '')) return null;
-    return cell;
-  }
-  function coordKey(cell){
-    var table = document.getElementById('durationExpectedTable');
-    if(!cell || !table || !table.contains(cell)) return '';
-    var row = cell.parentElement;
-    var r = Array.prototype.indexOf.call(table.rows, row);
-    var c = Array.prototype.indexOf.call(row.children, cell);
-    if(r < 0 || c < 0) return '';
-    return 'durationExpected:r' + r + ':c' + c;
-  }
-  function fieldKeys(cell){
-    var keys=[];
-    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
-    if(field){
-      if(field.id) keys.push('field-id:' + field.id);
-      if(field.dataset && field.dataset.syncKey) keys.push('field-sync:' + field.dataset.syncKey);
-    }
-    return keys;
-  }
-  function styleFromCell(cell){
-    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
-    var main = field || cell;
-    return {
-      fontWeight: (main && main.style && main.style.fontWeight) || '',
-      color: (main && main.style && main.style.color) || '',
-      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
-      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
-    };
-  }
-  function emptyStyle(s){ return !s || (!s.fontWeight && !s.color && !s.backgroundColor && !s.hidden); }
-  function saveCell(cell){
-    if(!cell) return;
-    var key = coordKey(cell);
-    if(!key) return;
-    var map = readMap();
-    delete map[key];
-    fieldKeys(cell).forEach(function(k){ delete map[k]; });
-    var style = styleFromCell(cell);
-    if(!emptyStyle(style)) map[key] = style;
-    writeMap(map);
-    try {
-      if (typeof window.__tripScheduleApplyPlanStylesNow === 'function') window.__tripScheduleApplyPlanStylesNow();
-    } catch(e){}
-  }
-  function markSelected(cell){
-    if(!cell) return;
-    window.__tripDurationExactSelectedCell = cell;
-    window.__tripScheduleSelectedStyleCell = cell;
-    window.__tripScheduleSelectedStyleTarget = cell;
-    try {
-      document.querySelectorAll('#durationExpectedTable .style-selected-cell').forEach(function(el){ el.classList.remove('style-selected-cell'); });
-      cell.classList.add('style-selected-cell');
-      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-      if(field) field.classList.add('style-selected-cell');
-    } catch(e){}
-  }
-
-  ['pointerdown','mousedown','touchstart','focusin','click'].forEach(function(type){
-    window.addEventListener(type, function(event){
-      var cell = durationCellFromTarget(event.target);
-      if(cell) markSelected(cell);
-    }, true);
-  });
-
-  window.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
-    if(!btn) return;
-    var cell = window.__tripDurationExactSelectedCell;
-    if(!cell || !document.contains(cell) || !cell.closest('#durationExpectedTable')) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    cell.classList.toggle('trip-hidden-cell');
-    saveCell(cell);
-  }, true);
-
-  window.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
-    if(!btn) return;
-    var cell = window.__tripDurationExactSelectedCell;
-    if(!cell || !document.contains(cell) || !cell.closest('#durationExpectedTable')) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    cell.classList.remove('trip-hidden-cell');
-    var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-    if(field){
-      field.classList.remove('trip-hidden-cell');
-      field.style.removeProperty('font-weight');
-      field.style.removeProperty('color');
-      field.style.removeProperty('-webkit-text-fill-color');
-      field.style.removeProperty('background-color');
-    }
-    cell.style.removeProperty('background-color');
-    saveCell(cell);
-  }, true);
-})();
-</script>
 
 
-<script>
-/* 모바일: 식당 행 연락처 입력칸 편집 허용 */
-(function allowMobileMealPhoneEdit() {
-  function apply() {
-    const mealRow = document.querySelector("tr.meal-row");
-    if (!mealRow) return;
 
-    /* 식당 행의 2번째 입력칸 = 연락처 */
-    const mealInputs = mealRow.querySelectorAll("input.cell-input, textarea.cell-input");
-    const phoneInput = mealInputs[1];
 
-    if (!phoneInput) return;
-
-    phoneInput.removeAttribute("readonly");
-    phoneInput.readOnly = false;
-    phoneInput.disabled = false;
-    phoneInput.tabIndex = 0;
-
-    phoneInput.classList.remove("mobile-longpress-locked");
-    phoneInput.classList.add("mobile-longpress-editing");
-
-    phoneInput.style.pointerEvents = "auto";
-    phoneInput.style.userSelect = "text";
-    phoneInput.style.webkitUserSelect = "text";
-    phoneInput.style.caretColor = "auto";
-    phoneInput.style.touchAction = "manipulation";
-
-    phoneInput.addEventListener("touchstart", function () {
-      this.focus();
-    }, { passive: true });
-  }
-
-  document.addEventListener("DOMContentLoaded", apply);
-  window.addEventListener("load", apply);
-  setTimeout(apply, 300);
-})();
-</script>
 
 
 
@@ -6285,46 +5519,7 @@ function resizeAllTextareas(root = document) {
 
 
 
-<script id="expected-time-default-black-patch">
-/* 예상시간 행 기본 글자색 검정 고정 패치
-   - 기본 빨강/파랑 클래스 제거
-   - 사용자가 직접 색상 스타일을 지정한 칸(data-user-styled-color 또는 inline color)은 보존 */
-(function(){
-  function markManualColorOnStyleButtons(){
-    document.addEventListener('click', function(event){
-      var btn = event.target && event.target.closest ? event.target.closest('[data-info-action]') : null;
-      if(!btn) return;
-      var action = btn.getAttribute('data-info-action') || '';
-      if(action !== 'text-red-cell' && action !== 'text-blue-cell' && action !== 'text-black-cell') return;
-      document.querySelectorAll('#expected-top-row .style-selected-cell, #expected-bottom-row .style-selected-cell, #expected-top-row .duration-column-selected, #expected-bottom-row .duration-column-selected').forEach(function(el){
-        var input = el.matches && el.matches('input,textarea') ? el : el.querySelector && el.querySelector('input,textarea');
-        if(input) input.dataset.userStyledColor = '1';
-      });
-    }, true);
-  }
 
-  function applyExpectedTimeDefaultBlack(){
-    document.querySelectorAll('#expected-top-row input, #expected-bottom-row input').forEach(function(input){
-      if(!input) return;
-      if(input.dataset.userStyledColor === '1') return;
-      if(input.style && input.style.color && input.style.color !== 'rgb(17, 17, 17)' && input.style.color !== '#111111') return;
-      input.classList.remove('red', 'blue');
-      input.style.color = '#111111';
-      input.style.webkitTextFillColor = '#111111';
-    });
-  }
-
-  markManualColorOnStyleButtons();
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyExpectedTimeDefaultBlack);
-  else applyExpectedTimeDefaultBlack();
-  window.addEventListener('load', applyExpectedTimeDefaultBlack);
-  window.addEventListener('trip-duration-structure-changed', applyExpectedTimeDefaultBlack);
-  var table = document.getElementById('durationExpectedTable');
-  if(table && window.MutationObserver){
-    new MutationObserver(function(){ setTimeout(applyExpectedTimeDefaultBlack, 0); }).observe(table, { childList:true, subtree:true });
-  }
-})();
-</script>
 
 
 
@@ -6358,206 +5553,7 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
-<script id="trip-hide-any-cell-member-mode-patch">
-/*
-  전체 칸 가림 패치
-  - 기존: 일부 소요/예상시간 칸 또는 입력칸 중심으로만 저장/복원되는 경우가 있음
-  - 수정: table.plan / durationExpectedTable / gimbap-inner-table 안의 td, th 어느 칸이든
-          선택 후 [가림]을 누르면 칸 자체에 trip-hidden-cell 저장
-  - 회원모드: CSS로 해당 칸의 입력값/텍스트를 완전히 투명 처리
-*/
-(function(){
-  'use strict';
-  var PLAN_STYLE_KEY = 'tripSchedule.planCellStyles.v1';
 
-  function readMap(){
-    try {
-      var raw = localStorage.getItem(PLAN_STYLE_KEY);
-      var obj = raw ? JSON.parse(raw) : {};
-      return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
-    } catch(e){ return {}; }
-  }
-  function writeMap(map){
-    try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(map || {})); } catch(e){}
-    try {
-      window.__tripSchedulePlanStyleLocalSavingUntil = Date.now() + 5000;
-      if (typeof window.__tripScheduleSavePlanStylesToFirebase === 'function') {
-        window.__tripScheduleSavePlanStylesToFirebase(map || {});
-      }
-      if (typeof window.scheduleRealtimeSave === 'function') window.scheduleRealtimeSave();
-    } catch(e){}
-  }
-  function cssEscape(value){
-    if(window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
-    return String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\]/g,'\\]');
-  }
-  function managedTableForCell(cell){
-    if(!cell || !cell.closest) return null;
-    return cell.closest('#durationExpectedTable') || cell.closest('.gimbap-inner-table') || cell.closest('table.plan');
-  }
-  function tableName(table){
-    if(!table) return '';
-    if(table.id === 'durationExpectedTable') return 'durationExpected';
-    if(table.classList && table.classList.contains('gimbap-inner-table')) return 'gimbap';
-    if(table.matches && table.matches('table.plan')) return 'plan';
-    return '';
-  }
-  function cellKey(cell){
-    var table = managedTableForCell(cell);
-    var name = tableName(table);
-    if(!name || !cell || !cell.parentElement) return '';
-    var row = cell.parentElement;
-    var r = Array.prototype.indexOf.call(table.rows, row);
-    var c = Array.prototype.indexOf.call(row.children, cell);
-    if(r < 0 || c < 0) return '';
-    return name + ':r' + r + ':c' + c;
-  }
-  function cellStyle(cell){
-    var field = cell && cell.querySelector ? cell.querySelector('input.cell-input, textarea.cell-input') : null;
-    var main = field || cell;
-    return {
-      fontWeight: (main && main.style && main.style.fontWeight) || '',
-      color: (main && main.style && main.style.color) || '',
-      backgroundColor: (cell && cell.style && cell.style.backgroundColor) || (main && main.style && main.style.backgroundColor) || '',
-      hidden: !!(cell && cell.classList && cell.classList.contains('trip-hidden-cell'))
-    };
-  }
-  function emptyStyle(style){
-    return !style || (!style.fontWeight && !style.color && !style.backgroundColor && !style.hidden);
-  }
-  function targetFromKey(key){
-    var target = null;
-    if(key.indexOf('field-id:') === 0){
-      target = document.getElementById(key.slice('field-id:'.length));
-    } else if(key.indexOf('field-sync:') === 0){
-      target = document.querySelector('table.plan [data-sync-key="' + cssEscape(key.slice('field-sync:'.length)) + '"]');
-    } else {
-      var m = String(key).match(/^(plan|gimbap|durationExpected):r(\d+):c(\d+)$/);
-      if(m){
-        var table = m[1] === 'durationExpected' ? document.getElementById('durationExpectedTable') : (m[1] === 'gimbap' ? document.querySelector('.gimbap-inner-table') : document.querySelector('table.plan'));
-        var row = table && table.rows[Number(m[2])];
-        target = row && row.children[Number(m[3])];
-      }
-    }
-    return target;
-  }
-  function clearHiddenInManagedTables(){
-    document.querySelectorAll('table.plan td.trip-hidden-cell, table.plan th.trip-hidden-cell, .duration-expected-table td.trip-hidden-cell, .duration-expected-table th.trip-hidden-cell, .gimbap-inner-table td.trip-hidden-cell, .gimbap-inner-table th.trip-hidden-cell').forEach(function(cell){
-      cell.classList.remove('trip-hidden-cell');
-    });
-  }
-  function applyMap(map){
-    map = (map && typeof map === 'object' && !Array.isArray(map)) ? map : readMap();
-    clearHiddenInManagedTables();
-    Object.keys(map).forEach(function(key){
-      var style = map[key];
-      if(!style || typeof style !== 'object') return;
-      var target = targetFromKey(key);
-      if(!target) return;
-      var cell = target.closest ? target.closest('td,th') : null;
-      var field = target.matches && target.matches('input.cell-input, textarea.cell-input') ? target : (target.querySelector ? target.querySelector('input.cell-input, textarea.cell-input') : null);
-      var main = field || target;
-      if(main && main.style){
-        if(style.fontWeight) main.style.setProperty('font-weight', style.fontWeight, 'important');
-        if(style.color){
-          main.style.setProperty('color', style.color, 'important');
-          main.style.setProperty('-webkit-text-fill-color', style.color, 'important');
-        }
-        if(style.backgroundColor) main.style.setProperty('background-color', style.backgroundColor, 'important');
-      }
-      if(cell && style.backgroundColor) cell.style.setProperty('background-color', style.backgroundColor, 'important');
-      if(cell && style.hidden) cell.classList.add('trip-hidden-cell');
-    });
-  }
-  function selectedManagedCell(){
-    var cell = window.__tripScheduleSelectedStyleCell;
-    if(cell && cell.closest) cell = cell.closest('td,th');
-    if(cell && document.contains(cell) && managedTableForCell(cell)) return cell;
-
-    var marked = document.querySelector('table.plan td.style-selected-cell, table.plan th.style-selected-cell, .duration-expected-table td.style-selected-cell, .duration-expected-table th.style-selected-cell, .gimbap-inner-table td.style-selected-cell, .gimbap-inner-table th.style-selected-cell');
-    if(marked && managedTableForCell(marked)) return marked;
-
-    var inputMarked = document.querySelector('table.plan input.style-selected-cell, table.plan textarea.style-selected-cell, .duration-expected-table input.style-selected-cell, .duration-expected-table textarea.style-selected-cell, .gimbap-inner-table input.style-selected-cell, .gimbap-inner-table textarea.style-selected-cell');
-    cell = inputMarked && inputMarked.closest ? inputMarked.closest('td,th') : null;
-    return (cell && managedTableForCell(cell)) ? cell : null;
-  }
-  function saveCell(cell){
-    var key = cellKey(cell);
-    if(!key) return;
-    var map = readMap();
-    var style = cellStyle(cell);
-    delete map[key];
-    var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-    if(field){
-      if(field.id) delete map['field-id:' + field.id];
-      if(field.dataset && field.dataset.syncKey) delete map['field-sync:' + field.dataset.syncKey];
-    }
-    if(!emptyStyle(style)) map[key] = style;
-    writeMap(map);
-    applyMap(map);
-  }
-  function markSingleSelection(cell){
-    if(!cell || !managedTableForCell(cell)) return;
-    try {
-      document.querySelectorAll('.style-selected-cell, .info-selected, .duration-column-selected').forEach(function(el){
-        el.classList.remove('style-selected-cell','info-selected','duration-column-selected');
-      });
-      cell.classList.add('style-selected-cell');
-      var field = cell.querySelector && cell.querySelector('input.cell-input, textarea.cell-input');
-      if(field) field.classList.add('style-selected-cell');
-      window.__tripScheduleSelectedStyleCell = cell;
-      window.__tripScheduleSelectedStyleTarget = field || cell;
-    } catch(e){}
-  }
-
-  document.addEventListener('click', function(event){
-    var src = event.target;
-    if(!src || !src.closest) return;
-    if(src.closest('button, .info-toolbar, .action-buttons, .trip-auth-backdrop')) return;
-    var cell = src.closest('td,th');
-    if(cell && managedTableForCell(cell)) markSingleSelection(cell);
-  }, true);
-
-  document.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="hide-cell"]') : null;
-    if(!btn) return;
-    var cell = selectedManagedCell();
-    if(!cell) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    cell.classList.toggle('trip-hidden-cell');
-    saveCell(cell);
-  }, true);
-
-  document.addEventListener('click', function(event){
-    var btn = event.target && event.target.closest ? event.target.closest('button[data-info-action="clear-style-cell"]') : null;
-    if(!btn) return;
-    var cell = selectedManagedCell();
-    if(!cell) return;
-    setTimeout(function(){
-      cell.classList.remove('trip-hidden-cell');
-      saveCell(cell);
-    }, 0);
-  }, true);
-
-  var previousApply = window.__tripScheduleApplyPlanStylesFromFirebase;
-  window.__tripScheduleApplyPlanStylesFromFirebase = function(styleMap){
-    if(styleMap && typeof styleMap === 'object' && !Array.isArray(styleMap)){
-      try { localStorage.setItem(PLAN_STYLE_KEY, JSON.stringify(styleMap)); } catch(e){}
-      applyMap(styleMap);
-      return;
-    }
-    if(typeof previousApply === 'function') return previousApply(styleMap);
-  };
-  window.__tripScheduleApplyPlanStylesNow = function(){ applyMap(readMap()); };
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ applyMap(readMap()); }, 80); });
-  else setTimeout(function(){ applyMap(readMap()); }, 80);
-  window.addEventListener('load', function(){ setTimeout(function(){ applyMap(readMap()); }, 120); });
-  window.addEventListener('trip-duration-structure-changed', function(){ setTimeout(function(){ applyMap(readMap()); }, 120); });
-})();
-</script>
 
 
 
@@ -6607,70 +5603,7 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
-<script id="hike-row-right-cell-hide-priority-fix">
-/*
-  산행지 아래행 우측 끝칸 가림 보정
-  - 회원모드 공개행 보정 스크립트가 visibility/opacity를 다시 켜면서 field:6 값이 보이는 경우를 차단한다.
-  - .trip-hidden-cell이 붙은 모든 plan 칸의 내부 입력값을 회원모드에서 다시 투명/opacity 0으로 고정한다.
-*/
-(function(){
-  'use strict';
 
-  function forceHideCell(cell){
-    if(!cell || !cell.classList || !cell.classList.contains('trip-hidden-cell')) return;
-    cell.style.setProperty('position', 'relative', 'important');
-    cell.style.setProperty('overflow', 'hidden', 'important');
-    cell.querySelectorAll('input.cell-input, textarea.cell-input, [contenteditable="true"]').forEach(function(el){
-      el.style.setProperty('color', 'transparent', 'important');
-      el.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
-      el.style.setProperty('text-shadow', 'none', 'important');
-      el.style.setProperty('caret-color', 'transparent', 'important');
-      el.style.setProperty('opacity', '0', 'important');
-    });
-  }
-
-  function clearForcedHideCell(cell){
-    if(!cell) return;
-    cell.querySelectorAll('input.cell-input, textarea.cell-input, [contenteditable="true"]').forEach(function(el){
-      if(!el.closest('td,th') || !el.closest('td,th').classList.contains('trip-hidden-cell')){
-        el.style.removeProperty('opacity');
-      }
-    });
-  }
-
-  function applyHiddenPriority(){
-    try {
-      var plan = document.querySelector('table.plan');
-      if(!plan) return;
-      if(!document.body.classList.contains('trip-read-mode')){
-        plan.querySelectorAll('td,th').forEach(clearForcedHideCell);
-        return;
-      }
-      plan.querySelectorAll('td.trip-hidden-cell, th.trip-hidden-cell').forEach(forceHideCell);
-
-      /* 산행지 아래행 우측 끝칸(field:6)은 공개행이라 재표시될 수 있어 한 번 더 직접 보정 */
-      var field6 = plan.querySelector('[data-sync-key="field:6"]');
-      var field6Cell = field6 && field6.closest ? field6.closest('td,th') : null;
-      if(field6Cell && field6Cell.classList.contains('trip-hidden-cell')) forceHideCell(field6Cell);
-    } catch(e) {}
-  }
-
-  ['load','pageshow','trip-duration-structure-changed'].forEach(function(type){
-    window.addEventListener(type, function(){
-      setTimeout(applyHiddenPriority, 60);
-      setTimeout(applyHiddenPriority, 350);
-      setTimeout(applyHiddenPriority, 1300);
-    });
-  });
-  document.addEventListener('click', function(){ setTimeout(applyHiddenPriority, 80); }, true);
-  var oldApply = window.__tripScheduleApplyPlanStylesNow;
-  window.__tripScheduleApplyPlanStylesNow = function(){
-    if(typeof oldApply === 'function') oldApply();
-    setTimeout(applyHiddenPriority, 50);
-  };
-  setTimeout(applyHiddenPriority, 100);
-})();
-</script>
 
 
 
@@ -6760,8 +5693,6 @@ function resizeAllTextareas(root = document) {
     if(!isMobileEditMode()) return;
     document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach(function(el){
       if(el.id === 'mountain-name') return;
-      /* 기존 예외 패치가 부여한 바로편집 플래그 제거 */
-      if(el.dataset && el.dataset.directEdit === 'true') delete el.dataset.directEdit;
       if(!el.classList.contains('mobile-longpress-editing')) el.classList.add('mobile-longpress-locked');
     });
     document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(function(cell){
@@ -6843,7 +5774,9 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load', normalizeMobileLocks);
   window.addEventListener('resize', normalizeMobileLocks);
   window.addEventListener('orientationchange', function(){ setTimeout(normalizeMobileLocks, 200); });
-  setInterval(normalizeMobileLocks, 1200);
+  if(window.MutationObserver){
+    new MutationObserver(normalizeMobileLocks).observe(document.body, {childList:true, subtree:true});
+  }
 })();
 </script>
 
