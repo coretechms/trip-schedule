@@ -942,6 +942,8 @@
     }
     body.trip-read-mode .trip-mode-badge,
     body.trip-admin-mode .trip-mode-badge { display: block; }
+    body.trip-admin-mode #tripModeBadge,
+    body.trip-admin-mode #save-button { display: none !important; }
     body.trip-read-mode .action-buttons,
     body.trip-read-mode #info-form-wrap,
     body.trip-read-mode .firebase-panel { display: none !important; }
@@ -1009,10 +1011,36 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.16);
       cursor: pointer;
     }
-    body.trip-read-mode .trip-read-exit-btn {
+    body.trip-read-mode #tripReadExitBtn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+    }
+    .action-buttons #tripAdminExitBtn {
+      display: none;
+      border-color: #777;
+      background: #fff;
+      color: #111;
+    }
+    body.trip-admin-mode .action-buttons #tripAdminExitBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 산행지 아래행 오른쪽 마지막 칸의 배경과 입력 영역을 셀 안으로 제한 */
+    table.plan > tbody > tr > .upper-right-last-cell {
+      overflow: hidden !important;
+      background-clip: padding-box !important;
+    }
+    table.plan > tbody > tr > .upper-right-last-cell > input.cell-input {
+      display: block;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      background-clip: padding-box !important;
     }
     @media (max-width: 768px) {
       .trip-read-exit-btn {
@@ -1024,110 +1052,6 @@
       }
     }
 
-    /* 회원모드 산행공지 메모장: 정기산행 계획 표와 완전 분리 */
-    .trip-member-notice-pad {
-      display: none;
-      position: fixed;
-      left: 10px;
-      right: 10px;
-      bottom: 10px;
-      width: auto;
-      max-width: calc(100vw - 20px);
-      height: 33.3vh;
-      max-height: 33.3vh;
-      border: 1px solid #d7c76b;
-      background: #fff7c7;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-      box-sizing: border-box;
-      z-index: 140000;
-      transform: none !important;
-    }
-    body.trip-read-mode {
-      padding-bottom: 35.1vh;
-    }
-    body.trip-read-mode .trip-member-notice-pad {
-      display: flex;
-      flex-direction: column;
-    }
-    .trip-member-notice-title {
-      flex: 0 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      min-height: 36px;
-      padding: 8px 12px;
-      background: #fff200;
-      color: #111;
-      font-size: 14px;
-      font-weight: 800;
-      border-bottom: 1px solid #d7c76b;
-    }
-    .trip-member-notice-state {
-      font-size: 11px;
-      font-weight: 700;
-      color: #555;
-      white-space: nowrap;
-    }
-    .trip-member-notice-body {
-      flex: 1 1 auto;
-      min-height: 256px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 12px 14px;
-      background: #fffbe8;
-      color: #111;
-      font-size: 14px;
-      line-height: 1.65;
-      white-space: pre-wrap;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-    }
-    .trip-member-notice-body.is-empty {
-      color: #777;
-    }
-    .trip-member-notice-body .guide-bold { font-weight: 900 !important; }
-    .trip-member-notice-body .guide-blue { color: #1428c8 !important; font-weight: 800 !important; }
-    .trip-member-notice-body .guide-red { color: #d80000 !important; font-weight: 800 !important; }
-    .trip-member-notice-body .guide-blink {
-      animation: tripMemberNoticeBlink 1.3s steps(2, start) infinite;
-      font-weight: 900 !important;
-    }
-    @keyframes tripMemberNoticeBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .25; }
-    }
-    @media (max-width: 768px) {
-      .trip-member-notice-pad {
-        position: fixed !important;
-        left: 8px;
-        right: 8px;
-        bottom: 8px;
-        max-width: calc(100vw - 16px);
-        height: 34.2vh;
-        max-height: 34.2vh;
-        border-radius: 12px;
-      }
-      body.trip-read-mode {
-        padding-bottom: 36vh;
-      }
-      .trip-member-notice-title {
-        min-height: 34px;
-        padding: 7px 10px;
-        font-size: 13px;
-      }
-      .trip-member-notice-body {
-        min-height: 272px;
-        padding: 10px;
-        font-size: 13px;
-      }
-    }
-
-
-  
     /* 비품 윗행 제목 칸도 편집 가능하도록 전환 */
     #supply-label-water,
     #supply-label-alcohol,
@@ -1402,30 +1326,6 @@
 <!-- refresh-keeps-mode-exit-clears-login-v2 -->
 <!-- v19-admin-hide-diagonal-thin -->
 
-<style id="member-notice-height-and-read-refresh-fix">
-  /* 산행공지 메모장 세로 높이 20% 축소 */
-  .trip-member-notice-pad {
-    height: 26.6vh !important;
-    max-height: 26.6vh !important;
-  }
-  body.trip-read-mode {
-    padding-bottom: 28.1vh !important;
-  }
-  @media (max-width: 768px) {
-    .trip-member-notice-pad {
-      height: 27.4vh !important;
-      max-height: 27.4vh !important;
-    }
-    body.trip-read-mode {
-      padding-bottom: 28.8vh !important;
-    }
-    .trip-member-notice-body {
-      min-height: 0 !important;
-    }
-  }
-</style>
-
-
 <style id="info-edit-group-transparent-fix">
   /* 정보모음 편집 그룹 박스 배경 투명 처리 */
   #info-form-wrap .info-toolbar .info-toolbar-group-panel[data-info-group="edit"] {
@@ -1592,6 +1492,7 @@
 </div>
 <div class="action-buttons">
 <button aria-disabled="true" class="save-btn" disabled="" id="save-button" title="입력 내용이 자동으로 저장됩니다." type="button">[실시간 동기화]</button>
+<button class="capture-btn trip-admin-exit-btn" id="tripAdminExitBtn" type="button">나가기</button>
 <button class="capture-btn" id="member-capture-button" type="button">[회원용 캡쳐]</button>
 <button class="capture-btn" id="capture-button" type="button">[캡쳐]</button>
 <button class="duration-column-btn" id="durationAddColumnBtn" type="button">소요열추가</button>
@@ -1637,7 +1538,7 @@
 <td class="input-cell address-cell" colspan="2"><input class="cell-input left address-input" data-realtime-save-bound="true" data-sync-key="field:3" value=""/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:4"/></td>
 <td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:5"/></td>
-<td class="input-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:6"/></td>
+<td class="input-cell upper-right-last-cell"><input class="cell-input" data-realtime-save-bound="true" data-sync-key="field:6"/></td>
 </tr>
 <tr class="h30">
 <td class="fixed" rowspan="2">관광 버스</td>
@@ -1831,13 +1732,6 @@
 </div>
 </div>
 </div>
-<div class="trip-member-notice-pad" id="tripMemberNoticePad" aria-label="산행공지 메모장">
-  <div class="trip-member-notice-title">
-    <span>산행공지 메모장</span>
-    <span class="trip-member-notice-state" id="tripMemberNoticeState">실시간 공지</span>
-  </div>
-  <div class="trip-member-notice-body is-empty" id="tripMemberNoticeBody">등록된 산행공지가 없습니다.</div>
-</div>
 <script>
     function parseDuration(text) {
       const raw = String(text || '').replace(/ /g, '').trim();
@@ -1940,104 +1834,6 @@
       if (!printEl) return;
       const nextText = String(rawTitle || '').trim();
       printEl.textContent = nextText ? nextText : '';
-    }
-
-    /* 요청 수정: 회원모드 산행공지 메모장 HTML 코드 원문 표시 방지
-       - bus-seat 산행공지에서 저장된 서식 HTML은 메모장에 서식으로 표시
-       - script/iframe/event 속성 등 위험 코드는 제거 */
-    function decodeTripNoticeHtmlOnce(rawText) {
-      const text = String(rawText || '');
-      if (!/[&]lt;|[&]gt;|[&]amp;|[&]quot;|[&]#39;/.test(text)) return text;
-      const decoder = document.createElement('textarea');
-      decoder.innerHTML = text;
-      return decoder.value;
-    }
-
-    function sanitizeTripNoticeHtml(rawHtml) {
-      const sourceHtml = decodeTripNoticeHtmlOnce(rawHtml);
-      const template = document.createElement('template');
-      template.innerHTML = sourceHtml;
-
-      const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'SPAN', 'DIV', 'P']);
-      const allowedClasses = new Set(['guide-bold', 'guide-blue', 'guide-red', 'guide-blink']);
-      const allowedStyleProps = new Set(['color', 'font-weight', 'font-style', 'text-decoration']);
-
-      const sanitizeNode = (node) => {
-        Array.from(node.childNodes).forEach((child) => {
-          if (child.nodeType === Node.ELEMENT_NODE) {
-            const tagName = child.tagName;
-            if (!allowedTags.has(tagName)) {
-              const textNode = document.createTextNode(child.textContent || '');
-              child.replaceWith(textNode);
-              return;
-            }
-
-            Array.from(child.attributes).forEach((attr) => {
-              const name = attr.name.toLowerCase();
-              if (name.startsWith('on') || name === 'src' || name === 'href') {
-                child.removeAttribute(attr.name);
-                return;
-              }
-              if (name === 'class') {
-                const safeClassName = String(attr.value || '')
-                  .split(/\s+/)
-                  .filter((className) => allowedClasses.has(className))
-                  .join(' ');
-                if (safeClassName) child.setAttribute('class', safeClassName);
-                else child.removeAttribute('class');
-                return;
-              }
-              if (name === 'style') {
-                const safeStyles = [];
-                String(attr.value || '').split(';').forEach((part) => {
-                  const pair = part.split(':');
-                  if (pair.length < 2) return;
-                  const prop = pair.shift().trim().toLowerCase();
-                  const value = pair.join(':').trim();
-                  if (!allowedStyleProps.has(prop)) return;
-                  if (/url\s*\(|expression\s*\(|javascript:/i.test(value)) return;
-                  safeStyles.push(`${prop}: ${value}`);
-                });
-                if (safeStyles.length) child.setAttribute('style', safeStyles.join('; '));
-                else child.removeAttribute('style');
-                return;
-              }
-              child.removeAttribute(attr.name);
-            });
-
-            sanitizeNode(child);
-          } else if (child.nodeType !== Node.TEXT_NODE) {
-            child.remove();
-          }
-        });
-      };
-
-      sanitizeNode(template.content);
-      return template.innerHTML;
-    }
-
-    function setTripMemberNoticeText(noticeValue) {
-      const bodyEl = document.getElementById('tripMemberNoticeBody');
-      const stateEl = document.getElementById('tripMemberNoticeState');
-      if (!bodyEl) return;
-
-      let text = '';
-      let locked = false;
-      if (noticeValue && typeof noticeValue === 'object') {
-        text = String(noticeValue.text || '').trim();
-        locked = !!noticeValue.locked;
-      } else {
-        text = String(noticeValue || '').trim();
-      }
-
-      if (text) {
-        bodyEl.innerHTML = sanitizeTripNoticeHtml(text);
-        bodyEl.classList.remove('is-empty');
-      } else {
-        bodyEl.textContent = '등록된 산행공지가 없습니다.';
-        bodyEl.classList.add('is-empty');
-      }
-      if (stateEl) stateEl.textContent = locked ? '잠금 공지' : '실시간 공지';
     }
 
     function countNamedSeats(seatSource) {
@@ -3939,10 +3735,6 @@ function resizeAllTextareas(root = document) {
             setBusSeatSummaryFilled(attendeeCount);
           }
 
-          if (snapshotValue && Object.prototype.hasOwnProperty.call(snapshotValue, 'hikingNotice')) {
-            setTripMemberNoticeText(snapshotValue.hikingNotice);
-          }
-
           // bus-seat에서 변경한 산행계획 비밀번호/관리자 비밀번호를 정기산행 계획 로그인에 즉시 반영
           applyTripAuthPayload({
             loginPassword: snapshotValue?.tripPlanPassword,
@@ -3963,11 +3755,6 @@ function resizeAllTextareas(root = document) {
           console.error('bus-seat busInfo/infoTitleMain 실시간 수신 실패:', error);
         });
 
-        onValue(ref(busSeatDb, `${BUS_SEAT_ROOT_PATH}/hikingNotice`), (snapshot) => {
-          setTripMemberNoticeText(snapshot.val());
-        }, (error) => {
-          console.error('bus-seat 산행공지 실시간 수신 실패:', error);
-        });
       } catch (error) {
         console.error('bus-seat Firebase 초기화 오류:', error);
       }
@@ -5236,7 +5023,7 @@ function resizeAllTextareas(root = document) {
     document.body.classList.remove('trip-read-mode','trip-admin-mode');
     document.body.classList.add(mode === 'admin' ? 'trip-admin-mode' : 'trip-read-mode');
     var badge = document.getElementById('tripModeBadge');
-    if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보/공지 보기';
+    if(badge) badge.textContent = mode === 'admin' ? '관리자 모드 · 전체 보기/편집 가능' : '회원모드 · 산행정보 보기';
     var backdrop = document.getElementById('tripAuthBackdrop');
     if(backdrop) backdrop.classList.add('is-hidden');
     if(mode === 'read') {
@@ -5269,6 +5056,25 @@ function resizeAllTextareas(root = document) {
     var input = document.getElementById('tripAdminPasswordInput');
     var exitBtn = document.getElementById('tripAuthExitBtn');
     var readExitBtn = document.getElementById('tripReadExitBtn');
+    var adminExitBtn = document.getElementById('tripAdminExitBtn');
+    function returnToLogin(){
+      try {
+        sessionStorage.removeItem(MODE_SESSION_KEY);
+        sessionStorage.setItem(EXIT_SESSION_KEY, '1');
+      } catch(e) {}
+      document.body.classList.remove('trip-read-mode', 'trip-admin-mode');
+      var backdrop = document.getElementById('tripAuthBackdrop');
+      if(backdrop) backdrop.classList.remove('is-hidden');
+      var passwordInput = document.getElementById('tripAdminPasswordInput');
+      if(passwordInput) {
+        passwordInput.value = '';
+        passwordInput.removeAttribute('readonly');
+        passwordInput.removeAttribute('tabindex');
+        setTimeout(function(){ passwordInput.focus(); }, 0);
+      }
+      var message = document.getElementById('tripAuthMessage');
+      if(message) message.textContent = '';
+    }
     function goBusSeat(){ window.location.href = 'https://coretechms.github.io/bus-seat/'; }
     function exitApp(){
       // 사용자가 앱의 '나가기'를 누른 경우에만 로그인 세션을 종료한다.
@@ -5290,6 +5096,7 @@ function resizeAllTextareas(root = document) {
     if(readBtn) readBtn.addEventListener('click', function(){ setMode('read'); });
     if(exitBtn) exitBtn.addEventListener('click', goBusSeat);
     if(readExitBtn) readExitBtn.addEventListener('click', exitApp);
+    if(adminExitBtn) adminExitBtn.addEventListener('click', returnToLogin);
     var wasExited = false;
     try { wasExited = sessionStorage.getItem(EXIT_SESSION_KEY) === '1'; } catch(e) {}
     if(wasExited) {
