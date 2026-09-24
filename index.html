@@ -6286,6 +6286,7 @@ function resizeAllTextareas(root = document) {
   var viewportBaseHeight = 0;
   var keyboardFocusEl = null;
   var keyboardTimers = [];
+  var keyboardPositionAligned = false;
 
   function isMobile(){
     return window.matchMedia(MOBILE_QUERY).matches;
@@ -6676,17 +6677,33 @@ function resizeAllTextareas(root = document) {
     var vv = window.visualViewport;
     var viewTop = vv ? vv.offsetTop : 0;
     var viewHeight = vv ? vv.height : window.innerHeight;
-    var viewBottom = viewTop + viewHeight;
     var cell = keyboardFocusEl.closest('td,th') || keyboardFocusEl;
     var rect = cell.getBoundingClientRect();
-    var safeTop = viewTop + 18;
-    var safeBottom = viewBottom - 74;
 
-    if(rect.bottom > safeBottom){
-      var deltaDown = rect.bottom - safeBottom + Math.min(80, Math.max(20, rect.height));
-      window.scrollBy({top: deltaDown, left: 0, behavior: 'smooth'});
-    } else if(rect.top < safeTop){
-      window.scrollBy({top: rect.top - safeTop - 12, left: 0, behavior: 'smooth'});
+    /*
+      편집 셀을 화면 최상단으로 올리지 않는다.
+      키보드가 올라온 뒤 실제로 보이는 영역의 중앙보다 약간 아래,
+      즉 키보드 바로 위에서 편집하기 편한 위치에 셀 중심을 맞춘다.
+    */
+    var targetCenterY = viewTop + (viewHeight * 0.60);
+    var minimumCenterY = viewTop + Math.min(120, viewHeight * 0.32);
+    var maximumCenterY = viewTop + viewHeight - Math.max(82, rect.height + 34);
+
+    targetCenterY = Math.max(minimumCenterY, Math.min(targetCenterY, maximumCenterY));
+
+    var cellCenterY = rect.top + (rect.height / 2);
+    var delta = cellCenterY - targetCenterY;
+
+    /*
+      키보드 resize/focus 이벤트가 연속 발생하므로 smooth 스크롤을 사용하지 않는다.
+      18px 이내의 작은 차이는 무시하여 화면 흔들림도 방지한다.
+    */
+    if(Math.abs(delta) > 18){
+      window.scrollBy({
+        top: delta,
+        left: 0,
+        behavior: 'auto'
+      });
     }
   }
 
@@ -6711,8 +6728,8 @@ function resizeAllTextareas(root = document) {
 
     if(active){
       var spacerHeight = keyboardLikely
-        ? Math.max(180, Math.round(estimatedInset + 130), Math.round((viewportBaseHeight || current) * 0.34))
-        : Math.max(120, Math.round(current * 0.20));
+        ? Math.max(180, Math.round(estimatedInset + 110), Math.round((viewportBaseHeight || current) * 0.30))
+        : Math.max(100, Math.round(current * 0.16));
 
       document.documentElement.style.setProperty('--mobile-keyboard-inset', Math.max(0, Math.round(estimatedInset)) + 'px');
       document.documentElement.style.setProperty('--mobile-keyboard-spacer', spacerHeight + 'px');
@@ -6720,7 +6737,15 @@ function resizeAllTextareas(root = document) {
       document.body.classList.add('mobile-keyboard-open');
       ensureKeyboardSpacer();
 
-      revealFocusedCell();
+      /*
+        편집 셀 위치는 키보드가 실제로 열린 직후 딱 한 번만 맞춘다.
+        이후 글자 입력, 자동완성, 키보드 높이 변화 중에는 위치를 다시 움직이지 않는다.
+        사용자가 손가락으로 스크롤한 위치도 그대로 유지한다.
+      */
+      if(keyboardLikely && !keyboardPositionAligned){
+        revealFocusedCell();
+        keyboardPositionAligned = true;
+      }
     } else {
       document.documentElement.classList.remove('mobile-keyboard-open');
       document.body.classList.remove('mobile-keyboard-open');
@@ -6733,10 +6758,11 @@ function resizeAllTextareas(root = document) {
     if(!isMobile() || !isEditableKeyboardTarget(e.target)) return;
 
     keyboardFocusEl = e.target;
+    keyboardPositionAligned = false;
     updateViewportBaseline();
     clearKeyboardTimers();
 
-    [0, 80, 180, 320, 520].forEach(function(delay){
+    [80, 220, 420].forEach(function(delay){
       keyboardTimers.push(setTimeout(refreshKeyboardSafeArea, delay));
     });
   }, true);
@@ -6753,6 +6779,7 @@ function resizeAllTextareas(root = document) {
         return;
       }
       keyboardFocusEl = null;
+      keyboardPositionAligned = false;
       refreshKeyboardSafeArea();
     }, 180));
   }, true);
@@ -6763,7 +6790,10 @@ function resizeAllTextareas(root = document) {
       else updateViewportBaseline();
     });
     window.visualViewport.addEventListener('scroll', function(){
-      if(keyboardFocusEl) revealFocusedCell();
+      /*
+        편집 중 사용자가 직접 터치 스크롤한 위치를 존중한다.
+        자동으로 편집 셀을 다시 중앙으로 끌어오지 않는다.
+      */
     });
   }
 
@@ -6775,6 +6805,7 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('orientationchange', function(){
     viewportBaseHeight = 0;
     keyboardFocusEl = null;
+    keyboardPositionAligned = false;
     clearKeyboardTimers();
     setTimeout(function(){
       updateViewportBaseline();
