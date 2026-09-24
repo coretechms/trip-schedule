@@ -1706,6 +1706,9 @@
 <button data-info-action="clear-style-cell" type="button">서식해제</button>
 <button id="infoBackupJsonBtn" class="info-json-btn" data-info-action="backup-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#0b7a28!important;color:#fff!important;border:1px solid #0b7a28!important;font-weight:700!important;min-width:150px!important;height:31px!important;">백업(JSON)</button>
 <button id="infoRestoreJsonBtn" class="info-json-btn" data-info-action="restore-json" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#1737c9!important;color:#fff!important;border:1px solid #1737c9!important;font-weight:700!important;min-width:150px!important;height:31px!important;">복구(JSON)</button>
+<button id="tripExcelExportBtn" class="info-json-btn" data-info-action="export-excel" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#137b5a!important;color:#fff!important;border:1px solid #137b5a!important;font-weight:700!important;min-width:150px!important;height:31px!important;">엑셀 내보내기</button>
+<button id="tripExcelImportBtn" class="info-json-btn" data-info-action="import-excel" type="button" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#174bb3!important;color:#fff!important;border:1px solid #174bb3!important;font-weight:700!important;min-width:150px!important;height:31px!important;">엑셀 불러오기</button>
+<input id="tripExcelImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden/>
 <input accept="application/json,.json" id="infoRestoreFile" style="display:none" type="file"/>
 </div>
 <table class="info-section-table" id="info-main-table" style="width: 1015px; min-width: 100%; table-layout: fixed;">
@@ -4448,7 +4451,7 @@ function resizeAllTextareas(root = document) {
 
     buttons.forEach(function(btn){
       var action = btn.getAttribute('data-info-action') || '';
-      if(action === 'backup-json' || action === 'restore-json') {
+      if(action === 'backup-json' || action === 'restore-json' || action === 'export-excel' || action === 'import-excel') {
         adminPanel.appendChild(btn);
       } else {
         editPanel.appendChild(btn);
@@ -5341,6 +5344,7 @@ function resizeAllTextareas(root = document) {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindFullBackupButtons); else bindFullBackupButtons();
   window.addEventListener('load', bindFullBackupButtons);
   setTimeout(bindFullBackupButtons, 500);
+  window.__tripScheduleExcelBackupApi={collectPlanBackup,collectInfoBackup,applyPlanBackup,applyInfoTable};
 })();
 </script>
 
@@ -5872,4 +5876,269 @@ function resizeAllTextareas(root = document) {
     }
   }
 </style>
+<script id="tripScheduleExcelTransfer">
+(function(){
+  'use strict';
+  const exportButton=document.getElementById('tripExcelExportBtn');
+  const importButton=document.getElementById('tripExcelImportBtn');
+  const importFile=document.getElementById('tripExcelImportFile');
+  if(!exportButton || !importButton || !importFile)return;
+  const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8');
+  function escapeXml(value){
+    return String(value??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function column(index){let name='';for(index++;index;index=Math.floor((index-1)/26))name=String.fromCharCode(65+(index-1)%26)+name;return name;}
+  function readInfoRows(table){
+    if(!table)return [['']];
+    const header=(table.header?.[0]||[]).slice(1).map(cell=>cell.text||cell.html?.replace(/<[^>]*>/g,'')||'');
+    const body=(table.body||[]).map(row=>row.slice(1).map(cell=>cell.text||cell.html?.replace(/<[^>]*>/g,'')||''));
+    return [header,...body];
+  }
+  function collectVisualPlan(){
+    const table=document.querySelector('table.plan');
+    if(!table)throw Error('산행계획 화면 표를 찾지 못했습니다.');
+    const topRows=Array.from(table.tBodies[0]?.rows||[]);
+    const screenRows=topRows.flatMap(tr=>{
+      const nested=tr.cells.length===1?tr.cells[0].querySelector('table'):null;
+      return nested?Array.from(nested.rows):[tr];
+    });
+    const columns=Math.max(9,...screenRows.map(tr=>Array.from(tr.cells).reduce((count,cell)=>count+(Number(cell.colSpan)||1),0)));
+    if(columns>64)throw Error('산행계획 열이 너무 많아 엑셀로 내보낼 수 없습니다.');
+    const rows=[Array(columns)];rows[0][0]={value:'정기산행 계획',style:1};
+    const merges=[`A1:${column(columns-1)}1`];
+    const links=[['셀주소','데이터키','구조값']];
+    const occupiedUntil=Array(columns).fill(0);
+    function appendRow(tr){
+      const row=Array(columns),occupied=occupiedUntil.map(count=>count>0);
+      for(let i=0;i<columns;i++)occupiedUntil[i]=Math.max(0,occupiedUntil[i]-1);
+      let col=0;
+      for(const cell of Array.from(tr.cells)){
+        while(col<columns && occupied[col])col++;
+        if(col>=columns)break;
+        const span=Math.min(Number(cell.colSpan)||1,columns-col),depth=Math.max(1,Number(cell.rowSpan)||1);
+        const input=Array.from(cell.querySelectorAll('input,textarea,select')).find(el=>el.closest('td,th')===cell);
+        const raw=input?(input.type==='checkbox'?(input.checked?'TRUE':'FALSE'):input.value):(cell.innerText||cell.textContent||'');
+        const value=String(raw??'').trim();
+        const key=input?.getAttribute('data-sync-key')||(input?.id?'id:'+input.id:'');
+        const calculated=input?.readOnly && !input.classList.contains('plan-label-input');
+        const style=cell.classList.contains('fixed')?3:cell.classList.contains('sky-cell')?4:2;
+        row[col]={value,style};
+        const excelRow=rows.length+1,address=column(col)+excelRow;
+        if(key && !calculated && !/^id:(calc-|meal-count|gimbap-count|gimbap-total|total-people)/.test(key))links.push([address,key,'']);
+        if(span>1 || depth>1)merges.push(`${address}:${column(col+span-1)}${excelRow+depth-1}`);
+        for(let n=col;n<col+span;n++){
+          occupied[n]=true;
+          occupiedUntil[n]=Math.max(occupiedUntil[n],depth-1);
+        }
+        col+=span;
+      }
+      rows.push(row);
+    }
+    screenRows.forEach(appendRow);
+    const count=document.getElementById('duration-column-count');
+    if(count)links.push(['','id:duration-column-count',count.value||'7']);
+    return {rows,merges,links};
+  }
+  function collectSheets(){
+    const api=window.__tripScheduleExcelBackupApi;
+    if(!api)throw Error('산행계획 저장 기능을 준비하지 못했습니다.');
+    const info=api.collectInfoBackup(),visual=collectVisualPlan();
+    return [
+      {name:'산행계획',rows:visual.rows,visual:true,merges:visual.merges},
+      {name:'정보모음',rows:readInfoRows(info.tables.main)},
+      {name:'버스회사',rows:readInfoRows(info.tables.company)},
+      {name:'_연결정보',rows:visual.links,hidden:true}
+    ];
+  }
+  function visualSheetXml(sheet){
+    const count=sheet.rows[0].length;
+    const widths=Array.from({length:count},(_,index)=>`<col min="${index+1}" max="${index+1}" width="${index===0?13:20}" customWidth="1"/>`).join('');
+    const body=sheet.rows.map((row,r)=>`<row r="${r+1}" ht="${r===0?28:29}" customHeight="1">`+
+      row.map((cell,c)=>cell?`<c r="${column(c)}${r+1}" s="${cell.style}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(cell.value)}</t></is></c>`:'').join('')+'</row>').join('');
+    const mergeXml=`<mergeCells count="${sheet.merges.length}">${sheet.merges.map(ref=>`<mergeCell ref="${ref}"/>`).join('')}</mergeCells>`;
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${column(count-1)}${sheet.rows.length}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="29"/><cols>${widths}</cols><sheetData>${body}</sheetData>${mergeXml}</worksheet>`;
+  }
+  function sheetXml(rows,filtered){
+    const columns=Math.max(1,...rows.map(row=>row.length));
+    const widths=Array.from({length:columns},(_,index)=>{
+      let width=10;
+      for(const row of rows){
+        const value=String(row[index]??'');
+        const length=Array.from(value).reduce((sum,ch)=>Math.min(60,sum+(ch.codePointAt(0)>127?2:1)),2);
+        width=Math.max(width,length);
+      }
+      return `<col min="${index+1}" max="${index+1}" width="${width}" customWidth="1"/>`;
+    }).join('');
+    const body=rows.map((row,r)=>`<row r="${r+1}" ht="22" customHeight="1">`+
+      Array.from({length:columns},(_,c)=>`<c r="${column(c)}${r+1}" s="${r?2:1}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(row[c])}</t></is></c>`).join('')+'</row>').join('');
+    const range=`A1:${column(columns-1)}${rows.length}`;
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${range}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="22"/><cols>${widths}</cols><sheetData>${body}</sheetData>${filtered&&rows.length>1?`<autoFilter ref="${range}"/>`:''}</worksheet>`;
+  }
+  const styleXml='<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="10"/><name val="Malgun Gothic"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Malgun Gothic"/></font><font><b/><sz val="10"/><color rgb="FF174081"/><name val="Malgun Gothic"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF23466B"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EDF4"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBAC6D3"/></left><right style="thin"><color rgb="FFBAC6D3"/></right><top style="thin"><color rgb="FFBAC6D3"/></top><bottom style="thin"><color rgb="FFBAC6D3"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" horizontal="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" horizontal="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const crcTable=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c>>>0;}return t;})();
+  function crc32(data){let c=0xFFFFFFFF;for(const b of data)c=crcTable[(c^b)&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+  function archive(files){
+    const chunks=[],directory=[];let offset=0;
+    for(const [name,value] of files){
+      const n=encoder.encode(name),data=encoder.encode(value),crc=crc32(data);
+      const local=new Uint8Array(30+n.length),l=new DataView(local.buffer);
+      l.setUint32(0,0x04034b50,true);l.setUint16(4,20,true);l.setUint16(6,0x0800,true);
+      l.setUint32(14,crc,true);l.setUint32(18,data.length,true);l.setUint32(22,data.length,true);l.setUint16(26,n.length,true);local.set(n,30);
+      const central=new Uint8Array(46+n.length),v=new DataView(central.buffer);
+      v.setUint32(0,0x02014b50,true);v.setUint16(4,20,true);v.setUint16(6,20,true);v.setUint16(8,0x0800,true);
+      v.setUint32(16,crc,true);v.setUint32(20,data.length,true);v.setUint32(24,data.length,true);v.setUint16(28,n.length,true);v.setUint32(42,offset,true);central.set(n,46);
+      chunks.push(local,data);directory.push(central);offset+=local.length+data.length;
+    }
+    const end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);
+    v.setUint16(8,files.length,true);v.setUint16(10,files.length,true);v.setUint32(12,directory.reduce((n,c)=>n+c.length,0),true);v.setUint32(16,offset,true);
+    return new Blob([...chunks,...directory,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+  function workbook(sheets){
+    const contentTypes='<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>';
+    const main='<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>`<sheet name="${escapeXml(s.name)}" sheetId="${i+1}"${s.hidden?' state="hidden"':''} r:id="rId${i+1}"/>`).join('')+'</sheets></workbook>';
+    const rels='<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    return archive([
+      ['[Content_Types].xml',contentTypes],['_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+      ['xl/workbook.xml',main],['xl/_rels/workbook.xml.rels',rels],['xl/styles.xml',styleXml],
+      ...sheets.map((s,i)=>[`xl/worksheets/sheet${i+1}.xml`,s.visual?visualSheetXml(s):sheetXml(s.rows,i>0&&!s.hidden)])
+    ]);
+  }
+  function parseXml(value){const doc=new DOMParser().parseFromString(value,'application/xml');if(doc.getElementsByTagName('parsererror').length)throw Error('엑셀 내부 XML 형식이 잘못되었습니다.');return doc;}
+  function all(el,name){return Array.from(el.getElementsByTagNameNS('*',name));}
+  function colIndex(ref){let n=0;for(const c of (ref.match(/^[A-Z]+/i)?.[0]||''))n=n*26+c.toUpperCase().charCodeAt(0)-64;return n-1;}
+  async function openArchive(file){
+    if(file.size>25*1024*1024)throw Error('25MB 이하의 .xlsx 파일을 선택해 주세요.');
+    const buffer=await file.arrayBuffer(),bytes=new Uint8Array(buffer),view=new DataView(buffer);
+    let end=-1;for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(view.getUint32(i,true)===0x06054b50){end=i;break;}
+    if(end<0)throw Error('올바른 .xlsx 파일이 아닙니다.');
+    let pos=view.getUint32(end+16,true);const entries=new Map();
+    for(let i=0;i<view.getUint16(end+10,true);i++){
+      if(view.getUint32(pos,true)!==0x02014b50)throw Error('엑셀 압축 파일이 손상되었습니다.');
+      const len=view.getUint16(pos+28,true),name=decoder.decode(bytes.subarray(pos+46,pos+46+len));
+      entries.set(name,{method:view.getUint16(pos+10,true),size:view.getUint32(pos+20,true),plain:view.getUint32(pos+24,true),offset:view.getUint32(pos+42,true)});
+      pos+=46+len+view.getUint16(pos+30,true)+view.getUint16(pos+32,true);
+    }
+    async function read(name){
+      const e=entries.get(name);if(!e)return null;if(e.plain>50*1024*1024)throw Error('엑셀 시트가 너무 큽니다.');
+      const p=e.offset;if(view.getUint32(p,true)!==0x04034b50)throw Error('엑셀 항목이 손상되었습니다.');
+      const start=p+30+view.getUint16(p+26,true)+view.getUint16(p+28,true),data=bytes.subarray(start,start+e.size);
+      if(data.length!==e.size)throw Error('엑셀 파일이 잘렸습니다.');
+      if(e.method===0)return decoder.decode(data);
+      if(e.method!==8 || typeof DecompressionStream==='undefined')throw Error('지원하지 않는 엑셀 압축 형식입니다.');
+      const raw=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+      if(raw.byteLength!==e.plain)throw Error('엑셀 압축 데이터가 손상되었습니다.');
+      return decoder.decode(raw);
+    }
+    return read;
+  }
+  async function parseWorkbook(file){
+    const read=await openArchive(file),main=await read('xl/workbook.xml'),links=await read('xl/_rels/workbook.xml.rels');
+    if(!main||!links)throw Error('산행계획 .xlsx 파일을 선택해 주세요.');
+    const rels=new Map(all(parseXml(links),'Relationship').map(r=>[r.getAttribute('Id'),r.getAttribute('Target')]));
+    const sharedText=await read('xl/sharedStrings.xml');
+    const shared=sharedText?all(parseXml(sharedText),'si').map(si=>all(si,'t').map(t=>t.textContent).join('')):[];
+    const result=new Map();
+    for(const sheet of all(parseXml(main),'sheet')){
+      const name=sheet.getAttribute('name');if(!['산행계획','정보모음','버스회사','_연결정보'].includes(name))continue;
+      const id=sheet.getAttribute('r:id')||sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+      const target=rels.get(id);if(!target)throw Error(name+' 시트를 찾을 수 없습니다.');
+      const path=target.startsWith('/')?target.slice(1):'xl/'+target.replace(/^\.\//,'');
+      const sheetText=await read(path);if(!sheetText)throw Error(name+' 시트가 손상되었습니다.');
+      const rows=[];
+      for(const row of all(parseXml(sheetText),'row')){
+        if(rows.length>=50000)throw Error('최대 50,000행까지 불러올 수 있습니다.');
+        const cells=[];
+        for(const cell of all(row,'c')){
+          const index=colIndex(cell.getAttribute('r')||'');if(index<0||index>200)continue;
+          const type=cell.getAttribute('t'),raw=all(cell,'v')[0]?.textContent||'';
+          cells[index]=type==='s'?shared[Number(raw)]||'':type==='inlineStr'?all(cell,'t').map(t=>t.textContent).join(''):raw;
+        }
+        if(name==='산행계획' || name==='_연결정보'){
+          const index=Number(row.getAttribute('r'))-1;
+          if(index>=0 && index<50000)rows[index]=cells;
+        }else if(cells.some(v=>String(v??'').trim()))rows.push(cells);
+      }
+      result.set(name,Array.from({length:rows.length},(_,i)=>rows[i]||[]));
+    }
+    return result;
+  }
+  function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+  function updateInfoFromSheet(current,rows){
+    if(!rows || !rows.length)return null;
+    const max=Math.max(...rows.map(row=>row.length),1);
+    const existingHeaders=current.header?.[0]||[];
+    const first={html:'',text:'',className:'info-select-col',style:'',contentEditable:'false'};
+    const make=(value,old)=>({...old,html:escapeHtml(value),text:String(value??''),className:old?.className||'',style:old?.style||'',contentEditable:'true'});
+    const importedBody=rows.length>1?rows.slice(1):[Array(max).fill('')];
+    return {...current,
+      header:[[first,...Array.from({length:max},(_,index)=>make(rows[0][index]??'',existingHeaders[index+1]))]],
+      body:importedBody.map((values,row)=>[first,...Array.from({length:max},(_,index)=>make(values[index]??'',current.body?.[row]?.[index+1]))])
+    };
+  }
+  async function importRows(sheets){
+    if(!document.body.classList.contains('trip-admin-mode'))throw Error('관리자 모드에서 불러와 주세요.');
+    const api=window.__tripScheduleExcelBackupApi;
+    if(!api)throw Error('산행계획 저장 기능을 준비하지 못했습니다.');
+    const planRows=sheets.get('산행계획');
+    const links=sheets.get('_연결정보');
+    const visual=!!(links?.length && links[0][0]==='셀주소' && links[0][1]==='데이터키');
+    const older=!!(planRows?.length && planRows[0]?.[2]==='데이터키');
+    if(!planRows?.length || (!visual && !older))
+      throw Error('이 화면에서 내보낸 엑셀 파일을 선택해 주세요. 연결정보 시트가 필요합니다.');
+    const plan=api.collectPlanBackup(),info=api.collectInfoBackup();
+    let updated=0;
+    for(const row of (visual?links:planRows).slice(1)){
+      const key=String(row[visual?1:2]??'').trim();
+      if(!key || !/^(id:|field:)/.test(key))continue;
+      if(!Object.prototype.hasOwnProperty.call(plan.formData,key) && key!=='id:duration-column-count' && !/^field:\d+$/.test(key))continue;
+      const address=visual?String(row[0]??'').trim():'';
+      const match=visual?/^([A-Z]+)([1-9]\d*)$/.exec(address):null;
+      if(visual && !match && key!=='id:duration-column-count')continue;
+      const sheetRow=match?planRows[Number(match[2])-1]:null;
+      if(match && !sheetRow)continue;
+      const old=plan.formData[key],value=String(visual?(match?(sheetRow[colIndex(match[1])]??''):(row[2]??'')):(row[1]??''));
+      plan.formData[key]=typeof old==='boolean'?(value==='TRUE'||value==='true'||value==='1'):value;
+      (plan.fields||[]).forEach(rec=>{if(rec.key===key)rec.value=plan.formData[key];});
+      updated++;
+    }
+    if(!updated)throw Error('산행계획 시트에서 적용할 입력값을 찾지 못했습니다.');
+    const main=sheets.has('정보모음')?updateInfoFromSheet(info.tables.main,sheets.get('정보모음')):null;
+    const company=sheets.has('버스회사')?updateInfoFromSheet(info.tables.company,sheets.get('버스회사')):null;
+    const infoCount=(main?.body.length||0)+(company?.body.length||0);
+    if(!confirm(`산행계획 ${updated}개 항목과 정보 표 ${infoCount}행을 불러와 저장하시겠습니까?\n엑셀에 포함된 정보 표는 현재 표 내용을 대체합니다.`))return;
+    window.__tripScheduleRestoringBackup=true;
+    try{
+      api.applyPlanBackup(plan);
+      if(main)api.applyInfoTable(document.getElementById('info-main-table'),main);
+      if(company)api.applyInfoTable(document.getElementById('info-company-table'),company);
+    }finally{window.__tripScheduleRestoringBackup=false;}
+    const saves=[];
+    if(main||company){
+      const saved=Array.from(document.querySelectorAll('.info-section-table')).map(table=>Array.from(table.rows).map(row=>Array.from(row.cells).map(cell=>({html:cell.querySelector('.info-row-select-btn')?'':cell.innerHTML,style:cell.getAttribute('style')||'',hidden:cell.classList.contains('trip-hidden-cell')}))));
+      try{localStorage.setItem('tripSchedule.infoForm.tables.v2',JSON.stringify(saved));}catch(e){}
+      window.__tripScheduleInfoLocalSavingUntil=Date.now()+5000;
+      if(typeof window.__tripScheduleSaveInfoTablesToFirebase==='function')saves.push(window.__tripScheduleSaveInfoTablesToFirebase(saved));
+    }
+    if(typeof window.__tripScheduleForceSaveNow==='function')saves.push(window.__tripScheduleForceSaveNow());
+    const results=await Promise.all(saves);
+    alert(results.some(result=>result===false)?'화면에 반영했지만 원격 저장을 확인하지 못했습니다. 연결 상태를 확인하세요.':'엑셀 데이터를 불러와 저장했습니다.');
+  }
+  exportButton.addEventListener('click',()=>{
+    if(!document.body.classList.contains('trip-admin-mode'))return;
+    try{
+      const blob=workbook(collectSheets()),url=URL.createObjectURL(blob),link=document.createElement('a');
+      link.href=url;link.download='Trip-Schedule_엑셀_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx';
+      document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }catch(error){console.error('엑셀 내보내기 실패',error);alert(error.message||'엑셀 파일을 만들지 못했습니다.');}
+  });
+  importButton.addEventListener('click',()=>{if(document.body.classList.contains('trip-admin-mode'))importFile.click();});
+  importFile.addEventListener('change',async()=>{
+    const file=importFile.files?.[0];importFile.value='';if(!file)return;
+    try{const sheets=await parseWorkbook(file);await importRows(sheets);}
+    catch(error){console.error('엑셀 불러오기 실패',error);alert(error.message||'엑셀 파일을 불러오지 못했습니다.');}
+  });
+})();
+</script>
+
 </body></html>
