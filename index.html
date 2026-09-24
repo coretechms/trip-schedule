@@ -6163,4 +6163,637 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
+
+<!-- ===== 모바일 키보드 안전영역 + 전체 셀 길게누름 복사/붙여넣기 ===== -->
+<style id="mobile-keyboard-cell-clipboard-style">
+  @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    html.mobile-keyboard-open,
+    body.mobile-keyboard-open {
+      scroll-padding-bottom: calc(var(--mobile-keyboard-inset, 0px) + 96px) !important;
+    }
+
+    #mobileKeyboardSafeSpacer {
+      display: block;
+      width: 1px;
+      height: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      pointer-events: none;
+      transition: height .12s ease-out;
+    }
+
+    body.mobile-keyboard-open #mobileKeyboardSafeSpacer {
+      height: var(--mobile-keyboard-spacer, 42vh);
+    }
+
+    #mobileCellClipboardMenu {
+      position: fixed;
+      display: none;
+      z-index: 500000;
+      min-width: 176px;
+      padding: 7px;
+      gap: 6px;
+      border: 1px solid #777;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,.28);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    #mobileCellClipboardMenu.is-open {
+      display: flex;
+    }
+
+    #mobileCellClipboardMenu button {
+      flex: 1 1 0;
+      min-width: 76px;
+      height: 38px;
+      padding: 0 10px;
+      border: 1px solid #999;
+      border-radius: 9px;
+      background: #f4f4f4;
+      color: #111;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    #mobileCellClipboardMenu button[data-mobile-clip="copy"] {
+      background: #1737c9;
+      border-color: #1737c9;
+      color: #fff;
+    }
+
+    #mobileCellClipboardMenu button[data-mobile-clip="paste"] {
+      background: #0b7a28;
+      border-color: #0b7a28;
+      color: #fff;
+    }
+
+    #mobileCellClipboardMenu button:disabled {
+      opacity: .45;
+      cursor: default;
+    }
+
+    .mobile-longpress-clipboard-cell {
+      outline: 2px solid #1737c9 !important;
+      outline-offset: -2px !important;
+    }
+
+    #mobileClipboardToast {
+      position: fixed;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index: 500001;
+      max-width: calc(100vw - 28px);
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(17,24,39,.94);
+      color: #fff;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 5px 18px rgba(0,0,0,.24);
+    }
+  }
+</style>
+
+<script id="mobile-keyboard-cell-clipboard-script">
+(function(){
+  'use strict';
+
+  var MOBILE_QUERY = '(max-width: 768px), (hover: none) and (pointer: coarse)';
+  var LONG_PRESS_MS = 680;
+  var MOVE_CANCEL_PX = 16;
+
+  var longPressTimer = 0;
+  var pressCell = null;
+  var pressX = 0;
+  var pressY = 0;
+  var menuCell = null;
+  var appClipboardText = '';
+  var suppressClickUntil = 0;
+  var viewportBaseHeight = 0;
+  var keyboardFocusEl = null;
+  var keyboardTimers = [];
+
+  function isMobile(){
+    return window.matchMedia(MOBILE_QUERY).matches;
+  }
+
+  function isAdminMode(){
+    return document.body && document.body.classList.contains('trip-admin-mode');
+  }
+
+  function isTableCell(cell){
+    if(!cell || !cell.matches || !cell.matches('td,th')) return false;
+    return !!cell.closest('table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table');
+  }
+
+  function getCell(target){
+    if(!target || !target.closest) return null;
+    if(target.closest('button, .action-buttons, .info-toolbar, .trip-auth-backdrop, #mobileCellClipboardMenu, input[type="file"]')) return null;
+    var cell = target.closest('td,th');
+    return isTableCell(cell) ? cell : null;
+  }
+
+  function getCellField(cell){
+    if(!cell || !cell.querySelector) return null;
+    return cell.querySelector(
+      'input:not([type="button"]):not([type="submit"]):not([type="file"]), textarea, select'
+    );
+  }
+
+  function getWritableTarget(cell){
+    if(!cell || !isAdminMode()) return null;
+
+    var field = getCellField(cell);
+    if(field){
+      if(field.disabled || field.readOnly || field.hasAttribute('readonly')) return null;
+      return field;
+    }
+
+    if(cell.closest('.info-section-table') &&
+       !cell.classList.contains('info-select-col') &&
+       !cell.querySelector('.info-row-select-btn')){
+      return cell;
+    }
+
+    if(cell.isContentEditable) return cell;
+    return null;
+  }
+
+  function readCellText(cell){
+    if(!cell) return '';
+    var field = getCellField(cell);
+    if(field){
+      if(field.tagName === 'SELECT'){
+        var option = field.options && field.options[field.selectedIndex];
+        return option ? option.text : (field.value || '');
+      }
+      return field.value == null ? '' : String(field.value);
+    }
+
+    var clone = cell.cloneNode(true);
+    clone.querySelectorAll('button,script,style').forEach(function(el){ el.remove(); });
+    return (clone.innerText || clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+  }
+
+  function fireValueEvents(target){
+    try{ target.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+    try{ target.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+    try{ target.dispatchEvent(new Event('blur', {bubbles:true})); }catch(e){}
+  }
+
+  function writeCellText(cell, value){
+    var target = getWritableTarget(cell);
+    if(!target) return false;
+
+    var text = value == null ? '' : String(value);
+
+    if(target.matches && target.matches('input,textarea,select')){
+      if(target.tagName === 'SELECT'){
+        var matched = Array.from(target.options || []).find(function(opt){
+          return opt.value === text || opt.text === text;
+        });
+        if(matched) target.value = matched.value;
+        else return false;
+      } else {
+        var nativeSetter = Object.getOwnPropertyDescriptor(
+          target.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+          'value'
+        );
+        if(nativeSetter && nativeSetter.set) nativeSetter.set.call(target, text);
+        else target.value = text;
+      }
+      fireValueEvents(target);
+      if(typeof target.blur === 'function') target.blur();
+      return true;
+    }
+
+    if(target.matches && target.matches('.info-section-table th, .info-section-table td')){
+      var wasEditable = target.getAttribute('contenteditable');
+      target.contentEditable = 'true';
+      target.textContent = text;
+      fireValueEvents(target);
+      if(wasEditable === null) target.removeAttribute('contenteditable');
+      else target.setAttribute('contenteditable', wasEditable);
+      if(isMobile() && !target.classList.contains('mobile-longpress-editing')){
+        target.contentEditable = 'false';
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  function fallbackCopy(text){
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly','');
+    area.style.position = 'fixed';
+    area.style.left = '-9999px';
+    area.style.top = '0';
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){}
+    area.remove();
+    return ok;
+  }
+
+  function showToast(message){
+    var old = document.getElementById('mobileClipboardToast');
+    if(old) old.remove();
+    var toast = document.createElement('div');
+    toast.id = 'mobileClipboardToast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function(){
+      if(toast && toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 1500);
+  }
+
+  async function copyCell(cell){
+    var text = readCellText(cell);
+    appClipboardText = text;
+
+    var copied = false;
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    }catch(e){}
+
+    if(!copied) copied = fallbackCopy(text);
+    closeMenu();
+
+    if(copied || text === appClipboardText) showToast('셀 내용을 복사했습니다.');
+    else showToast('복사하지 못했습니다.');
+  }
+
+  async function pasteCell(cell){
+    if(!getWritableTarget(cell)){
+      closeMenu();
+      showToast('이 셀은 고정/자동계산 셀이라 붙여넣을 수 없습니다.');
+      return;
+    }
+
+    var text = '';
+    var gotSystemClipboard = false;
+
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        text = await navigator.clipboard.readText();
+        gotSystemClipboard = true;
+      }
+    }catch(e){}
+
+    if(!gotSystemClipboard) text = appClipboardText;
+
+    if(text === '' && appClipboardText === '' && !gotSystemClipboard){
+      closeMenu();
+      showToast('먼저 복사할 셀을 길게 눌러 복사해 주세요.');
+      return;
+    }
+
+    if(writeCellText(cell, text)){
+      closeMenu();
+      showToast('셀에 붙여넣었습니다.');
+      try{
+        if(typeof window.__tripScheduleForceSaveNow === 'function'){
+          window.__tripScheduleForceSaveNow();
+        }
+      }catch(e){}
+    } else {
+      closeMenu();
+      showToast('이 셀에는 붙여넣을 수 없습니다.');
+    }
+  }
+
+  function ensureMenu(){
+    var menu = document.getElementById('mobileCellClipboardMenu');
+    if(menu) return menu;
+
+    menu = document.createElement('div');
+    menu.id = 'mobileCellClipboardMenu';
+    menu.setAttribute('role','menu');
+    menu.innerHTML =
+      '<button type="button" data-mobile-clip="copy">복사</button>' +
+      '<button type="button" data-mobile-clip="paste">붙여넣기</button>';
+    document.body.appendChild(menu);
+
+    menu.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+    }, true);
+
+    menu.addEventListener('click', function(e){
+      var btn = e.target.closest('button[data-mobile-clip]');
+      if(!btn || !menuCell) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(btn.dataset.mobileClip === 'copy') copyCell(menuCell);
+      if(btn.dataset.mobileClip === 'paste') pasteCell(menuCell);
+    });
+
+    return menu;
+  }
+
+  function clearCellHighlight(){
+    document.querySelectorAll('.mobile-longpress-clipboard-cell').forEach(function(el){
+      el.classList.remove('mobile-longpress-clipboard-cell');
+    });
+  }
+
+  function closeMenu(){
+    var menu = document.getElementById('mobileCellClipboardMenu');
+    if(menu) menu.classList.remove('is-open');
+    clearCellHighlight();
+    menuCell = null;
+  }
+
+  function openMenu(cell, x, y){
+    if(!isMobile() || !isAdminMode() || !cell) return;
+
+    cancelLongPress();
+    closeMenu();
+    menuCell = cell;
+    cell.classList.add('mobile-longpress-clipboard-cell');
+
+    var menu = ensureMenu();
+    var pasteBtn = menu.querySelector('[data-mobile-clip="paste"]');
+    if(pasteBtn) pasteBtn.disabled = !getWritableTarget(cell);
+
+    menu.classList.add('is-open');
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+
+    var r = menu.getBoundingClientRect();
+    var vv = window.visualViewport;
+    var leftBound = vv ? vv.offsetLeft : 0;
+    var topBound = vv ? vv.offsetTop : 0;
+    var rightBound = leftBound + (vv ? vv.width : window.innerWidth);
+    var bottomBound = topBound + (vv ? vv.height : window.innerHeight);
+
+    var left = Math.max(leftBound + 6, Math.min(x, rightBound - r.width - 6));
+    var top = Math.max(topBound + 6, Math.min(y - r.height - 8, bottomBound - r.height - 6));
+
+    if(top < topBound + 6) top = Math.min(y + 12, bottomBound - r.height - 6);
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+
+    suppressClickUntil = Date.now() + 650;
+    try{ navigator.vibrate && navigator.vibrate(20); }catch(e){}
+  }
+
+  function cancelLongPress(){
+    if(longPressTimer){
+      clearTimeout(longPressTimer);
+      longPressTimer = 0;
+    }
+    pressCell = null;
+  }
+
+  document.addEventListener('pointerdown', function(e){
+    if(!isMobile() || !isAdminMode()) return;
+    if(e.pointerType && e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+
+    var cell = getCell(e.target);
+    if(!cell) return;
+
+    closeMenu();
+    cancelLongPress();
+
+    pressCell = cell;
+    pressX = e.clientX || 0;
+    pressY = e.clientY || 0;
+
+    longPressTimer = setTimeout(function(){
+      if(pressCell === cell){
+        openMenu(cell, pressX, pressY);
+      }
+    }, LONG_PRESS_MS);
+  }, true);
+
+  document.addEventListener('pointermove', function(e){
+    if(!longPressTimer) return;
+    var x = e.clientX || 0;
+    var y = e.clientY || 0;
+    if(Math.abs(x - pressX) > MOVE_CANCEL_PX || Math.abs(y - pressY) > MOVE_CANCEL_PX){
+      cancelLongPress();
+    }
+  }, true);
+
+  ['pointerup','pointercancel','lostpointercapture'].forEach(function(type){
+    document.addEventListener(type, cancelLongPress, true);
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    if(!isMobile() || !isAdminMode()) return;
+    var cell = getCell(e.target);
+    if(!cell) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openMenu(cell, e.clientX || pressX, e.clientY || pressY);
+  }, true);
+
+  document.addEventListener('click', function(e){
+    var menu = document.getElementById('mobileCellClipboardMenu');
+    if(menu && menu.contains(e.target)) return;
+
+    if(Date.now() < suppressClickUntil){
+      var cell = getCell(e.target);
+      if(cell && menuCell === cell){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
+    }
+    closeMenu();
+  }, true);
+
+  window.addEventListener('scroll', function(){
+    if(document.getElementById('mobileCellClipboardMenu')?.classList.contains('is-open')) closeMenu();
+  }, true);
+
+  /* ===== 키보드가 마지막 줄을 가리지 않도록 Visual Viewport 기반 안전영역 생성 ===== */
+
+  function ensureKeyboardSpacer(){
+    var spacer = document.getElementById('mobileKeyboardSafeSpacer');
+    if(spacer) return spacer;
+    spacer = document.createElement('div');
+    spacer.id = 'mobileKeyboardSafeSpacer';
+    spacer.setAttribute('aria-hidden','true');
+    document.body.appendChild(spacer);
+    return spacer;
+  }
+
+  function isEditableKeyboardTarget(el){
+    if(!el || !el.matches || !isAdminMode()) return false;
+    if(el.matches('input:not([readonly]):not([disabled]):not([type="button"]):not([type="file"]), textarea:not([readonly]):not([disabled])')){
+      return !!el.closest('table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table, #info-form-wrap');
+    }
+    if(el.matches('[contenteditable="true"]')){
+      return !!el.closest('.info-section-table');
+    }
+    return false;
+  }
+
+  function getViewportHeight(){
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  }
+
+  function updateViewportBaseline(){
+    var h = getViewportHeight();
+    if(!keyboardFocusEl || !document.contains(keyboardFocusEl)){
+      viewportBaseHeight = Math.max(viewportBaseHeight || 0, h || 0);
+    }
+    if(!viewportBaseHeight) viewportBaseHeight = h || window.innerHeight || 0;
+  }
+
+  function clearKeyboardTimers(){
+    while(keyboardTimers.length){
+      clearTimeout(keyboardTimers.pop());
+    }
+  }
+
+  function revealFocusedCell(){
+    if(!isMobile() || !keyboardFocusEl || !document.contains(keyboardFocusEl)) return;
+
+    var vv = window.visualViewport;
+    var viewTop = vv ? vv.offsetTop : 0;
+    var viewHeight = vv ? vv.height : window.innerHeight;
+    var viewBottom = viewTop + viewHeight;
+    var cell = keyboardFocusEl.closest('td,th') || keyboardFocusEl;
+    var rect = cell.getBoundingClientRect();
+    var safeTop = viewTop + 18;
+    var safeBottom = viewBottom - 74;
+
+    if(rect.bottom > safeBottom){
+      var deltaDown = rect.bottom - safeBottom + Math.min(80, Math.max(20, rect.height));
+      window.scrollBy({top: deltaDown, left: 0, behavior: 'smooth'});
+    } else if(rect.top < safeTop){
+      window.scrollBy({top: rect.top - safeTop - 12, left: 0, behavior: 'smooth'});
+    }
+  }
+
+  function refreshKeyboardSafeArea(){
+    if(!isMobile()){
+      document.documentElement.classList.remove('mobile-keyboard-open');
+      document.body.classList.remove('mobile-keyboard-open');
+      return;
+    }
+
+    updateViewportBaseline();
+
+    var current = getViewportHeight();
+    var vv = window.visualViewport;
+    var offsetTop = vv ? vv.offsetTop : 0;
+    var estimatedInset = Math.max(0, (viewportBaseHeight || current) - current - offsetTop);
+    var active = keyboardFocusEl && document.contains(keyboardFocusEl) && document.activeElement === keyboardFocusEl;
+    var keyboardLikely = active && (
+      estimatedInset > 70 ||
+      current < (viewportBaseHeight || current) * 0.90
+    );
+
+    if(active){
+      var spacerHeight = keyboardLikely
+        ? Math.max(180, Math.round(estimatedInset + 130), Math.round((viewportBaseHeight || current) * 0.34))
+        : Math.max(120, Math.round(current * 0.20));
+
+      document.documentElement.style.setProperty('--mobile-keyboard-inset', Math.max(0, Math.round(estimatedInset)) + 'px');
+      document.documentElement.style.setProperty('--mobile-keyboard-spacer', spacerHeight + 'px');
+      document.documentElement.classList.add('mobile-keyboard-open');
+      document.body.classList.add('mobile-keyboard-open');
+      ensureKeyboardSpacer();
+
+      revealFocusedCell();
+    } else {
+      document.documentElement.classList.remove('mobile-keyboard-open');
+      document.body.classList.remove('mobile-keyboard-open');
+      document.documentElement.style.setProperty('--mobile-keyboard-inset', '0px');
+      document.documentElement.style.setProperty('--mobile-keyboard-spacer', '0px');
+    }
+  }
+
+  document.addEventListener('focusin', function(e){
+    if(!isMobile() || !isEditableKeyboardTarget(e.target)) return;
+
+    keyboardFocusEl = e.target;
+    updateViewportBaseline();
+    clearKeyboardTimers();
+
+    [0, 80, 180, 320, 520].forEach(function(delay){
+      keyboardTimers.push(setTimeout(refreshKeyboardSafeArea, delay));
+    });
+  }, true);
+
+  document.addEventListener('focusout', function(e){
+    if(!isMobile()) return;
+    if(keyboardFocusEl !== e.target) return;
+
+    clearKeyboardTimers();
+    keyboardTimers.push(setTimeout(function(){
+      if(document.activeElement && isEditableKeyboardTarget(document.activeElement)){
+        keyboardFocusEl = document.activeElement;
+        refreshKeyboardSafeArea();
+        return;
+      }
+      keyboardFocusEl = null;
+      refreshKeyboardSafeArea();
+    }, 180));
+  }, true);
+
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){
+      if(keyboardFocusEl) refreshKeyboardSafeArea();
+      else updateViewportBaseline();
+    });
+    window.visualViewport.addEventListener('scroll', function(){
+      if(keyboardFocusEl) revealFocusedCell();
+    });
+  }
+
+  window.addEventListener('resize', function(){
+    if(keyboardFocusEl) refreshKeyboardSafeArea();
+    else updateViewportBaseline();
+  });
+
+  window.addEventListener('orientationchange', function(){
+    viewportBaseHeight = 0;
+    keyboardFocusEl = null;
+    clearKeyboardTimers();
+    setTimeout(function(){
+      updateViewportBaseline();
+      refreshKeyboardSafeArea();
+    }, 350);
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    ensureMenu();
+    ensureKeyboardSpacer();
+    updateViewportBaseline();
+  });
+
+  if(document.readyState !== 'loading'){
+    ensureMenu();
+    ensureKeyboardSpacer();
+    updateViewportBaseline();
+  }
+})();
+</script>
+
 </body></html>
