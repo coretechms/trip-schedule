@@ -950,18 +950,8 @@
     body.trip-read-mode table.plan > tbody > tr { display: none; }
     body.trip-read-mode table.plan > tbody > tr.trip-public-row { display: table-row; }
 
-    /* 회원모드 공개행 강제 표시: 회비/산행지/관광버스/소요시간·예상시간/식당 */
-    body.trip-read-mode table.plan > tbody > tr.trip-public-row {
-      display: table-row !important;
-      visibility: visible !important;
-    }
-    body.trip-read-mode table.plan > tbody > tr.trip-public-row input,
-    body.trip-read-mode table.plan > tbody > tr.trip-public-row textarea {
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
-    body.trip-read-mode table.plan > tbody > tr.trip-public-row .red { color: #c51616 !important; }
-    body.trip-read-mode table.plan > tbody > tr.trip-public-row .blue { color: #203fd8 !important; }
+    /* 공개 범위에 해당하는 행만 표시하며, 개별 셀의 가림 설정은 유지합니다. */
+    body.trip-read-mode table.plan > tbody > tr.trip-public-row { display: table-row !important; }
     body.trip-read-mode table.plan > tbody > tr.trip-public-row.member-hide-from-supply {
       display: none !important;
     }
@@ -1221,11 +1211,6 @@
 
 
     /* 회원모드: 소요시간 윗행은 관리자모드에서 저장된 글자색/굵기를 그대로 표시 */
-    body.trip-read-mode #duration-title-row td,
-    body.trip-read-mode #duration-title-row th {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
     body.trip-read-mode #duration-title-row .fixed {
       background: #ececec !important;
       text-align: center !important;
@@ -1241,8 +1226,6 @@
       /* 색상/굵기는 관리자모드의 class, inline style, Firebase 복원값을 덮어쓰지 않는다 */
       -webkit-text-fill-color: currentColor !important;
       text-align: center !important;
-      opacity: 1 !important;
-      visibility: visible !important;
     }
     body.trip-read-mode #duration-title-row input.cell-input.bold {
       font-weight: 700 !important;
@@ -2583,7 +2566,8 @@ function resizeAllTextareas(root = document) {
           if (cls !== 'cell-input' && cls !== 'amount-input') div.classList.add(cls);
         });
 
-        const value = field.value == null ? '' : String(field.value);
+        const masked = !!field.closest('[data-member-capture-hidden="true"]');
+        const value = masked || field.value == null ? '' : String(field.value);
         div.textContent = value.trim() ? value : ' ';
         div.style.minHeight = Math.max(field.offsetHeight || 28, 28) + 'px';
 
@@ -2596,6 +2580,14 @@ function resizeAllTextareas(root = document) {
         }
 
         field.replaceWith(div);
+      });
+
+      // 입력칸을 이미지용 요소로 바꾼 뒤에도 가림 표시를 마지막으로 한 번 더 확인합니다.
+      clone.querySelectorAll('[data-member-capture-hidden="true"]').forEach((cell) => {
+        cell.querySelectorAll('.capture-render').forEach((rendered) => {
+          rendered.textContent = ' ';
+          rendered.style.setProperty('visibility', 'hidden', 'important');
+        });
       });
 
       clone.querySelectorAll('tr').forEach((row) => {
@@ -2663,76 +2655,61 @@ function resizeAllTextareas(root = document) {
     }
 
     function buildMemberCaptureClone() {
-      const sourceTable = document.querySelector('#capture-area table.plan');
+      const source = document.getElementById('capture-area');
+      const sourceTable = source && source.querySelector('table.plan');
       if (!sourceTable) return null;
 
-      const cloneTable = sourceTable.cloneNode(true);
-      cloneTable.style.width = getComputedStyle(sourceTable).width;
-      cloneTable.style.tableLayout = 'fixed';
+      // 예시 이미지의 제목/버튼 줄과 회비부터 식당 입력행까지 같은 폭으로 복사합니다.
+      const memberView = source.cloneNode(true);
+      memberView.id = 'member-capture-source-' + Date.now();
+      memberView.style.transform = 'none';
+      memberView.style.width = getComputedStyle(source).width;
+      Array.from(memberView.children).forEach((child) => {
+        if (!child.matches('.title-bar, table.plan')) child.remove();
+      });
 
-      const allRows = Array.from(cloneTable.querySelectorAll('tr'));
-      const memberRows = allRows.slice(6, 12);
+      const table = memberView.querySelector('table.plan');
+      const rows = Array.from(table.tBodies[0].rows);
+      const lastMemberRow = rows.findIndex((row) => row.classList.contains('meal-row'));
+      if (lastMemberRow < 0) return null;
+      rows.slice(lastMemberRow + 1).forEach((row) => row.remove());
 
-      if (!memberRows.length) return null;
+      // 가림은 화면의 클래스뿐 아니라 저장된 서식 설정으로도 판정합니다.
+      // 복원 시점에 클래스가 누락되어도 캡쳐에는 해당 값이 남지 않습니다.
+      let savedStyles = {};
+      try { savedStyles = JSON.parse(localStorage.getItem('tripSchedule.planCellStyles.v1') || '{}') || {}; }
+      catch (error) { savedStyles = {}; }
+      memberView.querySelectorAll('table.plan td, table.plan th').forEach((cell) => {
+        const parentTable = cell.closest('table');
+        const tableName = parentTable.id === 'durationExpectedTable' ? 'durationExpected'
+          : (parentTable.classList.contains('gimbap-inner-table') ? 'gimbap' : 'plan');
+        const rowIndex = Array.prototype.indexOf.call(parentTable.rows, cell.parentElement);
+        const cellIndex = Array.prototype.indexOf.call(cell.parentElement.children, cell);
+        const positionKey = tableName + ':r' + rowIndex + ':c' + cellIndex;
+        const field = cell.querySelector(':scope > input.cell-input, :scope > textarea.cell-input');
+        const styleKeys = tableName === 'durationExpected' ? [positionKey] : [];
+        if (field && field.id) styleKeys.push('field-id:' + field.id);
+        if (field && field.dataset.syncKey) styleKeys.push('field-sync:' + field.dataset.syncKey);
+        if (tableName !== 'durationExpected') styleKeys.push(positionKey);
+        const saved = styleKeys.map((key) => savedStyles[key]).find((style) => style && typeof style.hidden === 'boolean');
+        const isHidden = cell.classList.contains('trip-hidden-cell')
+          || !!(field && field.classList.contains('trip-hidden-cell'))
+          || !!(saved && saved.hidden);
+        if (!isHidden) return;
 
-      const wrapper = document.createElement('div');
-      wrapper.id = 'member-capture-clone-' + Date.now();
-      wrapper.style.position = 'fixed';
-      wrapper.style.left = '-100000px';
-      wrapper.style.top = '0';
-      wrapper.style.zIndex = '-1';
-      wrapper.style.background = '#ffffff';
-      wrapper.style.padding = '0';
-      wrapper.style.margin = '0';
-
-      const table = document.createElement('table');
-      table.className = 'plan';
-      table.style.width = getComputedStyle(sourceTable).width;
-      table.style.borderCollapse = 'collapse';
-      table.style.tableLayout = 'fixed';
-      table.style.background = '#ececec';
-
-      const sourceColgroup = sourceTable.querySelector('colgroup');
-      if (sourceColgroup) {
-        table.appendChild(sourceColgroup.cloneNode(true));
-      }
-
-      const tbody = document.createElement('tbody');
-      memberRows.forEach((row) => tbody.appendChild(row));
-      table.appendChild(tbody);
-      wrapper.appendChild(table);
-
-      wrapper.querySelectorAll('input.cell-input, textarea.cell-input').forEach((field) => {
-        const div = document.createElement('div');
-        div.className = 'capture-render';
-        Array.from(field.classList || []).forEach((cls) => {
-          if (cls !== 'cell-input' && cls !== 'amount-input') div.classList.add(cls);
+        cell.dataset.memberCaptureHidden = 'true';
+        cell.querySelectorAll('input, textarea').forEach((input) => {
+          input.value = '';
+          input.defaultValue = '';
+          input.removeAttribute('value');
         });
-
-        const value = field.value == null ? '' : String(field.value);
-        div.textContent = value.trim() ? value : ' ';
-        div.style.minHeight = Math.max(field.offsetHeight || 28, 28) + 'px';
-
-        const td = field.closest('td');
-        if (td) {
-          td.style.height = 'auto';
-          td.style.verticalAlign = 'middle';
-          td.style.paddingTop = '3px';
-          td.style.paddingBottom = '3px';
-        }
-
-        field.replaceWith(div);
+        const textNodes = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        while (textNodes.nextNode()) textNodes.currentNode.nodeValue = ' ';
+        cell.querySelectorAll('.trip-hidden-cell').forEach((node) => node.classList.remove('trip-hidden-cell'));
+        cell.classList.remove('trip-hidden-cell');
       });
 
-      wrapper.querySelectorAll('tr').forEach((row) => {
-        row.style.height = 'auto';
-      });
-
-      wrapper.querySelectorAll('table.plan, table.plan td, table.plan th').forEach((el) => {
-        el.style.borderStyle = 'solid';
-      });
-
-      return wrapper;
+      return memberView;
     }
 
     async function captureMemberImage() {
@@ -3666,6 +3643,7 @@ function resizeAllTextareas(root = document) {
 
       function applyPlanStyleMap() {
         const map = loadPlanStyleMap();
+        const hiddenByCell = new Map();
         document.querySelectorAll('[data-trip-style-applied="1"]').forEach((node) => {
           node.style.removeProperty('font-weight');
           node.style.removeProperty('color');
@@ -3706,10 +3684,17 @@ function resizeAllTextareas(root = document) {
           if (parts.cell) {
             parts.cell.dataset.tripStyleApplied = '1';
             if (style.backgroundColor) parts.cell.style.setProperty('background-color', style.backgroundColor, 'important');
-            parts.cell.classList.toggle('trip-hidden-cell', !!style.hidden);
+            // 같은 칸에 이전 위치 키와 현재 입력 키가 함께 있을 때 현재 입력 키를 우선합니다.
+            const priority = key.startsWith('durationExpected:') ? 4
+              : key.startsWith('field-id:') ? 3 : key.startsWith('field-sync:') ? 2 : 1;
+            const previous = hiddenByCell.get(parts.cell);
+            if (!previous || priority >= previous.priority) {
+              hiddenByCell.set(parts.cell, { priority, hidden: !!style.hidden });
+            }
           }
           else if (parts.main && parts.main.classList) parts.main.classList.toggle('trip-hidden-cell', !!style.hidden);
         });
+        hiddenByCell.forEach(({ hidden }, cell) => cell.classList.toggle('trip-hidden-cell', hidden));
       }
 
 
@@ -4808,11 +4793,6 @@ function resizeAllTextareas(root = document) {
           window.tripScheduleRefreshMemberPublicRows();
         }
         if (!document.body.classList.contains('trip-read-mode')) return;
-        document.querySelectorAll('table.plan > tbody > tr.trip-public-row input.cell-input, table.plan > tbody > tr.trip-public-row textarea.cell-input').forEach(function(el){
-          el.style.visibility = 'visible';
-          el.style.opacity = '1';
-          /* 저장된 글자색을 지우지 않음: 관리자모드 서식을 회원모드에서도 그대로 표시 */
-        });
         if (typeof window.__tripScheduleApplyPlanStylesFromFirebase === 'function') {
           try {
             var raw = localStorage.getItem('tripSchedule.planCellStyles.v1');
@@ -5611,6 +5591,19 @@ function resizeAllTextareas(root = document) {
 
 
 
+<style id="member-hidden-amount-and-input-priority">
+  /* 저장된 글자색(!important)과 공개행 표시 설정이 있어도 가림 내용은 노출하지 않음 */
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell input.cell-input,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row td.trip-hidden-cell textarea.cell-input,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row th.trip-hidden-cell input.cell-input,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row input.cell-input.trip-hidden-cell,
+  body.trip-read-mode table.plan > tbody > tr.trip-public-row textarea.cell-input.trip-hidden-cell {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+</style>
+
+
 <script id="pc-oneclick-mobile-doubleclick-edit-patch">
 /*
   편집 방식 최종 패치
@@ -5786,6 +5779,7 @@ function resizeAllTextareas(root = document) {
 
 
 <style id="edit-context-menu-style">
+  #durationAddColumnBtn,#durationDeleteColumnBtn{display:none!important;}
   #tripEditContextMenu{position:fixed;display:none;z-index:300000;min-width:150px;max-height:70vh;overflow-y:auto;padding:4px;background:#fff;border:1px solid #999;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.22);font-family:"Malgun Gothic",sans-serif;}
   #tripEditContextMenu.is-open{display:block;}
   #tripEditContextMenu button{display:block;width:100%;height:28px;margin:0;padding:3px 9px;border:0;border-bottom:1px solid #eee;background:#fff;color:#111;text-align:left;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;}
@@ -5801,6 +5795,7 @@ function resizeAllTextareas(root = document) {
     var editPanel=toolbar.querySelector('.info-toolbar-group-panel[data-info-group="edit"]');
     if(!editToggle || !editPanel) return;
     var menu=document.createElement('div'); menu.id='tripEditContextMenu'; document.body.appendChild(menu);
+    var selectedRightClickCell=null;
     function close(){menu.classList.remove('is-open');}
     function build(){
       menu.innerHTML='';
@@ -5810,10 +5805,26 @@ function resizeAllTextareas(root = document) {
         b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();close();src.click();});
         menu.appendChild(b);
       });
+      [['durationAddColumnBtn','소요열추가'],['durationDeleteColumnBtn','소요열삭제']].forEach(function(item){
+        var src=document.getElementById(item[0]);
+        if(!src)return;
+        var b=document.createElement('button'); b.type='button'; b.textContent=item[1];
+        b.addEventListener('click',function(e){
+          e.preventDefault();e.stopPropagation();close();
+          if(!selectedRightClickCell || !selectedRightClickCell.closest('#durationExpectedTable')){
+            alert('소요시간 또는 예상시간 칸을 우클릭해 주세요.');
+            return;
+          }
+          /* 원래 버튼의 추가/삭제 로직을 사용하여 선택 열과 동기화를 유지합니다. */
+          selectedRightClickCell.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+          src.click();
+        });
+        menu.appendChild(b);
+      });
     }
-    function openAt(x,y){build(); if(!menu.children.length)return; menu.classList.add('is-open'); menu.style.left='0px';menu.style.top='0px'; var r=menu.getBoundingClientRect(); menu.style.left=Math.max(4,Math.min(x,innerWidth-r.width-4))+'px'; menu.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+'px';}
-    editToggle.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY);});
-    editPanel.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY);});
+    function openAt(x,y,cell){selectedRightClickCell=cell||null;build(); if(!menu.children.length)return; menu.classList.add('is-open'); menu.style.left='0px';menu.style.top='0px'; var r=menu.getBoundingClientRect(); menu.style.left=Math.max(4,Math.min(x,innerWidth-r.width-4))+'px'; menu.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+'px';}
+    editToggle.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY,null);});
+    editPanel.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY,null);});
 
     /* 편집 모드: 모든 표 셀에서 마우스 우클릭 시 해당 셀을 선택하고 편집 풀다운 메뉴 표시 */
     document.addEventListener('contextmenu',function(e){
@@ -5833,7 +5844,7 @@ function resizeAllTextareas(root = document) {
         if(el!==cell){el.classList.remove('style-selected-cell','info-selected','duration-column-selected');}
       });
       cell.classList.add('style-selected-cell');
-      openAt(e.clientX,e.clientY);
+      openAt(e.clientX,e.clientY,cell);
     },true);
     document.addEventListener('mousedown',function(e){if(!menu.contains(e.target))close();});
     window.addEventListener('blur',close); window.addEventListener('resize',close); window.addEventListener('scroll',close,true);
@@ -6140,5 +6151,16 @@ function resizeAllTextareas(root = document) {
   });
 })();
 </script>
+
+<style id="all-plan-hidden-cells-in-member-view">
+  /* 모든 표 셀에 동일하게 가림 적용. 자식은 감추되 셀의 배경과 테두리는 유지. */
+  body.trip-read-mode table.plan td.trip-hidden-cell > *,
+  body.trip-read-mode table.plan th.trip-hidden-cell > *,
+  body.trip-read-mode table.plan input.trip-hidden-cell,
+  body.trip-read-mode table.plan textarea.trip-hidden-cell {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+</style>
 
 </body></html>
