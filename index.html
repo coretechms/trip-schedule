@@ -5602,182 +5602,6 @@ function resizeAllTextareas(root = document) {
     visibility: hidden !important;
   }
 </style>
-
-
-<script id="pc-oneclick-mobile-doubleclick-edit-patch">
-/*
-  편집 방식 최종 패치
-  - PC/마우스 환경: 칸을 한 번 클릭하면 내부 입력칸으로 즉시 포커스
-  - 모바일/터치 환경: 한 번 터치는 선택만, 같은 칸 더블클릭/더블탭 시에만 편집
-  - 기존 저장/자동계산/readonly 계산칸 구조는 변경하지 않음
-*/
-(function(){
-  'use strict';
-
-  var DOUBLE_TAP_MS = 430;
-  var DOUBLE_TAP_MOVE = 24;
-  var lastTapEl = null;
-  var lastTapTime = 0;
-  var lastTapX = 0;
-  var lastTapY = 0;
-
-  function isMobileEditMode(){
-    return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
-  }
-
-  function isBlockedArea(target){
-    return !!(target && target.closest && target.closest('button, .action-buttons, .info-toolbar, .trip-auth-backdrop, .phone-longpress-choice-box, input[type="file"]'));
-  }
-
-  function getEditableField(target){
-    if(!target || !target.closest) return null;
-    var field = target.closest('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
-    if(field && field.id !== 'mountain-name') return field;
-    var cell = target.closest('td, th');
-    if(cell){
-      var inner = cell.querySelector && cell.querySelector('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])');
-      if(inner && inner.id !== 'mountain-name') return inner;
-    }
-    return null;
-  }
-
-  function getEditableInfoCell(target){
-    if(!target || !target.closest) return null;
-    var cell = target.closest('.info-section-table th, .info-section-table td');
-    if(!cell) return null;
-    if(cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return null;
-    return cell;
-  }
-
-  function getEditableTarget(target){
-    return getEditableField(target) || getEditableInfoCell(target);
-  }
-
-  function focusEnd(el){
-    if(!el) return;
-    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
-      el.contentEditable = 'true';
-      // 커서를 글자 끝으로 보내지 않고 클릭/더블탭 위치 유지
-      try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
-      return;
-    }
-    // setSelectionRange(len, len) 제거: 마우스 커서가 글자 뒤로 가는 현상 방지
-    if(typeof el.focus === 'function') {
-      try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
-    }
-  }
-
-  function lockMobileTarget(el){
-    if(!el) return;
-    el.classList.remove('mobile-longpress-editing');
-    el.classList.add('mobile-longpress-locked');
-    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
-      el.contentEditable = 'false';
-    }
-  }
-
-  function unlockMobileTarget(el){
-    if(!el) return;
-    document.querySelectorAll('.mobile-longpress-editing').forEach(function(openEl){
-      if(openEl !== el) lockMobileTarget(openEl);
-    });
-    el.classList.remove('mobile-longpress-locked');
-    el.classList.add('mobile-longpress-editing');
-    focusEnd(el);
-  }
-
-  function normalizeMobileLocks(){
-    if(!isMobileEditMode()) return;
-    document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach(function(el){
-      if(el.id === 'mountain-name') return;
-      if(!el.classList.contains('mobile-longpress-editing')) el.classList.add('mobile-longpress-locked');
-    });
-    document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(function(cell){
-      if(cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return;
-      if(!cell.classList.contains('mobile-longpress-editing')){
-        cell.contentEditable = 'false';
-        cell.classList.add('mobile-longpress-locked');
-      }
-    });
-  }
-
-  /* PC: 원클릭으로 편집 포커스 */
-  document.addEventListener('click', function(event){
-    if(isMobileEditMode()) return;
-    if(isBlockedArea(event.target)) return;
-    var editable = getEditableTarget(event.target);
-    if(!editable) return;
-    focusEnd(editable);
-  }, true);
-
-  /* 모바일: 한 번 터치는 포커스/키보드를 열지 않고 스크롤에 사용 */
-  document.addEventListener('pointerdown', function(event){
-    if(!isMobileEditMode()) return;
-    if(isBlockedArea(event.target)) return;
-    normalizeMobileLocks();
-    var editable = getEditableTarget(event.target);
-    if(!editable) return;
-    if(editable.classList.contains('mobile-longpress-editing')) return;
-    /* preventDefault 금지: 손가락 드래그가 정상적으로 화면 스크롤을 시작해야 한다. */
-  }, true);
-
-  /* 모바일: 같은 칸 더블탭이면 편집 허용 */
-  document.addEventListener('pointerup', function(event){
-    if(!isMobileEditMode()) return;
-    if(event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    if(isBlockedArea(event.target)) return;
-    var editable = getEditableTarget(event.target);
-    if(!editable) return;
-
-    var now = Date.now();
-    var x = event.clientX || 0;
-    var y = event.clientY || 0;
-    var same = lastTapEl === editable;
-    var close = Math.abs(x - lastTapX) <= DOUBLE_TAP_MOVE && Math.abs(y - lastTapY) <= DOUBLE_TAP_MOVE;
-
-    if(same && close && now - lastTapTime <= DOUBLE_TAP_MS){
-      lastTapEl = null;
-      lastTapTime = 0;
-      event.preventDefault();
-      unlockMobileTarget(editable);
-      return;
-    }
-
-    lastTapEl = editable;
-    lastTapTime = now;
-    lastTapX = x;
-    lastTapY = y;
-  }, true);
-
-  document.addEventListener('dblclick', function(event){
-    if(!isMobileEditMode()) return;
-    if(isBlockedArea(event.target)) return;
-    var editable = getEditableTarget(event.target);
-    if(!editable) return;
-    event.preventDefault();
-    unlockMobileTarget(editable);
-  }, true);
-
-  /* 모바일: 잠금 상태에서 우발 포커스가 들어오면 즉시 해제 */
-  document.addEventListener('focusin', function(event){
-    if(!isMobileEditMode()) return;
-    var editable = getEditableTarget(event.target);
-    if(!editable) return;
-    if(editable.classList.contains('mobile-longpress-editing')) return;
-    if(event.target && typeof event.target.blur === 'function') event.target.blur();
-  }, true);
-
-  document.addEventListener('DOMContentLoaded', normalizeMobileLocks);
-  window.addEventListener('load', normalizeMobileLocks);
-  window.addEventListener('resize', normalizeMobileLocks);
-  window.addEventListener('orientationchange', function(){ setTimeout(normalizeMobileLocks, 200); });
-  if(window.MutationObserver){
-    new MutationObserver(normalizeMobileLocks).observe(document.body, {childList:true, subtree:true});
-  }
-})();
-</script>
-
-
 <style id="edit-context-menu-style">
   #durationAddColumnBtn,#durationDeleteColumnBtn{display:none!important;}
   #tripEditContextMenu{position:fixed;display:none;z-index:300000;min-width:150px;max-height:70vh;overflow-y:auto;padding:4px;background:#fff;border:1px solid #999;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.22);font-family:"Malgun Gothic",sans-serif;}
@@ -5853,40 +5677,6 @@ function resizeAllTextareas(root = document) {
   window.addEventListener('load',function(){setTimeout(initEditContextMenu,0);});
 })();
 </script>
-<style id="mobile-scroll-doubletap-edit-final-style">
-  @media (max-width: 768px), (hover: none) and (pointer: coarse) {
-    /* 잠긴 입력칸은 첫 터치로 포커스되지 않고 부모 셀에서 스크롤 제스처를 받는다. */
-    input.cell-input.mobile-longpress-locked,
-    textarea.cell-input.mobile-longpress-locked {
-      pointer-events: none !important;
-      touch-action: pan-x pan-y !important;
-    }
-
-    .info-section-table .mobile-longpress-locked {
-      touch-action: pan-x pan-y !important;
-    }
-
-    /* 일반 터치에서 기존 선택 코드가 잠깐 실행되더라도 파란 테두리는 표시하지 않는다. */
-    td.style-selected-cell,
-    th.style-selected-cell,
-    input.style-selected-cell,
-    textarea.style-selected-cell,
-    .info-selected,
-    .duration-column-selected {
-      outline: none !important;
-      box-shadow: none !important;
-    }
-
-    /* 더블탭으로 실제 편집이 열린 입력칸만 편집 표시를 보여준다. */
-    input.cell-input.mobile-longpress-editing,
-    textarea.cell-input.mobile-longpress-editing,
-    .info-section-table .mobile-longpress-editing {
-      pointer-events: auto !important;
-      outline: 2px solid #1737c9 !important;
-      outline-offset: -2px !important;
-    }
-  }
-</style>
 <script id="tripScheduleExcelTransfer">
 (function(){
   'use strict';
@@ -6165,14 +5955,75 @@ function resizeAllTextareas(root = document) {
 
 
 <!-- ===== 모바일 키보드 안전영역 + 전체 셀 길게누름 복사/붙여넣기 ===== -->
-<style id="mobile-keyboard-cell-clipboard-style">
+
+<!-- =====================================================================
+ GPT MAINTENANCE ZONE : MOBILE / DESKTOP CELL EDITOR
+ ---------------------------------------------------------------------
+ 앞으로 셀 편집 동작을 수정할 때는 이 영역만 우선 확인하세요.
+
+ [기능]
+ 1. PC       : 편집 가능 셀 한 번 클릭 → 바로 편집
+ 2. 모바일   : 한 번 터치 → 스크롤 전용 / 키보드 열지 않음
+ 3. 모바일   : 같은 셀 더블탭 → 편집 시작
+ 4. 모바일   : 모든 표 셀 길게 누름 → 복사 / 붙여넣기 메뉴
+ 5. 키보드   : 처음 열릴 때만 편집 셀을 키보드 위로 1회 정렬
+ 6. 편집 중  : 글자 입력/자동완성/키보드 높이 변화로 위치 재이동 안 함
+ 7. 사용자   : 편집 중에도 손가락 스크롤 허용, 자동으로 다시 끌어오지 않음
+
+ [수정 포인트]
+ - 동작 시간/위치/범위 : window.GPT_EDIT_CONFIG
+ - 화면 스타일          : #gpt-unified-cell-editor-style
+ - 동작 코드            : #gpt-unified-cell-editor-script
+ ====================================================================== -->
+<style id="gpt-unified-cell-editor-style">
+  :root {
+    --gpt-edit-outline: #1737c9;
+    --gpt-edit-menu-z: 500000;
+    --gpt-edit-toast-z: 500001;
+    --gpt-keyboard-spacer: 0px;
+  }
+
   @media (max-width: 768px), (hover: none) and (pointer: coarse) {
-    html.mobile-keyboard-open,
-    body.mobile-keyboard-open {
-      scroll-padding-bottom: calc(var(--mobile-keyboard-inset, 0px) + 96px) !important;
+    /* 잠금 상태: 첫 터치는 셀 선택이 아니라 페이지 스크롤로 사용 */
+    input.cell-input.gpt-mobile-edit-locked,
+    textarea.cell-input.gpt-mobile-edit-locked {
+      pointer-events: none !important;
+      caret-color: transparent !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
     }
 
-    #mobileKeyboardSafeSpacer {
+    .info-section-table .gpt-mobile-edit-locked {
+      caret-color: transparent !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+    }
+
+    /* 편집이 열린 셀만 포커스/키보드 허용 */
+    input.cell-input.gpt-mobile-edit-active,
+    textarea.cell-input.gpt-mobile-edit-active,
+    .info-section-table .gpt-mobile-edit-active {
+      pointer-events: auto !important;
+      caret-color: auto !important;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      touch-action: pan-x pan-y !important;
+      outline: 2px solid var(--gpt-edit-outline) !important;
+      outline-offset: -2px !important;
+    }
+
+    /* 일반 모바일 터치에서는 기존 선택 테두리를 보이지 않음 */
+    td.style-selected-cell,
+    th.style-selected-cell,
+    input.style-selected-cell,
+    textarea.style-selected-cell,
+    .info-selected,
+    .duration-column-selected {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    #gptKeyboardSafeSpacer {
       display: block;
       width: 1px;
       height: 0;
@@ -6180,17 +6031,16 @@ function resizeAllTextareas(root = document) {
       padding: 0;
       border: 0;
       pointer-events: none;
-      transition: height .12s ease-out;
     }
 
-    body.mobile-keyboard-open #mobileKeyboardSafeSpacer {
-      height: var(--mobile-keyboard-spacer, 42vh);
+    body.gpt-keyboard-open #gptKeyboardSafeSpacer {
+      height: var(--gpt-keyboard-spacer) !important;
     }
 
-    #mobileCellClipboardMenu {
+    #gptCellClipboardMenu {
       position: fixed;
       display: none;
-      z-index: 500000;
+      z-index: var(--gpt-edit-menu-z);
       min-width: 176px;
       padding: 7px;
       gap: 6px;
@@ -6204,19 +6054,15 @@ function resizeAllTextareas(root = document) {
       touch-action: manipulation;
     }
 
-    #mobileCellClipboardMenu.is-open {
-      display: flex;
-    }
+    #gptCellClipboardMenu.is-open { display: flex; }
 
-    #mobileCellClipboardMenu button {
+    #gptCellClipboardMenu button {
       flex: 1 1 0;
       min-width: 76px;
       height: 38px;
       padding: 0 10px;
       border: 1px solid #999;
       border-radius: 9px;
-      background: #f4f4f4;
-      color: #111;
       font: inherit;
       font-size: 13px;
       font-weight: 800;
@@ -6224,34 +6070,34 @@ function resizeAllTextareas(root = document) {
       white-space: nowrap;
     }
 
-    #mobileCellClipboardMenu button[data-mobile-clip="copy"] {
+    #gptCellClipboardMenu [data-gpt-clip="copy"] {
       background: #1737c9;
       border-color: #1737c9;
       color: #fff;
     }
 
-    #mobileCellClipboardMenu button[data-mobile-clip="paste"] {
+    #gptCellClipboardMenu [data-gpt-clip="paste"] {
       background: #0b7a28;
       border-color: #0b7a28;
       color: #fff;
     }
 
-    #mobileCellClipboardMenu button:disabled {
-      opacity: .45;
+    #gptCellClipboardMenu button:disabled {
+      opacity: .42;
       cursor: default;
     }
 
-    .mobile-longpress-clipboard-cell {
+    .gpt-clipboard-target-cell {
       outline: 2px solid #1737c9 !important;
       outline-offset: -2px !important;
     }
 
-    #mobileClipboardToast {
+    #gptClipboardToast {
       position: fixed;
       left: 50%;
       bottom: max(22px, env(safe-area-inset-bottom));
       transform: translateX(-50%);
-      z-index: 500001;
+      z-index: var(--gpt-edit-toast-z);
       max-width: calc(100vw - 28px);
       padding: 9px 14px;
       border-radius: 999px;
@@ -6260,7 +6106,6 @@ function resizeAllTextareas(root = document) {
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
       font-size: 12px;
       font-weight: 700;
-      text-align: center;
       white-space: nowrap;
       pointer-events: none;
       box-shadow: 0 5px 18px rgba(0,0,0,.24);
@@ -6268,58 +6113,107 @@ function resizeAllTextareas(root = document) {
   }
 </style>
 
-<script id="mobile-keyboard-cell-clipboard-script">
+<script id="gpt-unified-cell-editor-script">
 (function(){
   'use strict';
 
-  var MOBILE_QUERY = '(max-width: 768px), (hover: none) and (pointer: coarse)';
-  var LONG_PRESS_MS = 680;
-  var MOVE_CANCEL_PX = 16;
+  /* ================================================================
+     GPT_EDIT_CONFIG
+     앞으로 편집 감각을 바꾸려면 이 설정값부터 수정하면 됩니다.
+     ================================================================ */
+  window.GPT_EDIT_CONFIG = Object.assign({
+    mobileQuery: '(max-width: 768px), (hover: none) and (pointer: coarse)',
+    doubleTapMs: 430,
+    doubleTapMovePx: 24,
+    longPressMs: 680,
+    longPressCancelMovePx: 16,
+    /* ============================================================
+       모바일 키보드 / 편집 셀 위치 설정
+       앞으로 키보드 겹침이나 셀 위치를 바꿀 때는 이 구역만 수정합니다.
 
-  var longPressTimer = 0;
-  var pressCell = null;
-  var pressX = 0;
-  var pressY = 0;
-  var menuCell = null;
-  var appClipboardText = '';
-  var suppressClickUntil = 0;
-  var viewportBaseHeight = 0;
-  var keyboardFocusEl = null;
-  var keyboardTimers = [];
-  var keyboardPositionAligned = false;
+       keyboardAnchorRatio
+         0.50 = 보이는 화면 정중앙
+         0.60 = 중앙보다 약간 아래 (현재 권장값)
+         0.70 = 키보드에 더 가깝게
+       ============================================================ */
+    keyboardMinInsetPx: 70,              // 이 높이 이상 화면이 줄면 키보드가 열린 것으로 판단
+    keyboardOpenHeightRatio: 0.90,       // 평소 화면 높이의 90% 미만이면 키보드 열린 것으로 판단
+    keyboardAnchorRatio: 0.60,           // 편집 셀 중심 위치: 0.60 = 키보드 위 가시영역의 60%
+    keyboardTopGapPx: 90,                // 편집 셀이 화면 상단에 너무 붙지 않도록 하는 최소 여백
+    keyboardBottomGapPx: 82,             // 편집 셀과 키보드 상단 사이 최소 여백
+    keyboardCellExtraGapPx: 34,          // 셀 높이에 추가하는 키보드 안전 여백
+    keyboardAlignDeadzonePx: 18,         // 이 픽셀 이하 위치 차이는 움직이지 않음
+    keyboardExtraSpacerPx: 110,          // 키보드 높이에 더해 확보할 하단 공간
+    keyboardSpacerMinPx: 180,            // 키보드가 열린 상태의 최소 하단 여유 공간
+    keyboardSpacerViewportRatio: 0.30,   // 키보드 열린 상태에서 화면 높이 대비 하단 여유 공간
+    keyboardIdleSpacerMinPx: 100,        // 키보드 감지 직전/전환 중 최소 여유 공간
+    keyboardIdleSpacerViewportRatio: 0.16,
+    keyboardFocusDelaysMs: [80, 220, 420], // 키보드가 올라오는 동안 재측정 시점
+    keyboardFocusoutDelayMs: 180,        // 키보드 닫힘/다른 셀 이동 확인 지연
+    keyboardOrientationDelayMs: 350,     // 화면 회전 후 기준 높이 재측정 지연
+
+    clipboardMenuGapPx: 8,
+    editableTables: 'table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table',
+    blockedAreas: 'button, .action-buttons, .info-toolbar, .trip-auth-backdrop, #gptCellClipboardMenu, input[type="file"]'
+  }, window.GPT_EDIT_CONFIG || {});
+
+  var CFG = window.GPT_EDIT_CONFIG;
+
+  var State = {
+    lastTapTarget: null,
+    lastTapAt: 0,
+    lastTapX: 0,
+    lastTapY: 0,
+    longPressTimer: 0,
+    pressCell: null,
+    pressX: 0,
+    pressY: 0,
+    menuCell: null,
+    internalClipboard: '',
+    suppressClickUntil: 0,
+    viewportBaseHeight: 0,
+    focusedEditor: null,
+    keyboardAligned: false,
+    keyboardTimers: []
+  };
 
   function isMobile(){
-    return window.matchMedia(MOBILE_QUERY).matches;
+    return window.matchMedia(CFG.mobileQuery).matches;
   }
 
   function isAdminMode(){
-    return document.body && document.body.classList.contains('trip-admin-mode');
+    return !!(document.body && document.body.classList.contains('trip-admin-mode'));
   }
 
-  function isTableCell(cell){
-    if(!cell || !cell.matches || !cell.matches('td,th')) return false;
-    return !!cell.closest('table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table');
+  function isReadMode(){
+    return !!(document.body && document.body.classList.contains('trip-read-mode'));
   }
 
-  function getCell(target){
-    if(!target || !target.closest) return null;
-    if(target.closest('button, .action-buttons, .info-toolbar, .trip-auth-backdrop, #mobileCellClipboardMenu, input[type="file"]')) return null;
+  function isBlocked(target){
+    return !!(target && target.closest && target.closest(CFG.blockedAreas));
+  }
+
+  function closestCell(target){
+    if(!target || !target.closest || isBlocked(target)) return null;
     var cell = target.closest('td,th');
-    return isTableCell(cell) ? cell : null;
+    if(!cell || !cell.closest(CFG.editableTables)) return null;
+    return cell;
   }
 
-  function getCellField(cell){
+  function fieldInCell(cell){
     if(!cell || !cell.querySelector) return null;
     return cell.querySelector(
-      'input:not([type="button"]):not([type="submit"]):not([type="file"]), textarea, select'
+      'input.cell-input:not([type="button"]):not([type="submit"]):not([type="file"]), ' +
+      'textarea.cell-input, select'
     );
   }
 
-  function getWritableTarget(cell){
+  function editableTargetFromCell(cell){
     if(!cell || !isAdminMode()) return null;
 
-    var field = getCellField(cell);
+    var field = fieldInCell(cell);
     if(field){
+      if(field.id === 'mountain-name') return null;
       if(field.disabled || field.readOnly || field.hasAttribute('readonly')) return null;
       return field;
     }
@@ -6334,9 +6228,119 @@ function resizeAllTextareas(root = document) {
     return null;
   }
 
+  function editableTarget(target){
+    var cell = closestCell(target);
+    return cell ? editableTargetFromCell(cell) : null;
+  }
+
+  function focusEditor(el){
+    if(!el) return;
+    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
+      el.contentEditable = 'true';
+    }
+    try{ el.focus({preventScroll:true}); }
+    catch(e){ try{ el.focus(); }catch(_){} }
+  }
+
+  function lockEditor(el){
+    if(!el) return;
+    el.classList.remove('gpt-mobile-edit-active');
+    el.classList.add('gpt-mobile-edit-locked');
+    if(el.matches && el.matches('.info-section-table th, .info-section-table td')){
+      el.contentEditable = 'false';
+    }
+  }
+
+  function unlockEditor(el){
+    if(!el) return;
+    document.querySelectorAll('.gpt-mobile-edit-active').forEach(function(openEl){
+      if(openEl !== el) lockEditor(openEl);
+    });
+    el.classList.remove('gpt-mobile-edit-locked');
+    el.classList.add('gpt-mobile-edit-active');
+    focusEditor(el);
+  }
+
+  function normalizeMobileLocks(){
+    if(!isMobile()) return;
+
+    /* 이전 버전 클래스가 남아 있어도 제거하여 한 체계만 사용 */
+    document.querySelectorAll('.mobile-longpress-locked, .mobile-longpress-editing').forEach(function(el){
+      el.classList.remove('mobile-longpress-locked', 'mobile-longpress-editing');
+    });
+
+    document.querySelectorAll('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])').forEach(function(el){
+      if(el.id === 'mountain-name') return;
+      if(!el.classList.contains('gpt-mobile-edit-active')) el.classList.add('gpt-mobile-edit-locked');
+    });
+
+    document.querySelectorAll('.info-section-table th, .info-section-table td').forEach(function(cell){
+      if(cell.classList.contains('info-select-col') || cell.querySelector('.info-row-select-btn')) return;
+      if(!cell.classList.contains('gpt-mobile-edit-active')){
+        cell.contentEditable = 'false';
+        cell.classList.add('gpt-mobile-edit-locked');
+      }
+    });
+  }
+
+  /* ---------------- Desktop editing ---------------- */
+  document.addEventListener('click', function(event){
+    if(isMobile() || !isAdminMode() || isBlocked(event.target)) return;
+    var editor = editableTarget(event.target);
+    if(editor) focusEditor(editor);
+  }, true);
+
+  /* ---------------- Mobile double tap editing ---------------- */
+  document.addEventListener('pointerup', function(event){
+    if(!isMobile() || !isAdminMode()) return;
+    if(event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    if(isBlocked(event.target)) return;
+
+    var editor = editableTarget(event.target);
+    if(!editor) return;
+
+    var now = Date.now();
+    var x = event.clientX || 0;
+    var y = event.clientY || 0;
+    var same = State.lastTapTarget === editor;
+    var close = Math.abs(x - State.lastTapX) <= CFG.doubleTapMovePx &&
+                Math.abs(y - State.lastTapY) <= CFG.doubleTapMovePx;
+
+    if(same && close && (now - State.lastTapAt) <= CFG.doubleTapMs){
+      State.lastTapTarget = null;
+      State.lastTapAt = 0;
+      event.preventDefault();
+      unlockEditor(editor);
+      return;
+    }
+
+    State.lastTapTarget = editor;
+    State.lastTapAt = now;
+    State.lastTapX = x;
+    State.lastTapY = y;
+  }, true);
+
+  document.addEventListener('dblclick', function(event){
+    if(!isMobile() || !isAdminMode() || isBlocked(event.target)) return;
+    var editor = editableTarget(event.target);
+    if(!editor) return;
+    event.preventDefault();
+    unlockEditor(editor);
+  }, true);
+
+  /* 잠금 셀에 우발적으로 포커스가 생기면 키보드가 뜨지 않도록 차단 */
+  document.addEventListener('focusin', function(event){
+    if(!isMobile() || !isAdminMode()) return;
+    var editor = editableTarget(event.target);
+    if(!editor) return;
+    if(editor.classList.contains('gpt-mobile-edit-active')) return;
+    if(event.target && typeof event.target.blur === 'function') event.target.blur();
+  }, true);
+
+  /* ---------------- Clipboard ---------------- */
   function readCellText(cell){
     if(!cell) return '';
-    var field = getCellField(cell);
+    var field = fieldInCell(cell);
     if(field){
       if(field.tagName === 'SELECT'){
         var option = field.options && field.options[field.selectedIndex];
@@ -6344,57 +6348,52 @@ function resizeAllTextareas(root = document) {
       }
       return field.value == null ? '' : String(field.value);
     }
-
     var clone = cell.cloneNode(true);
     clone.querySelectorAll('button,script,style').forEach(function(el){ el.remove(); });
-    return (clone.innerText || clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+    return (clone.innerText || clone.textContent || '').replace(/\u00a0/g,' ').trim();
   }
 
-  function fireValueEvents(target){
-    try{ target.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
-    try{ target.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
-    try{ target.dispatchEvent(new Event('blur', {bubbles:true})); }catch(e){}
+  function writableCell(cell){
+    return !!editableTargetFromCell(cell);
+  }
+
+  function dispatchValueEvents(target){
+    try{ target.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+    try{ target.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
   }
 
   function writeCellText(cell, value){
-    var target = getWritableTarget(cell);
+    var target = editableTargetFromCell(cell);
     if(!target) return false;
-
     var text = value == null ? '' : String(value);
 
     if(target.matches && target.matches('input,textarea,select')){
       if(target.tagName === 'SELECT'){
-        var matched = Array.from(target.options || []).find(function(opt){
+        var found = Array.from(target.options || []).find(function(opt){
           return opt.value === text || opt.text === text;
         });
-        if(matched) target.value = matched.value;
-        else return false;
+        if(!found) return false;
+        target.value = found.value;
       } else {
-        var nativeSetter = Object.getOwnPropertyDescriptor(
-          target.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-          'value'
-        );
-        if(nativeSetter && nativeSetter.set) nativeSetter.set.call(target, text);
+        var proto = target.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        var setter = Object.getOwnPropertyDescriptor(proto,'value');
+        if(setter && setter.set) setter.set.call(target,text);
         else target.value = text;
       }
-      fireValueEvents(target);
-      if(typeof target.blur === 'function') target.blur();
+      dispatchValueEvents(target);
       return true;
     }
 
     if(target.matches && target.matches('.info-section-table th, .info-section-table td')){
-      var wasEditable = target.getAttribute('contenteditable');
+      var was = target.getAttribute('contenteditable');
       target.contentEditable = 'true';
       target.textContent = text;
-      fireValueEvents(target);
-      if(wasEditable === null) target.removeAttribute('contenteditable');
-      else target.setAttribute('contenteditable', wasEditable);
-      if(isMobile() && !target.classList.contains('mobile-longpress-editing')){
-        target.contentEditable = 'false';
-      }
+      dispatchValueEvents(target);
+      if(was === null) target.removeAttribute('contenteditable');
+      else target.setAttribute('contenteditable',was);
+      if(isMobile() && !target.classList.contains('gpt-mobile-edit-active')) target.contentEditable = 'false';
       return true;
     }
-
     return false;
   }
 
@@ -6402,429 +6401,392 @@ function resizeAllTextareas(root = document) {
     var area = document.createElement('textarea');
     area.value = text;
     area.setAttribute('readonly','');
-    area.style.position = 'fixed';
-    area.style.left = '-9999px';
-    area.style.top = '0';
+    area.style.position='fixed';
+    area.style.left='-9999px';
     document.body.appendChild(area);
     area.select();
-    var ok = false;
-    try{ ok = document.execCommand('copy'); }catch(e){}
+    var ok=false;
+    try{ ok=document.execCommand('copy'); }catch(e){}
     area.remove();
     return ok;
   }
 
   function showToast(message){
-    var old = document.getElementById('mobileClipboardToast');
+    var old=document.getElementById('gptClipboardToast');
     if(old) old.remove();
-    var toast = document.createElement('div');
-    toast.id = 'mobileClipboardToast';
-    toast.textContent = message;
+    var toast=document.createElement('div');
+    toast.id='gptClipboardToast';
+    toast.textContent=message;
     document.body.appendChild(toast);
-    setTimeout(function(){
-      if(toast && toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 1500);
+    setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); },1400);
+  }
+
+  function ensureMenu(){
+    var menu=document.getElementById('gptCellClipboardMenu');
+    if(menu) return menu;
+    menu=document.createElement('div');
+    menu.id='gptCellClipboardMenu';
+    menu.setAttribute('role','menu');
+    menu.innerHTML='<button type="button" data-gpt-clip="copy">복사</button>'+
+                   '<button type="button" data-gpt-clip="paste">붙여넣기</button>';
+    document.body.appendChild(menu);
+
+    menu.addEventListener('pointerdown',function(e){e.stopPropagation();},true);
+    menu.addEventListener('click',function(e){
+      var btn=e.target.closest('button[data-gpt-clip]');
+      if(!btn || !State.menuCell) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if(btn.dataset.gptClip==='copy') copyCell(State.menuCell);
+      if(btn.dataset.gptClip==='paste') pasteCell(State.menuCell);
+    });
+    return menu;
+  }
+
+  function clearMenuHighlight(){
+    document.querySelectorAll('.gpt-clipboard-target-cell').forEach(function(el){
+      el.classList.remove('gpt-clipboard-target-cell');
+    });
+  }
+
+  function closeMenu(){
+    var menu=document.getElementById('gptCellClipboardMenu');
+    if(menu) menu.classList.remove('is-open');
+    clearMenuHighlight();
+    State.menuCell=null;
+  }
+
+  function openMenu(cell,x,y){
+    if(!isMobile() || !cell) return;
+    cancelLongPress();
+    closeMenu();
+    State.menuCell=cell;
+    cell.classList.add('gpt-clipboard-target-cell');
+
+    var menu=ensureMenu();
+    var paste=menu.querySelector('[data-gpt-clip="paste"]');
+    if(paste) paste.disabled=!isAdminMode() || !writableCell(cell);
+
+    menu.classList.add('is-open');
+    menu.style.left='0px';
+    menu.style.top='0px';
+
+    var r=menu.getBoundingClientRect();
+    var vv=window.visualViewport;
+    var left0=vv?vv.offsetLeft:0;
+    var top0=vv?vv.offsetTop:0;
+    var right=left0+(vv?vv.width:window.innerWidth);
+    var bottom=top0+(vv?vv.height:window.innerHeight);
+    var gap=CFG.clipboardMenuGapPx;
+    var left=Math.max(left0+gap,Math.min(x,right-r.width-gap));
+    var top=Math.max(top0+gap,Math.min(y-r.height-gap,bottom-r.height-gap));
+    if(top<top0+gap) top=Math.min(y+gap,bottom-r.height-gap);
+    menu.style.left=left+'px';
+    menu.style.top=top+'px';
+    State.suppressClickUntil=Date.now()+650;
+    try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
   }
 
   async function copyCell(cell){
-    var text = readCellText(cell);
-    appClipboardText = text;
-
-    var copied = false;
+    var text=readCellText(cell);
+    State.internalClipboard=text;
+    var ok=false;
     try{
       if(navigator.clipboard && window.isSecureContext){
         await navigator.clipboard.writeText(text);
-        copied = true;
+        ok=true;
       }
     }catch(e){}
-
-    if(!copied) copied = fallbackCopy(text);
+    if(!ok) ok=fallbackCopy(text);
     closeMenu();
-
-    if(copied || text === appClipboardText) showToast('셀 내용을 복사했습니다.');
-    else showToast('복사하지 못했습니다.');
+    showToast('셀 내용을 복사했습니다.');
   }
 
   async function pasteCell(cell){
-    if(!getWritableTarget(cell)){
+    if(!isAdminMode() || !writableCell(cell)){
       closeMenu();
-      showToast('이 셀은 고정/자동계산 셀이라 붙여넣을 수 없습니다.');
+      showToast('이 셀은 붙여넣을 수 없습니다.');
       return;
     }
-
-    var text = '';
-    var gotSystemClipboard = false;
-
+    var text='';
+    var systemRead=false;
     try{
       if(navigator.clipboard && window.isSecureContext){
-        text = await navigator.clipboard.readText();
-        gotSystemClipboard = true;
+        text=await navigator.clipboard.readText();
+        systemRead=true;
       }
     }catch(e){}
-
-    if(!gotSystemClipboard) text = appClipboardText;
-
-    if(text === '' && appClipboardText === '' && !gotSystemClipboard){
+    if(!systemRead) text=State.internalClipboard;
+    if(!systemRead && text==='' && State.internalClipboard===''){
       closeMenu();
-      showToast('먼저 복사할 셀을 길게 눌러 복사해 주세요.');
+      showToast('먼저 셀을 복사해 주세요.');
       return;
     }
-
-    if(writeCellText(cell, text)){
+    if(writeCellText(cell,text)){
       closeMenu();
-      showToast('셀에 붙여넣었습니다.');
-      try{
-        if(typeof window.__tripScheduleForceSaveNow === 'function'){
-          window.__tripScheduleForceSaveNow();
-        }
-      }catch(e){}
-    } else {
+      showToast('붙여넣었습니다.');
+    }else{
       closeMenu();
       showToast('이 셀에는 붙여넣을 수 없습니다.');
     }
   }
 
-  function ensureMenu(){
-    var menu = document.getElementById('mobileCellClipboardMenu');
-    if(menu) return menu;
-
-    menu = document.createElement('div');
-    menu.id = 'mobileCellClipboardMenu';
-    menu.setAttribute('role','menu');
-    menu.innerHTML =
-      '<button type="button" data-mobile-clip="copy">복사</button>' +
-      '<button type="button" data-mobile-clip="paste">붙여넣기</button>';
-    document.body.appendChild(menu);
-
-    menu.addEventListener('pointerdown', function(e){
-      e.stopPropagation();
-    }, true);
-
-    menu.addEventListener('click', function(e){
-      var btn = e.target.closest('button[data-mobile-clip]');
-      if(!btn || !menuCell) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      if(btn.dataset.mobileClip === 'copy') copyCell(menuCell);
-      if(btn.dataset.mobileClip === 'paste') pasteCell(menuCell);
-    });
-
-    return menu;
-  }
-
-  function clearCellHighlight(){
-    document.querySelectorAll('.mobile-longpress-clipboard-cell').forEach(function(el){
-      el.classList.remove('mobile-longpress-clipboard-cell');
-    });
-  }
-
-  function closeMenu(){
-    var menu = document.getElementById('mobileCellClipboardMenu');
-    if(menu) menu.classList.remove('is-open');
-    clearCellHighlight();
-    menuCell = null;
-  }
-
-  function openMenu(cell, x, y){
-    if(!isMobile() || !isAdminMode() || !cell) return;
-
-    cancelLongPress();
-    closeMenu();
-    menuCell = cell;
-    cell.classList.add('mobile-longpress-clipboard-cell');
-
-    var menu = ensureMenu();
-    var pasteBtn = menu.querySelector('[data-mobile-clip="paste"]');
-    if(pasteBtn) pasteBtn.disabled = !getWritableTarget(cell);
-
-    menu.classList.add('is-open');
-    menu.style.left = '0px';
-    menu.style.top = '0px';
-
-    var r = menu.getBoundingClientRect();
-    var vv = window.visualViewport;
-    var leftBound = vv ? vv.offsetLeft : 0;
-    var topBound = vv ? vv.offsetTop : 0;
-    var rightBound = leftBound + (vv ? vv.width : window.innerWidth);
-    var bottomBound = topBound + (vv ? vv.height : window.innerHeight);
-
-    var left = Math.max(leftBound + 6, Math.min(x, rightBound - r.width - 6));
-    var top = Math.max(topBound + 6, Math.min(y - r.height - 8, bottomBound - r.height - 6));
-
-    if(top < topBound + 6) top = Math.min(y + 12, bottomBound - r.height - 6);
-
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-
-    suppressClickUntil = Date.now() + 650;
-    try{ navigator.vibrate && navigator.vibrate(20); }catch(e){}
-  }
-
   function cancelLongPress(){
-    if(longPressTimer){
-      clearTimeout(longPressTimer);
-      longPressTimer = 0;
+    if(State.longPressTimer){
+      clearTimeout(State.longPressTimer);
+      State.longPressTimer=0;
     }
-    pressCell = null;
+    State.pressCell=null;
   }
 
-  document.addEventListener('pointerdown', function(e){
-    if(!isMobile() || !isAdminMode()) return;
-    if(e.pointerType && e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-
-    var cell = getCell(e.target);
+  document.addEventListener('pointerdown',function(event){
+    if(!isMobile()) return;
+    if(event.pointerType && event.pointerType!=='touch' && event.pointerType!=='pen') return;
+    var cell=closestCell(event.target);
     if(!cell) return;
 
     closeMenu();
     cancelLongPress();
+    State.pressCell=cell;
+    State.pressX=event.clientX||0;
+    State.pressY=event.clientY||0;
+    State.longPressTimer=setTimeout(function(){
+      if(State.pressCell===cell) openMenu(cell,State.pressX,State.pressY);
+    },CFG.longPressMs);
+  },true);
 
-    pressCell = cell;
-    pressX = e.clientX || 0;
-    pressY = e.clientY || 0;
-
-    longPressTimer = setTimeout(function(){
-      if(pressCell === cell){
-        openMenu(cell, pressX, pressY);
-      }
-    }, LONG_PRESS_MS);
-  }, true);
-
-  document.addEventListener('pointermove', function(e){
-    if(!longPressTimer) return;
-    var x = e.clientX || 0;
-    var y = e.clientY || 0;
-    if(Math.abs(x - pressX) > MOVE_CANCEL_PX || Math.abs(y - pressY) > MOVE_CANCEL_PX){
+  document.addEventListener('pointermove',function(event){
+    if(!State.longPressTimer) return;
+    var x=event.clientX||0;
+    var y=event.clientY||0;
+    if(Math.abs(x-State.pressX)>CFG.longPressCancelMovePx ||
+       Math.abs(y-State.pressY)>CFG.longPressCancelMovePx){
       cancelLongPress();
     }
-  }, true);
+  },true);
 
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(type){
-    document.addEventListener(type, cancelLongPress, true);
+    document.addEventListener(type,cancelLongPress,true);
   });
 
-  document.addEventListener('contextmenu', function(e){
-    if(!isMobile() || !isAdminMode()) return;
-    var cell = getCell(e.target);
+  document.addEventListener('contextmenu',function(event){
+    if(!isMobile()) return;
+    var cell=closestCell(event.target);
     if(!cell) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    openMenu(cell, e.clientX || pressX, e.clientY || pressY);
-  }, true);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openMenu(cell,event.clientX||State.pressX,event.clientY||State.pressY);
+  },true);
 
-  document.addEventListener('click', function(e){
-    var menu = document.getElementById('mobileCellClipboardMenu');
-    if(menu && menu.contains(e.target)) return;
-
-    if(Date.now() < suppressClickUntil){
-      var cell = getCell(e.target);
-      if(cell && menuCell === cell){
-        e.preventDefault();
-        e.stopImmediatePropagation();
+  document.addEventListener('click',function(event){
+    var menu=document.getElementById('gptCellClipboardMenu');
+    if(menu && menu.contains(event.target)) return;
+    if(Date.now()<State.suppressClickUntil && State.menuCell){
+      var cell=closestCell(event.target);
+      if(cell===State.menuCell){
+        event.preventDefault();
+        event.stopImmediatePropagation();
         return;
       }
     }
     closeMenu();
-  }, true);
+  },true);
 
-  window.addEventListener('scroll', function(){
-    if(document.getElementById('mobileCellClipboardMenu')?.classList.contains('is-open')) closeMenu();
-  }, true);
-
-  /* ===== 키보드가 마지막 줄을 가리지 않도록 Visual Viewport 기반 안전영역 생성 ===== */
-
-  function ensureKeyboardSpacer(){
-    var spacer = document.getElementById('mobileKeyboardSafeSpacer');
+  /* ---------------- Keyboard safe area ---------------- */
+  function ensureSpacer(){
+    var spacer=document.getElementById('gptKeyboardSafeSpacer');
     if(spacer) return spacer;
-    spacer = document.createElement('div');
-    spacer.id = 'mobileKeyboardSafeSpacer';
+    spacer=document.createElement('div');
+    spacer.id='gptKeyboardSafeSpacer';
     spacer.setAttribute('aria-hidden','true');
     document.body.appendChild(spacer);
     return spacer;
   }
 
-  function isEditableKeyboardTarget(el){
+  function keyboardEditable(el){
     if(!el || !el.matches || !isAdminMode()) return false;
-    if(el.matches('input:not([readonly]):not([disabled]):not([type="button"]):not([type="file"]), textarea:not([readonly]):not([disabled])')){
-      return !!el.closest('table.plan, #durationExpectedTable, .info-section-table, .gimbap-inner-table, #info-form-wrap');
+    if(el.matches('input.cell-input:not([readonly]):not([disabled]), textarea.cell-input:not([readonly]):not([disabled])')){
+      return !!el.closest(CFG.editableTables);
     }
-    if(el.matches('[contenteditable="true"]')){
-      return !!el.closest('.info-section-table');
-    }
+    if(el.matches('[contenteditable="true"]')) return !!el.closest('.info-section-table');
     return false;
   }
 
-  function getViewportHeight(){
+  function viewportHeight(){
     return window.visualViewport ? window.visualViewport.height : window.innerHeight;
   }
 
-  function updateViewportBaseline(){
-    var h = getViewportHeight();
-    if(!keyboardFocusEl || !document.contains(keyboardFocusEl)){
-      viewportBaseHeight = Math.max(viewportBaseHeight || 0, h || 0);
+  function updateViewportBase(){
+    var h=viewportHeight();
+    if(!State.focusedEditor || !document.contains(State.focusedEditor)){
+      State.viewportBaseHeight=Math.max(State.viewportBaseHeight||0,h||0);
     }
-    if(!viewportBaseHeight) viewportBaseHeight = h || window.innerHeight || 0;
+    if(!State.viewportBaseHeight) State.viewportBaseHeight=h||window.innerHeight||0;
   }
 
   function clearKeyboardTimers(){
-    while(keyboardTimers.length){
-      clearTimeout(keyboardTimers.pop());
-    }
+    while(State.keyboardTimers.length) clearTimeout(State.keyboardTimers.pop());
   }
 
-  function revealFocusedCell(){
-    if(!isMobile() || !keyboardFocusEl || !document.contains(keyboardFocusEl)) return;
-
-    var vv = window.visualViewport;
-    var viewTop = vv ? vv.offsetTop : 0;
-    var viewHeight = vv ? vv.height : window.innerHeight;
-    var cell = keyboardFocusEl.closest('td,th') || keyboardFocusEl;
-    var rect = cell.getBoundingClientRect();
-
-    /*
-      편집 셀을 화면 최상단으로 올리지 않는다.
-      키보드가 올라온 뒤 실제로 보이는 영역의 중앙보다 약간 아래,
-      즉 키보드 바로 위에서 편집하기 편한 위치에 셀 중심을 맞춘다.
-    */
-    var targetCenterY = viewTop + (viewHeight * 0.60);
-    var minimumCenterY = viewTop + Math.min(120, viewHeight * 0.32);
-    var maximumCenterY = viewTop + viewHeight - Math.max(82, rect.height + 34);
-
-    targetCenterY = Math.max(minimumCenterY, Math.min(targetCenterY, maximumCenterY));
-
-    var cellCenterY = rect.top + (rect.height / 2);
-    var delta = cellCenterY - targetCenterY;
-
-    /*
-      키보드 resize/focus 이벤트가 연속 발생하므로 smooth 스크롤을 사용하지 않는다.
-      18px 이내의 작은 차이는 무시하여 화면 흔들림도 방지한다.
-    */
-    if(Math.abs(delta) > 18){
-      window.scrollBy({
-        top: delta,
-        left: 0,
-        behavior: 'auto'
-      });
+  function alignFocusedEditorOnce(){
+    if(!isMobile() || !State.focusedEditor || State.keyboardAligned || !document.contains(State.focusedEditor)) return;
+    var vv=window.visualViewport;
+    var viewTop=vv?vv.offsetTop:0;
+    var viewHeight=vv?vv.height:window.innerHeight;
+    var cell=State.focusedEditor.closest('td,th') || State.focusedEditor;
+    var rect=cell.getBoundingClientRect();
+    var target=viewTop+(viewHeight*CFG.keyboardAnchorRatio);
+    var minCenter=viewTop+CFG.keyboardTopGapPx;
+    var maxCenter=viewTop+viewHeight-Math.max(
+      CFG.keyboardBottomGapPx,
+      rect.height+CFG.keyboardCellExtraGapPx
+    );
+    target=Math.max(minCenter,Math.min(target,maxCenter));
+    var currentCenter=rect.top+(rect.height/2);
+    var delta=currentCenter-target;
+    if(Math.abs(delta)>CFG.keyboardAlignDeadzonePx){
+      window.scrollBy({top:delta,left:0,behavior:'auto'});
     }
+    State.keyboardAligned=true;
   }
 
-  function refreshKeyboardSafeArea(){
+  function refreshKeyboard(){
     if(!isMobile()){
-      document.documentElement.classList.remove('mobile-keyboard-open');
-      document.body.classList.remove('mobile-keyboard-open');
+      document.body.classList.remove('gpt-keyboard-open');
       return;
     }
-
-    updateViewportBaseline();
-
-    var current = getViewportHeight();
-    var vv = window.visualViewport;
-    var offsetTop = vv ? vv.offsetTop : 0;
-    var estimatedInset = Math.max(0, (viewportBaseHeight || current) - current - offsetTop);
-    var active = keyboardFocusEl && document.contains(keyboardFocusEl) && document.activeElement === keyboardFocusEl;
-    var keyboardLikely = active && (
-      estimatedInset > 70 ||
-      current < (viewportBaseHeight || current) * 0.90
+    updateViewportBase();
+    var current=viewportHeight();
+    var vv=window.visualViewport;
+    var offsetTop=vv?vv.offsetTop:0;
+    var inset=Math.max(0,(State.viewportBaseHeight||current)-current-offsetTop);
+    var active=State.focusedEditor && document.contains(State.focusedEditor) && document.activeElement===State.focusedEditor;
+    var keyboardLikely=active && (
+      inset>CFG.keyboardMinInsetPx ||
+      current<(State.viewportBaseHeight||current)*CFG.keyboardOpenHeightRatio
     );
 
     if(active){
-      var spacerHeight = keyboardLikely
-        ? Math.max(180, Math.round(estimatedInset + 110), Math.round((viewportBaseHeight || current) * 0.30))
-        : Math.max(100, Math.round(current * 0.16));
-
-      document.documentElement.style.setProperty('--mobile-keyboard-inset', Math.max(0, Math.round(estimatedInset)) + 'px');
-      document.documentElement.style.setProperty('--mobile-keyboard-spacer', spacerHeight + 'px');
-      document.documentElement.classList.add('mobile-keyboard-open');
-      document.body.classList.add('mobile-keyboard-open');
-      ensureKeyboardSpacer();
-
-      /*
-        편집 셀 위치는 키보드가 실제로 열린 직후 딱 한 번만 맞춘다.
-        이후 글자 입력, 자동완성, 키보드 높이 변화 중에는 위치를 다시 움직이지 않는다.
-        사용자가 손가락으로 스크롤한 위치도 그대로 유지한다.
-      */
-      if(keyboardLikely && !keyboardPositionAligned){
-        revealFocusedCell();
-        keyboardPositionAligned = true;
-      }
-    } else {
-      document.documentElement.classList.remove('mobile-keyboard-open');
-      document.body.classList.remove('mobile-keyboard-open');
-      document.documentElement.style.setProperty('--mobile-keyboard-inset', '0px');
-      document.documentElement.style.setProperty('--mobile-keyboard-spacer', '0px');
+      var spacerHeight=keyboardLikely
+        ? Math.max(
+            CFG.keyboardSpacerMinPx,
+            Math.round(inset+CFG.keyboardExtraSpacerPx),
+            Math.round((State.viewportBaseHeight||current)*CFG.keyboardSpacerViewportRatio)
+          )
+        : Math.max(
+            CFG.keyboardIdleSpacerMinPx,
+            Math.round(current*CFG.keyboardIdleSpacerViewportRatio)
+          );
+      document.documentElement.style.setProperty('--gpt-keyboard-spacer',spacerHeight+'px');
+      document.body.classList.add('gpt-keyboard-open');
+      ensureSpacer();
+      if(keyboardLikely) alignFocusedEditorOnce();
+    }else{
+      document.body.classList.remove('gpt-keyboard-open');
+      document.documentElement.style.setProperty('--gpt-keyboard-spacer','0px');
     }
   }
 
-  document.addEventListener('focusin', function(e){
-    if(!isMobile() || !isEditableKeyboardTarget(e.target)) return;
-
-    keyboardFocusEl = e.target;
-    keyboardPositionAligned = false;
-    updateViewportBaseline();
+  document.addEventListener('focusin',function(event){
+    if(!isMobile() || !keyboardEditable(event.target)) return;
+    State.focusedEditor=event.target;
+    State.keyboardAligned=false;
+    updateViewportBase();
     clearKeyboardTimers();
-
-    [80, 220, 420].forEach(function(delay){
-      keyboardTimers.push(setTimeout(refreshKeyboardSafeArea, delay));
+    CFG.keyboardFocusDelaysMs.forEach(function(delay){
+      State.keyboardTimers.push(setTimeout(refreshKeyboard,delay));
     });
-  }, true);
+  },true);
 
-  document.addEventListener('focusout', function(e){
-    if(!isMobile()) return;
-    if(keyboardFocusEl !== e.target) return;
-
+  document.addEventListener('focusout',function(event){
+    if(!isMobile() || State.focusedEditor!==event.target) return;
     clearKeyboardTimers();
-    keyboardTimers.push(setTimeout(function(){
-      if(document.activeElement && isEditableKeyboardTarget(document.activeElement)){
-        keyboardFocusEl = document.activeElement;
-        refreshKeyboardSafeArea();
+    State.keyboardTimers.push(setTimeout(function(){
+      if(document.activeElement && keyboardEditable(document.activeElement)){
+        State.focusedEditor=document.activeElement;
+        State.keyboardAligned=false;
+        refreshKeyboard();
         return;
       }
-      keyboardFocusEl = null;
-      keyboardPositionAligned = false;
-      refreshKeyboardSafeArea();
-    }, 180));
-  }, true);
+      State.focusedEditor=null;
+      State.keyboardAligned=false;
+      refreshKeyboard();
+    },CFG.keyboardFocusoutDelayMs));
+  },true);
 
   if(window.visualViewport){
-    window.visualViewport.addEventListener('resize', function(){
-      if(keyboardFocusEl) refreshKeyboardSafeArea();
-      else updateViewportBaseline();
+    window.visualViewport.addEventListener('resize',function(){
+      if(State.focusedEditor) refreshKeyboard();
+      else updateViewportBase();
     });
-    window.visualViewport.addEventListener('scroll', function(){
-      /*
-        편집 중 사용자가 직접 터치 스크롤한 위치를 존중한다.
-        자동으로 편집 셀을 다시 중앙으로 끌어오지 않는다.
-      */
-    });
+    /* visualViewport scroll에서는 아무 것도 하지 않음: 사용자의 터치 스크롤 위치 유지 */
   }
 
-  window.addEventListener('resize', function(){
-    if(keyboardFocusEl) refreshKeyboardSafeArea();
-    else updateViewportBaseline();
+  window.addEventListener('resize',function(){
+    if(State.focusedEditor) refreshKeyboard();
+    else updateViewportBase();
   });
 
-  window.addEventListener('orientationchange', function(){
-    viewportBaseHeight = 0;
-    keyboardFocusEl = null;
-    keyboardPositionAligned = false;
+  window.addEventListener('orientationchange',function(){
+    State.viewportBaseHeight=0;
+    State.focusedEditor=null;
+    State.keyboardAligned=false;
     clearKeyboardTimers();
-    setTimeout(function(){
-      updateViewportBaseline();
-      refreshKeyboardSafeArea();
-    }, 350);
+    setTimeout(function(){ updateViewportBase(); refreshKeyboard(); },CFG.keyboardOrientationDelayMs);
   });
 
-  document.addEventListener('DOMContentLoaded', function(){
+  function boot(){
     ensureMenu();
-    ensureKeyboardSpacer();
-    updateViewportBaseline();
-  });
-
-  if(document.readyState !== 'loading'){
-    ensureMenu();
-    ensureKeyboardSpacer();
-    updateViewportBaseline();
+    ensureSpacer();
+    normalizeMobileLocks();
+    updateViewportBase();
   }
+
+  document.addEventListener('DOMContentLoaded',boot);
+  window.addEventListener('load',normalizeMobileLocks);
+
+  if(window.MutationObserver){
+    new MutationObserver(function(){
+      if(isMobile()) normalizeMobileLocks();
+    }).observe(document.body,{childList:true,subtree:true});
+  }
+
+  if(document.readyState!=='loading') boot();
+
+  /* GPT/개발자 디버깅용 최소 공개 API */
+  window.TripCellEditor = {
+    config: CFG,
+    normalize: normalizeMobileLocks,
+    closeClipboardMenu: closeMenu,
+
+    /* 개발/GPT 조정용: 예) TripCellEditor.setKeyboardAnchor(0.65) */
+    setKeyboardAnchor: function(ratio){
+      var value=Number(ratio);
+      if(!Number.isFinite(value)) return CFG.keyboardAnchorRatio;
+      CFG.keyboardAnchorRatio=Math.max(0.35,Math.min(0.82,value));
+      State.keyboardAligned=false;
+      if(State.focusedEditor) refreshKeyboard();
+      return CFG.keyboardAnchorRatio;
+    },
+
+    /* 현재 셀의 키보드 위치 보정을 다시 1회 실행 */
+    realignKeyboardCell: function(){
+      State.keyboardAligned=false;
+      refreshKeyboard();
+    },
+
+    currentState: function(){
+      return {
+        mobile:isMobile(),
+        admin:isAdminMode(),
+        read:isReadMode(),
+        keyboardAligned:State.keyboardAligned,
+        focused:State.focusedEditor && (State.focusedEditor.id || State.focusedEditor.tagName)
+      };
+    }
+  };
 })();
 </script>
+<!-- ======================= END GPT MAINTENANCE ZONE ======================= -->
 
 </body></html>
