@@ -5609,6 +5609,14 @@ function resizeAllTextareas(root = document) {
   #tripEditContextMenu button{display:block;width:100%;height:28px;margin:0;padding:3px 9px;border:0;border-bottom:1px solid #eee;background:#fff;color:#111;text-align:left;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;}
   #tripEditContextMenu button:last-child{border-bottom:0;}
   #tripEditContextMenu button:hover{background:#eef3ff;}
+  #tripEditContextMenu button:disabled{opacity:.42;cursor:default;}
+  @media (max-width:768px), (hover:none) and (pointer:coarse){
+    table td, table th,
+    input.cell-input, textarea.cell-input,
+    .info-section-table td, .info-section-table th{
+      -webkit-touch-callout:none !important;
+    }
+  }
 </style>
 <script id="edit-context-menu-script">
 (function(){
@@ -5623,6 +5631,38 @@ function resizeAllTextareas(root = document) {
     function close(){menu.classList.remove('is-open');}
     function build(){
       menu.innerHTML='';
+
+      /* 기존 편집 풀다운 상단에 복사/붙여넣기 통합 */
+      if(selectedRightClickCell){
+        var copyBtn=document.createElement('button');
+        copyBtn.type='button';
+        copyBtn.textContent='복사';
+        copyBtn.addEventListener('click',function(e){
+          e.preventDefault(); e.stopPropagation();
+          close();
+          if(window.TripCellEditor && typeof window.TripCellEditor.copyCell==='function'){
+            window.TripCellEditor.copyCell(selectedRightClickCell);
+          }
+        });
+        menu.appendChild(copyBtn);
+
+        var pasteBtn=document.createElement('button');
+        pasteBtn.type='button';
+        pasteBtn.textContent='붙여넣기';
+        pasteBtn.disabled=!(window.TripCellEditor &&
+          typeof window.TripCellEditor.canPasteCell==='function' &&
+          window.TripCellEditor.canPasteCell(selectedRightClickCell));
+        pasteBtn.addEventListener('click',function(e){
+          e.preventDefault(); e.stopPropagation();
+          if(pasteBtn.disabled) return;
+          close();
+          if(window.TripCellEditor && typeof window.TripCellEditor.pasteCell==='function'){
+            window.TripCellEditor.pasteCell(selectedRightClickCell);
+          }
+        });
+        menu.appendChild(pasteBtn);
+      }
+
       Array.from(editPanel.querySelectorAll('button')).forEach(function(src){
         if(src.classList.contains('info-group-label-btn')) return;
         var b=document.createElement('button'); b.type='button'; b.textContent=(src.textContent||'').trim()||src.getAttribute('data-info-action')||'실행';
@@ -5646,7 +5686,41 @@ function resizeAllTextareas(root = document) {
         menu.appendChild(b);
       });
     }
-    function openAt(x,y,cell){selectedRightClickCell=cell||null;build(); if(!menu.children.length)return; menu.classList.add('is-open'); menu.style.left='0px';menu.style.top='0px'; var r=menu.getBoundingClientRect(); menu.style.left=Math.max(4,Math.min(x,innerWidth-r.width-4))+'px'; menu.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+'px';}
+    function openAt(x,y,cell){
+      selectedRightClickCell=cell||null;
+      build();
+      if(!menu.children.length)return;
+      menu.classList.add('is-open');
+      menu.style.left='0px';
+      menu.style.top='0px';
+      var r=menu.getBoundingClientRect();
+      var vv=window.visualViewport;
+      var left0=vv?vv.offsetLeft:0;
+      var top0=vv?vv.offsetTop:0;
+      var right=left0+(vv?vv.width:innerWidth);
+      var bottom=top0+(vv?vv.height:innerHeight);
+      var left=Math.max(left0+4,Math.min(x,right-r.width-4));
+      var top=Math.max(top0+4,Math.min(y,bottom-r.height-4));
+      menu.style.left=left+'px';
+      menu.style.top=top+'px';
+    }
+
+    /* 모바일 길게누름에서도 동일한 기존 풀다운 메뉴를 사용 */
+    window.__tripOpenEditContextMenu=function(cell,x,y){
+      if(!document.body.classList.contains('trip-admin-mode')) return false;
+      if(!cell || !cell.closest || !cell.closest('table')) return false;
+      try {
+        if(typeof window.__tripScheduleSelectedStyleCell !== 'undefined') window.__tripScheduleSelectedStyleCell=cell;
+        if(typeof window.__tripScheduleSelectedStyleTarget !== 'undefined') window.__tripScheduleSelectedStyleTarget=cell;
+        document.querySelectorAll('.style-selected-cell,.info-selected,.duration-column-selected').forEach(function(el){
+          if(el!==cell) el.classList.remove('style-selected-cell','info-selected','duration-column-selected');
+        });
+        cell.classList.add('style-selected-cell');
+      } catch(err) {}
+      openAt(x||0,y||0,cell);
+      return true;
+    };
+
     editToggle.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY,null);});
     editPanel.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation();openAt(e.clientX,e.clientY,null);});
 
@@ -6459,6 +6533,17 @@ function resizeAllTextareas(root = document) {
   function openMenu(cell,x,y){
     if(!isMobile() || !cell) return;
     cancelLongPress();
+
+    /* 관리자 모바일에서는 별도 복사/붙여넣기 박스 대신 기존 편집 풀다운 사용 */
+    if(isAdminMode() && typeof window.__tripOpenEditContextMenu==='function'){
+      closeMenu();
+      State.menuCell=cell;
+      State.suppressClickUntil=Date.now()+650;
+      try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
+      window.__tripOpenEditContextMenu(cell,x,y);
+      return;
+    }
+
     closeMenu();
     State.menuCell=cell;
     cell.classList.add('gpt-clipboard-target-cell');
@@ -6736,7 +6821,8 @@ function resizeAllTextareas(root = document) {
   });
 
   function boot(){
-    ensureMenu();
+    /* 모바일 관리자 길게누름은 기존 tripEditContextMenu를 사용하므로
+       별도 clipboard 메뉴는 필요할 때만 생성한다. */
     ensureSpacer();
     normalizeMobileLocks();
     updateViewportBase();
@@ -6758,6 +6844,11 @@ function resizeAllTextareas(root = document) {
     config: CFG,
     normalize: normalizeMobileLocks,
     closeClipboardMenu: closeMenu,
+    copyCell: copyCell,
+    pasteCell: pasteCell,
+    canPasteCell: function(cell){
+      return !!cell && isAdminMode() && writableCell(cell);
+    },
 
     /* 개발/GPT 조정용: 예) TripCellEditor.setKeyboardAnchor(0.65) */
     setKeyboardAnchor: function(ratio){
